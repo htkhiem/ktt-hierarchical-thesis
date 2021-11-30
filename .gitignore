@@ -5,3 +5,5 @@ part.*.parquet
 .feather
 *_best.pt
 *_current.pt
+
+Walmart_30k.parquet
