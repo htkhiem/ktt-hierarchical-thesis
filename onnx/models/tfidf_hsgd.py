@@ -65,10 +65,10 @@ def make_hierarchy(classes, depth=None, verbose=False):
             except:
                 pass
 
-        hierarchy = {}
-        for key in temp.keys():
-            hierarchy[key] = list(temp[key])
-        return hierarchy
+    hierarchy = {}
+    for key in temp.keys():
+        hierarchy[key] = list(temp[key])
+    return hierarchy
 
 # This model is sklearn-based, and so is its data handling procedures.
 def get_loaders(
