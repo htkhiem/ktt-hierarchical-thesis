@@ -3,6 +3,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 
+from utils.checkpoint import save_checkpoint
 from utils.distilbert import get_pretrained
 from utils.metric import get_metrics
 

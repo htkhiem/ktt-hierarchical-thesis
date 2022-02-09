@@ -8,7 +8,7 @@ from functools import partial
 
 from utils.metric import get_metrics
 from models import db_bhcn, db_ahmcnf, db_achmcnn, tfidf_hsgd
-from utils import dataset, metric, distilbert
+from utils import dataset, distilbert
 
 # This function expects train_func to return (encoder, classifier), val_metrics
 # and test_func to return a numpy array with five values: leaf accuracy, leaf precision, global accuracy, global precision, leaf auprc
@@ -54,11 +54,12 @@ def repeat_train(
         test_output = test_func(model, config, test_loader)
         test_metrics = metrics_func(test_output, display='both', compute_auprc=True)
         all_test_metrics[i, :] = test_metrics
-    averaged = np.average(all_test_metrics, axis = 0)
+    averaged = np.average(all_test_metrics, axis=0)
     averaged_display = '--- Average of {} runs:\nLeaf accuracy: {}\nLeaf precision: {}\nPath accuracy: {}\nPath precision: {}\nLeaf AU(PRC): {}'.format(
         repeat, averaged[0], averaged[1], averaged[2], averaged[3], averaged[4])
     print(averaged_display)
     logging.info(averaged_display)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

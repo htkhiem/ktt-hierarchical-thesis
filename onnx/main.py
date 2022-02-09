@@ -61,53 +61,80 @@ By default, all models are run.""")
 
     distilbert.init()
 
+    # Specific requirements from each model
+    build_R = 'db_bhcn_awx' in model_lst
+    build_M = 'db_achmcnn' in model_lst
+    binary = build_R or build_M or 'db_ahmcnf' in model_lst
+
     for dataset_name in dataset_lst:
+        config = {
+            'device': device,
+            'dataset_name': dataset_name
+        }
+        # Generate enough hierarchical data for all selected models
+        _, _, hierarchy = dataset.get_loaders(
+            '../datasets/{}.parquet'.format(dataset_name),
+            config,
+            full_set=True,
+            binary=binary,
+            build_R=build_R,
+            build_M=build_M,
+            verbose=verbose,
+        )
         if 'db_bhcn' in model_lst:
-            checkpoint = get_latest_checkpoint('db_bhcn', dataset_name)
+            model_name = 'db_bhcn'
+            checkpoint = get_latest_checkpoint(model, dataset_name)
             # Export DistilBERT with finetuned weights
             export_distilbert(
-                checkpoint['encoder_state_dict'],
                 dataset_name,
-                'db_bhcn'
+                model_name,
+                checkpoint['encoder_state_dict'],
             )
-            config = hyperparams['db_bhcn']
+            config = hyperparams[model_name]
             config['device'] = device
             config['dataset_name'] = dataset_name
-            _, _, _, hierarchy = dataset.get_loaders(
-                '../datasets/{}.parquet'.format(dataset_name),
-                config,
-                full_set=True,
-                verbose=verbose,
-            )
             export_classifier(
                 checkpoint['classifier_state_dict'],
-                'db_bhcn',
+                model_name,
                 dataset_name,
                 config,
-                hierarchy)
+                hierarchy
+            )
 
         if 'db_bhcn_awx' in model_lst:
-            checkpoint = get_latest_checkpoint('db_bhcn_awx', dataset_name)
+            model_name = 'db_bhcn_awx'
+            checkpoint = get_latest_checkpoint(model_name, dataset_name)
             # Export DistilBERT with finetuned weights
             export_distilbert(
-                checkpoint['encoder_state_dict'],
                 dataset_name,
-                'db_bhcn_awx'
+                model_name,
+                checkpoint['encoder_state_dict'],
             )
-            config = hyperparams['db_bhcn_awx']
+            config = hyperparams[model_name]
             config['device'] = device
             config['dataset_name'] = dataset_name
-            _, _, _, hierarchy = dataset.get_loaders(
-                '../datasets/{}.parquet'.format(dataset_name),
-                config,
-                full_set=True,
-                binary=True,
-                build_R=True,
-                verbose=verbose,
-            )
             export_classifier(
                 checkpoint['classifier_state_dict'],
-                'db_bhcn_awx',
+                model_name,
+                dataset_name,
+                config,
+                hierarchy
+            )
+        if 'db_ahmcnf' in model_lst:
+            model_name = 'db_ahmcnf'
+            checkpoint = get_latest_checkpoint(model_name, dataset_name)
+            # Export DistilBERT with finetuned weights
+            export_distilbert(
+                dataset_name,
+                model_name,
+                # No state dict - AHMCN-F doesn't like finetuning
+            )
+            config = hyperparams[model_name]
+            config['device'] = device
+            config['dataset_name'] = dataset_name
+            export_classifier(
+                checkpoint['classifier_state_dict'],
+                model_name,
                 dataset_name,
                 config,
                 hierarchy
