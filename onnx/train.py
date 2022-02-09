@@ -62,9 +62,8 @@ def repeat_train(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--retrieve', action='store_true', help='Retrieve additional datasets (five Amazon metadata sets).')
+    parser.add_argument('-d', '--dataset', help='Pass a comma-separated list of dataset names (excluding .parquet) to use. This is a required argument.')
     parser.add_argument('-n', '--dry_run', action='store_true', help='Don\'t save trained weights. Results are still logged to the logfile. Useful for when you run low on disk space.')
-    parser.add_argument('-d', '--dataset', help='Pass a comma-separated list of dataset names (excluding .parquet) to use. By default, all six datasets presented in the paper are used.')
     parser.add_argument('-D', '--distilbert', action='store_true', help='If this flag is specified, download DistilBERT pretrained weights from huggingface to your user temp directory. By default, this repository tries to look for an offline-cached version instead.')
     parser.add_argument('-m', '--model', help="""Pass a comma-separated list of model names to run. Available models:
 \tdb_bhcn\t\t(DistilBERT Branching Hierarchical Classifier)
@@ -85,12 +84,9 @@ By default, all models are run.""")
     with open('./hyperparams.json', 'r') as j:
         hyperparams = json.loads(j.read())
 
-    from datasets import retrieve_datasets
-
     # Defaults
     verbose = False
     log_path = './run.log'
-    dataset_lst = retrieve_datasets.urls.keys()
     model_lst = [
         'db_bhcn',
         'db_bhcn_awx',
@@ -103,10 +99,7 @@ By default, all models are run.""")
     save_weights = True
     full_set = True
 
-    if args.retrieve:
-        retrieve_datasets.from_ucsd()
-    if args.dataset:
-        dataset_lst = [name.strip() for name in args.dataset.split(",")]
+    dataset_lst = [name.strip() for name in args.dataset.split(",")]
     if args.model:
         model_lst = [name.strip() for name in args.model.split(",")]
     if args.log:

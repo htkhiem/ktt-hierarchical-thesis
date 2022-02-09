@@ -9,11 +9,20 @@ from functools import partial
 # from models import db_bhcn, db_ahmcnf, db_achmcnn, tfidf_hsgd
 from utils import dataset, distilbert
 from utils.export import export_classifier, export_distilbert
+
+
+def get_latest_checkpoint(model_name, dataset_name):
+    """Grabs latest checkpoint in the automatic folder structure."""
+    weight_names = sorted(glob.glob('weights/{}/{}/run_*.pt'.format(model_name, dataset_name)))
+    weight_name = weight_names[-1]  # For now default to the latest weight
+    return torch.load(weight_name)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--retrieve', action='store_true', help='Retrieve additional datasets (five Amazon metadata sets).')
     parser.add_argument('-n', '--dry_run', action='store_true', help='Don\'t save trained weights. Results are still logged to the logfile. Useful for when you run low on disk space.')
-    parser.add_argument('-d', '--dataset', help='Pass a comma-separated list of dataset names (excluding .parquet) to use. By default, all six datasets presented in the paper are used.')
+    parser.add_argument('-d', '--dataset', help='Pass a comma-separated list of dataset names (excluding .parquet) to use. This is a required argument.')
     parser.add_argument('-D', '--distilbert', action='store_true', help='If this flag is specified, download DistilBERT pretrained weights from huggingface to your user temp directory. By default, this repository tries to look for an offline-cached version instead.')
     parser.add_argument('-m', '--model', help="""Pass a comma-separated list of model names to run. Available models:
 \tdb_bhcn\t\t(DistilBERT Branching Hierarchical Classifier)
@@ -31,15 +40,6 @@ By default, all models are run.""")
     verbose = False
     with open('./hyperparams.json', 'r') as j:
         hyperparams = json.loads(j.read())
-    urls = {
-        'Arts_Crafts_and_Sewing': 'http://deepyeti.ucsd.edu/jianmo/amazon/metaFiles2/meta_Arts_Crafts_and_Sewing.json.gz',
-        'Electronics': 'http://deepyeti.ucsd.edu/jianmo/amazon/metaFiles2/meta_Electronics.json.gz',
-        'Grocery_and_Gourmet_Food': 'http://deepyeti.ucsd.edu/jianmo/amazon/metaFiles2/meta_Grocery_and_Gourmet_Food.json.gz',
-        'Industrial_and_Scientific': 'http://deepyeti.ucsd.edu/jianmo/amazon/metaFiles2/meta_Industrial_and_Scientific.json.gz',
-        'Musical_Instruments': 'http://deepyeti.ucsd.edu/jianmo/amazon/metaFiles2/meta_Musical_Instruments.json.gz',
-        'Walmart_30k': 'offline'
-    }
-    dataset_lst = urls.keys()
     model_lst = [
         'db_bhcn',
         'db_bhcn_awx',
@@ -48,8 +48,7 @@ By default, all models are run.""")
         'tfidf_hsgd'
     ]
 
-    if args.dataset:
-        dataset_lst = [name.strip() for name in args.dataset.split(",")]
+    dataset_lst = [name.strip() for name in args.dataset.split(",")]
 
     if args.model:
         model_lst = [name.strip() for name in args.model.split(",")]
@@ -64,12 +63,13 @@ By default, all models are run.""")
 
     for dataset_name in dataset_lst:
         if 'db_bhcn' in model_lst:
-            weight_names = sorted(glob.glob('weights/db_bhcn/run_*.pt'))
-            weight_name = weight_names[-1] # For now default to the latest weight
-            checkpoint = torch.load(weight_name)
-            # print(checkpoint['encoder_state_dict'])
+            checkpoint = get_latest_checkpoint('db_bhcn', dataset_name)
             # Export DistilBERT with finetuned weights
-            export_distilbert(checkpoint['encoder_state_dict'], dataset_name, 'db_bhcn')
+            export_distilbert(
+                checkpoint['encoder_state_dict'],
+                dataset_name,
+                'db_bhcn'
+            )
             config = hyperparams['db_bhcn']
             config['device'] = device
             config['dataset_name'] = dataset_name
@@ -79,4 +79,36 @@ By default, all models are run.""")
                 full_set=True,
                 verbose=verbose,
             )
-            export_classifier(checkpoint['classifier_state_dict'], 'db_bhcn', dataset_name, config, hierarchy)
+            export_classifier(
+                checkpoint['classifier_state_dict'],
+                'db_bhcn',
+                dataset_name,
+                config,
+                hierarchy)
+
+        if 'db_bhcn_awx' in model_lst:
+            checkpoint = get_latest_checkpoint('db_bhcn_awx', dataset_name)
+            # Export DistilBERT with finetuned weights
+            export_distilbert(
+                checkpoint['encoder_state_dict'],
+                dataset_name,
+                'db_bhcn_awx'
+            )
+            config = hyperparams['db_bhcn_awx']
+            config['device'] = device
+            config['dataset_name'] = dataset_name
+            _, _, _, hierarchy = dataset.get_loaders(
+                '../datasets/{}.parquet'.format(dataset_name),
+                config,
+                full_set=True,
+                binary=True,
+                build_R=True,
+                verbose=verbose,
+            )
+            export_classifier(
+                checkpoint['classifier_state_dict'],
+                'db_bhcn_awx',
+                dataset_name,
+                config,
+                hierarchy
+            )
