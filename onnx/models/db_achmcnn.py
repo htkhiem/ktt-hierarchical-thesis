@@ -168,7 +168,8 @@ def train(config, train_loader, val_loader, gen_model, path=None, best_path=None
             if path is not None and best_path is not None:
                 # create checkpoint variable and add important data
                 checkpoint = {
-                    'state_dict': model.state_dict(),
+                    'encoder_state_dict': encoder.state_dict(),
+                    'classifier_state_dict': classifier.state_dict(),
                     'optimizer': optimizer.state_dict()
                 }
                 # save checkpoint

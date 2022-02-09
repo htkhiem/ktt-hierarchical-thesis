@@ -88,6 +88,11 @@ def export_classifier(
             'level_offsets': hierarchy.level_offsets,
             'level_sizes': hierarchy.levels
         }
+        # Special metadata for some models
+        if hasattr(hierarchy, 'M'):
+            hierarchy_json['M'] = hierarchy.M
+        if hasattr(hierarchy, 'R'):
+            hierarchy_json['R'] = hierarchy.R
         json.dump(hierarchy_json, outfile)
 
 

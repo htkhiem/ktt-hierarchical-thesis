@@ -64,7 +64,6 @@ By default, all models are run.""")
     # Specific requirements from each model
     build_R = 'db_bhcn_awx' in model_lst
     build_M = 'db_achmcnn' in model_lst
-    binary = build_R or build_M or 'db_ahmcnf' in model_lst
 
     for dataset_name in dataset_lst:
         config = {
@@ -76,14 +75,13 @@ By default, all models are run.""")
             '../datasets/{}.parquet'.format(dataset_name),
             config,
             full_set=True,
-            binary=binary,
             build_R=build_R,
             build_M=build_M,
             verbose=verbose,
         )
         if 'db_bhcn' in model_lst:
             model_name = 'db_bhcn'
-            checkpoint = get_latest_checkpoint(model, dataset_name)
+            checkpoint = get_latest_checkpoint(model_name, dataset_name)
             # Export DistilBERT with finetuned weights
             export_distilbert(
                 dataset_name,
@@ -128,6 +126,26 @@ By default, all models are run.""")
                 dataset_name,
                 model_name,
                 # No state dict - AHMCN-F doesn't like finetuning
+            )
+            config = hyperparams[model_name]
+            config['device'] = device
+            config['dataset_name'] = dataset_name
+            export_classifier(
+                checkpoint['state_dict'],
+                model_name,
+                dataset_name,
+                config,
+                hierarchy
+            )
+
+        if 'db_achmcnn' in model_lst:
+            model_name = 'db_achmcnn'
+            checkpoint = get_latest_checkpoint(model_name, dataset_name)
+            # Export DistilBERT with finetuned weights
+            export_distilbert(
+                dataset_name,
+                model_name,
+                checkpoint['encoder_state_dict']
             )
             config = hyperparams[model_name]
             config['device'] = device
