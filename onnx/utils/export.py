@@ -83,10 +83,13 @@ def export_classifier(
 
     # Export hierarchical metadata for result postprocessing
     with open("output/{}/hierarchy.json".format(name), "w") as outfile:
+        # Convert parent_of back to lists
+        parent_of = [p.tolist() for p in hierarchy.parent_of]
         hierarchy_json = {
             'classes': hierarchy.classes,
             'level_offsets': hierarchy.level_offsets,
-            'level_sizes': hierarchy.levels
+            'level_sizes': hierarchy.levels,
+            'parent_of': parent_of
         }
         # Special metadata for some models
         if hasattr(hierarchy, 'M'):

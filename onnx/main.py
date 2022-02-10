@@ -68,10 +68,12 @@ By default, all models are run.""")
     for dataset_name in dataset_lst:
         config = {
             'device': device,
-            'dataset_name': dataset_name
+            'dataset_name': dataset_name,
+            'train_minibatch_size': 1,
+            'val_test_minibatch_size': 1,
         }
         # Generate enough hierarchical data for all selected models
-        _, _, hierarchy = dataset.get_loaders(
+        _, _, _, hierarchy = dataset.get_loaders(
             '../datasets/{}.parquet'.format(dataset_name),
             config,
             full_set=True,
@@ -80,79 +82,79 @@ By default, all models are run.""")
             verbose=verbose,
         )
         if 'db_bhcn' in model_lst:
-            model_name = 'db_bhcn'
-            checkpoint = get_latest_checkpoint(model_name, dataset_name)
+            MODEL_NAME = 'db_bhcn'
+            checkpoint = get_latest_checkpoint(MODEL_NAME, dataset_name)
             # Export DistilBERT with finetuned weights
             export_distilbert(
                 dataset_name,
-                model_name,
+                MODEL_NAME,
                 checkpoint['encoder_state_dict'],
             )
-            config = hyperparams[model_name]
+            config = hyperparams[MODEL_NAME]
             config['device'] = device
             config['dataset_name'] = dataset_name
             export_classifier(
                 checkpoint['classifier_state_dict'],
-                model_name,
+                MODEL_NAME,
                 dataset_name,
                 config,
                 hierarchy
             )
 
         if 'db_bhcn_awx' in model_lst:
-            model_name = 'db_bhcn_awx'
-            checkpoint = get_latest_checkpoint(model_name, dataset_name)
+            MODEL_NAME = 'db_bhcn_awx'
+            checkpoint = get_latest_checkpoint(MODEL_NAME, dataset_name)
             # Export DistilBERT with finetuned weights
             export_distilbert(
                 dataset_name,
-                model_name,
+                MODEL_NAME,
                 checkpoint['encoder_state_dict'],
             )
-            config = hyperparams[model_name]
+            config = hyperparams[MODEL_NAME]
             config['device'] = device
             config['dataset_name'] = dataset_name
             export_classifier(
                 checkpoint['classifier_state_dict'],
-                model_name,
+                MODEL_NAME,
                 dataset_name,
                 config,
                 hierarchy
             )
         if 'db_ahmcnf' in model_lst:
-            model_name = 'db_ahmcnf'
-            checkpoint = get_latest_checkpoint(model_name, dataset_name)
+            MODEL_NAME = 'db_ahmcnf'
+            checkpoint = get_latest_checkpoint(MODEL_NAME, dataset_name)
             # Export DistilBERT with finetuned weights
             export_distilbert(
                 dataset_name,
-                model_name,
+                MODEL_NAME,
                 # No state dict - AHMCN-F doesn't like finetuning
             )
-            config = hyperparams[model_name]
+            config = hyperparams[MODEL_NAME]
             config['device'] = device
             config['dataset_name'] = dataset_name
             export_classifier(
                 checkpoint['state_dict'],
-                model_name,
+                MODEL_NAME,
                 dataset_name,
                 config,
                 hierarchy
             )
 
         if 'db_achmcnn' in model_lst:
-            model_name = 'db_achmcnn'
-            checkpoint = get_latest_checkpoint(model_name, dataset_name)
+            MODEL_NAME = 'db_achmcnn'
+            checkpoint = get_latest_checkpoint(MODEL_NAME, dataset_name)
             # Export DistilBERT with finetuned weights
             export_distilbert(
                 dataset_name,
-                model_name,
+                MODEL_NAME,
                 checkpoint['encoder_state_dict']
             )
-            config = hyperparams[model_name]
+            config = hyperparams[MODEL_NAME]
             config['device'] = device
             config['dataset_name'] = dataset_name
             export_classifier(
                 checkpoint['classifier_state_dict'],
-                model_name,
+                MODEL_NAME,
                 dataset_name,
                 config,
                 hierarchy
