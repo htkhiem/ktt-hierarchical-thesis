@@ -2,12 +2,21 @@ import transformers as tr
 import os
 import json
 import torch.onnx
+import bentoml
 
 from models import tfidf_hsgd, db_bhcn, db_ahmcnf, db_achmcnn
 
-# For now just finetuned DistilBERT is enough
-def export_distilbert(dataset_name, classifier_name, db_state_dict=None):
-    """ Exports a fine-tuned instance of DistilBERT.
+
+def export_distilbert(
+        dataset_name,
+        classifier_name,
+        db_state_dict=None,
+        bento=False
+):
+    """Export a fine-tuned instance of DistilBERT.
+
+    If BentoML support is specified, then ONNX exporting is skipped and a model
+    is saved to the default Bento model store directly.
     If db_state_dict is not passed, then distilbert-base-uncased is exported.
     """
     # Load model with pretrained weights.
@@ -18,13 +27,21 @@ def export_distilbert(dataset_name, classifier_name, db_state_dict=None):
     if db_state_dict is not None:
         model.load_state_dict(db_state_dict)
     model.eval()
-    # Export into transformers model .bin format
     name = '{}_{}'.format(classifier_name, dataset_name)
-    tmp_path = 'tmp/distilbert_' + name
-    model.save_pretrained(tmp_path)
-    tokenizer.save_pretrained(tmp_path)
-    # Run PyTorch ONNX exporter on said model file
-    os.system('python3 -m transformers.onnx --model {} output/{}/encoder --opset 11'.format(tmp_path, name))
+    if bento:
+        bentoml.transformers.save(
+            'encoder_' + name,
+            model=model,
+            tokenizer=tokenizer
+        )
+    else:
+        # Export into transformers model .bin format
+        tmp_path = 'tmp/distilbert_' + name
+        model.save_pretrained(tmp_path)
+        tokenizer.save_pretrained(tmp_path)
+        # Run PyTorch ONNX exporter on said model file
+        onnx_path = 'output/{}/encoder'.format(name)
+        os.system('python3 -m transformers.onnx --model {} {} --opset 11'.format(tmp_path, onnx_path))
 
 
 # dict mapping classifier names with their init functions
@@ -64,6 +81,7 @@ def export_classifier(
         os.makedirs(path)
 
     path += 'classifier.onnx'
+
     # Clear previous versions
     if os.path.exists(path):
         os.remove(path)
@@ -97,6 +115,10 @@ def export_classifier(
         if hasattr(hierarchy, 'R'):
             hierarchy_json['R'] = hierarchy.R
         json.dump(hierarchy_json, outfile)
+
+    # Optionally save to BentoML model store. Pack hierarchical metadata along with model for convenience.
+    if config['bento']:
+        bentoml.onnx.save('classifier_' + name, path, metadata=hierarchy_json)
 
 
 if __name__ == 'main':

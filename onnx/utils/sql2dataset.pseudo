@@ -1,0 +1,80 @@
+from collections import namedtuple
+
+Node = namedtuple('Node', ['name', 'db_id', 'children'], defaults={'children': []})
+
+# Build the tree. Root node has no name and  ID = -1 to completely avoid
+# collision risks
+root_node = Node('', -1, [])
+# Example table hierarchy
+# A:
+#   B:
+#       C
+#       D
+#   E:
+#       F:
+#           G
+# Treat this table as a fake SQL view. Note how the order is jumbled.
+category_sql_table = [
+    {'name': 'D', 'id': 1, 'parent_id': 3},
+    {'name': 'E', 'id': 2, 'parent_id': 4},
+    {'name': 'B', 'id': 3, 'parent_id': 4},
+    {'name': 'A', 'id': 4, 'parent_id': None},
+    {'name': 'C', 'id': 5, 'parent_id': 3},
+    {'name': 'F', 'id': 6, 'parent_id': 2},
+    {'name': 'G', 'id': 7, 'parent_id': 6},
+]
+# We might be stuck with a for-loop, as the body uses code with side effects.
+# We must use some sort of storage as we cannot be guaranteed to be able to
+# iterate through the table in a hierarchical manner.
+# As such, this node dict allows for easy access to all nodes at once, no
+# matter the iteration order.
+node_dict = {
+    -1: root_node
+}
+# Auxillary dict to keep track of child nodes, as we would often reach a child
+# node before the parent node is discovered.
+# The root node need not have an entry here as we already have it created.
+children_dict = {}
+
+for row in category_sql_table:
+    node = Node(row['name'], row['id'], [])
+    node_dict[row['id']] = node
+    if row['parent_id'] is None:
+        root_node.children.append(node)
+    else:
+        try:
+            children_dict[row['parent_id']].append(row['id'])
+        except KeyError:
+            children_dict[row['parent_id']] = [row['id']]
+
+
+# Now with all nodes visited, iterate through children_dict
+# to connect the dots.
+for parent_id, child_id in children_dict.items():
+    node_dict[parent_id].children.append(node_dict[child_id])
+
+
+# We now have a full tree, accessible through root_node.
+# Example per-level traversal. This is an algorithm I thought up on the spot
+# to serve our needs. If you can think of anything better, or suspect that
+# I had a bad case of brainfart in that some textbook algorithm could've done
+# the job please let me know. I desperately need sleep.
+from queue import Queue
+
+even_queue = Queue()
+odd_queue = Queue()
+
+even_queue.put(root_node)
+
+depth = 0  # which queue to pop depends on depth
+
+while not even_queue.empty() or not odd_queue.empty():
+    pop_queue = even_queue if depth % 2 == 0 else odd_queue
+    put_queue = odd_queue if depth % 2 == 0 else even_queue
+
+    while not pop_queue.empty():
+        node = pop_queue.get()
+        # --- The main task (indexing, pushing to parent_of, whatever) --- #
+        for child in node.children:
+            put_queue.put(child)
+    depth += 1

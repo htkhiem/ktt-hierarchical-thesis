@@ -31,6 +31,7 @@ if __name__ == "__main__":
 \tdb_achmcnn\t\t(Adapted C-HMCNN model running on DistilBERT encodings)
 \ttfidf_hsgd\t\t(Internal-node SGD classifier hierarchy using tf-idf encodings)
 By default, all models are run.""")
+    parser.add_argument('-b', '--bento', action='store_true', help='Add exported models to the local BentoML model store.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information to the console (for debugging purposes).')
     parser.add_argument('-c', '--cpu', action='store_true', help='Only run on CPU. Use this if you have to run without CUDA support (warning: depressingly slow).')
 
@@ -38,6 +39,7 @@ By default, all models are run.""")
 
     # Defaults
     verbose = False
+    bento = False
     with open('./hyperparams.json', 'r') as j:
         hyperparams = json.loads(j.read())
     model_lst = [
@@ -55,6 +57,9 @@ By default, all models are run.""")
 
     if args.verbose:
         verbose = args.verbose
+
+    if args.bento:
+        bento = args.bento
 
     device = 'cuda' if torch.cuda.is_available() and not args.cpu else 'cpu'
     print('Using', device)
@@ -89,10 +94,12 @@ By default, all models are run.""")
                 dataset_name,
                 MODEL_NAME,
                 checkpoint['encoder_state_dict'],
+                bento
             )
             config = hyperparams[MODEL_NAME]
             config['device'] = device
             config['dataset_name'] = dataset_name
+            config['bento'] = bento
             export_classifier(
                 checkpoint['classifier_state_dict'],
                 MODEL_NAME,
@@ -109,10 +116,12 @@ By default, all models are run.""")
                 dataset_name,
                 MODEL_NAME,
                 checkpoint['encoder_state_dict'],
+                bento
             )
             config = hyperparams[MODEL_NAME]
             config['device'] = device
             config['dataset_name'] = dataset_name
+            config['bento'] = bento
             export_classifier(
                 checkpoint['classifier_state_dict'],
                 MODEL_NAME,
@@ -127,11 +136,13 @@ By default, all models are run.""")
             export_distilbert(
                 dataset_name,
                 MODEL_NAME,
+                bento=bento
                 # No state dict - AHMCN-F doesn't like finetuning
             )
             config = hyperparams[MODEL_NAME]
             config['device'] = device
             config['dataset_name'] = dataset_name
+            config['bento'] = bento
             export_classifier(
                 checkpoint['state_dict'],
                 MODEL_NAME,
@@ -147,11 +158,13 @@ By default, all models are run.""")
             export_distilbert(
                 dataset_name,
                 MODEL_NAME,
-                checkpoint['encoder_state_dict']
+                checkpoint['encoder_state_dict'],
+                bento
             )
             config = hyperparams[MODEL_NAME]
             config['device'] = device
             config['dataset_name'] = dataset_name
+            config['bento'] = bento
             export_classifier(
                 checkpoint['classifier_state_dict'],
                 MODEL_NAME,
