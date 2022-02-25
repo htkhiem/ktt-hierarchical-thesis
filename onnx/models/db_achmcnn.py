@@ -7,11 +7,15 @@ from utils.metric import get_metrics
 
 
 class MCM(torch.nn.Module):
+    """Implementation of the MCM post-processing layer."""
+
     def __init__(self, M):
+        """Construct module."""
         super(MCM, self).__init__()
         self.M = M
 
     def forward(self, x):
+        """Post-process normal FC outputs to be hierarchically-compliant."""
         n = self.M.shape[1]
         H = x.unsqueeze(1)  # Add a new dimension
         # Duplicate x along the new dimension to create a list of 2D matrices
@@ -24,7 +28,10 @@ class MCM(torch.nn.Module):
 
 
 class H_MCM_Model(torch.nn.Module):
+    """Implementation of a standard FC network coupled with the MCM layer."""
+
     def __init__(self, input_dim, hierarchy, config):
+        """Construct module."""
         super(H_MCM_Model, self).__init__()
 
         self.depth = len(hierarchy.levels)
@@ -65,6 +72,7 @@ class H_MCM_Model(torch.nn.Module):
             self.f = torch.nn.ReLU()
 
     def forward(self, x):
+        """Forward-propagate input to generate classification."""
         for i in range(self.layer_count):
             if i == self.layer_count - 1:
                 x = self.sigmoid(self.fc[i](x))
@@ -76,9 +84,12 @@ class H_MCM_Model(torch.nn.Module):
         return self.mcm(x)
 
 
-class AC_HMCNN(torch.nn.Module):
-    def __init__(self, input_dim, hierarchy, config):
-        super(AC_HMCNN, self).__init__()
+class DB_AC_HMCNN(torch.nn.Module):
+    """Wrapper class combining DistilBERT and the adapted C-HMCNN model."""
+
+    def __init__(self, hierarchy, config):
+        """Construct module."""
+        super(DB_AC_HMCNN, self).__init__()
         self.encoder = get_pretrained().to(config['device'])
         self.classifier = H_MCM_Model(
             768,  # DistilBERT outputs 768 values.
@@ -88,9 +99,11 @@ class AC_HMCNN(torch.nn.Module):
         self.config = config
 
     def forward(self, ids, mask):
+        """Forward-propagate input to generate classification."""
         return self.classifier(self.encoder(ids, mask)[0][:, 0, :])
 
     def save(self, path, optim):
+        """Save model state to disk using PyTorch's pickle facilities."""
         checkpoint = {
             'encoder_state_dict': self.encoder.state_dict(),
             'classifier_state_dict': self.classifier.state_dict(),
@@ -99,12 +112,13 @@ class AC_HMCNN(torch.nn.Module):
         torch.save(checkpoint, path)
 
     def load(self, path):
+        """Load model state from disk."""
         checkpoint = torch.load(path)
         self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
         return checkpoint['optimizer_state_dict']
 
-    def train(
+    def fit(
             self,
             train_loader,
             val_loader,
@@ -231,11 +245,12 @@ class AC_HMCNN(torch.nn.Module):
                 )
 
                 if path is not None and best_path is not None:
-                    self.save(path, optimizer.state_dict())
+                    optim = optimizer.state_dict()
+                    self.save(path, optim)
                     if val_loss <= val_loss_min:
                         print('Validation loss decreased ({:.6f} --> {:.6f}). Saving best model...'.format(val_loss_min,val_loss))
                         val_loss_min = val_loss
-                        self.save(best_path)
+                        self.save(best_path, optim)
             print('Epoch {}: Done\n'.format(epoch))
         return val_metrics
 

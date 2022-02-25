@@ -133,7 +133,6 @@ class DB_AHMCN_F(torch.nn.Module):
 
     def __init__(
         self,
-        input_dim,
         hierarchy,
         config
     ):
@@ -176,7 +175,7 @@ class DB_AHMCN_F(torch.nn.Module):
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
         return checkpoint['optimizer_state_dict']
 
-    def train(
+    def fit(
             self,
             train_loader,
             val_loader,

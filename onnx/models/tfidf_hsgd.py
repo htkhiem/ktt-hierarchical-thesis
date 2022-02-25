@@ -169,7 +169,7 @@ class Tfidf_HSGD:
         ])
         self.config = config
 
-    def train(
+    def fit(
             self,
             train_loader,
             val_loader=None,  # Unused but included for signature compatibility

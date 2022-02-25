@@ -1,22 +1,24 @@
+"""
+Training controller.
+
+Use this Python script to initiate batched training of any combination of model
+and dataset.
+"""
+import os
 import argparse
 import logging
 import json
 import numpy as np
-import os
 import torch
-from functools import partial
 
 from utils.metric import get_metrics
 from models import db_bhcn, db_ahmcnf, db_achmcnn, tfidf_hsgd
 from utils import dataset, distilbert
 
-# This function expects train_func to return (encoder, classifier), val_metrics
-# and test_func to return a numpy array with five values: leaf accuracy, leaf precision, global accuracy, global precision, leaf auprc
+
 def repeat_train(
         config,
-        gen_func,
-        train_func,
-        test_func,
+        model,
         train_loader,
         val_loader,
         test_loader,
@@ -25,6 +27,14 @@ def repeat_train(
         save_weights=True,
         verbose=False
 ):
+    """
+    Train a model over a dataset.
+
+    This function expects train_func to return (encoder, classifier),
+    val_metrics and test_func to return a numpy array with five values:
+    leaf accuracy, leaf precision, global accuracy, global precision,
+    leaf auprc.
+    """
     model_name = config['model_name']
     dataset_name = config['dataset_name']
     all_test_metrics = np.zeros((repeat, 5), dtype=float)
@@ -36,23 +46,23 @@ def repeat_train(
         print('RUN #{} ----'.format(i))
         logging.info('RUN #{} ----'.format(i))
         if save_weights:
-            model, _ = train_func(
-                config,
+            model.fit(
                 train_loader,
                 val_loader,
-                gen_func,
                 path='{}/run_{}.pt'.format(checkpoint_dir, repeat),
-                best_path='{}/run_{}_best.pt'.format(checkpoint_dir, repeat),
+                best_path='{}/run_{}_best.pt'.format(checkpoint_dir, repeat)
             )
         else:
-            model, _ = train_func(
-                config,
+            model.fit(
                 train_loader,
                 val_loader,
-                gen_func,
             )
-        test_output = test_func(model, config, test_loader)
-        test_metrics = metrics_func(test_output, display='both', compute_auprc=True)
+        test_output = model.test(test_loader)
+        test_metrics = metrics_func(
+            test_output,
+            display='both',
+            compute_auprc=True
+        )
         all_test_metrics[i, :] = test_metrics
     averaged = np.average(all_test_metrics, axis=0)
     averaged_display = '--- Average of {} runs:\nLeaf accuracy: {}\nLeaf precision: {}\nPath accuracy: {}\nPath precision: {}\nLeaf AU(PRC): {}'.format(
@@ -63,7 +73,7 @@ def repeat_train(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--dataset', help='Pass a comma-separated list of dataset names (excluding .parquet) to use. This is a required argument.')
+    parser.add_argument('-d', '--dataset', help='Pass a comma-separated list of PREPROCESSED dataset names (excluding .parquet) to use. This is a required argument.')
     parser.add_argument('-n', '--dry_run', action='store_true', help='Don\'t save trained weights. Results are still logged to the logfile. Useful for when you run low on disk space.')
     parser.add_argument('-D', '--distilbert', action='store_true', help='If this flag is specified, download DistilBERT pretrained weights from huggingface to your user temp directory. By default, this repository tries to look for an offline-cached version instead.')
     parser.add_argument('-m', '--model', help="""Pass a comma-separated list of model names to run. Available models:
@@ -144,11 +154,10 @@ By default, all models are run.""")
                 full_set=full_set,
                 verbose=verbose,
             )
+            model = db_bhcn.DB_BHCN(hierarchy, config)
             repeat_train(
                 config,
-                partial(db_bhcn.gen_bhcn, config, hierarchy),
-                db_bhcn.train_bhcn,
-                db_bhcn.test_bhcn,
+                model,
                 train_loader,
                 val_loader,
                 test_loader,
@@ -175,11 +184,10 @@ By default, all models are run.""")
                 build_R=True,
                 verbose=verbose,
             )
+            model = db_bhcn.DB_BHCN(hierarchy, config, awx=True)
             repeat_train(
                 config,
-                partial(db_bhcn.gen_bhcn_awx, config, hierarchy),
-                db_bhcn.train_bhcn_awx,
-                db_bhcn.test_bhcn_awx,
+                model,
                 train_loader,
                 val_loader,
                 test_loader,
@@ -205,11 +213,10 @@ By default, all models are run.""")
                 binary=True,
                 verbose=verbose,
             )
+            model = db_ahmcnf.DB_AHMCN_F(hierarchy, config)
             repeat_train(
                 config,
-                partial(db_ahmcnf.gen, config, hierarchy),
-                db_ahmcnf.train,
-                db_ahmcnf.test,
+                model,
                 train_loader,
                 val_loader,
                 test_loader,
@@ -236,11 +243,10 @@ By default, all models are run.""")
                 build_M=True,
                 verbose=verbose,
             )
+            model = db_achmcnn.DB_AC_HMCNN(hierarchy, config)
             repeat_train(
                 config,
-                partial(db_achmcnn.gen, config, hierarchy),
-                db_achmcnn.train,
-                db_achmcnn.test,
+                model,
                 train_loader,
                 val_loader,
                 test_loader,
@@ -264,13 +270,12 @@ By default, all models are run.""")
                 full_set=full_set,
                 verbose=verbose,
             )
+            model = tfidf_hsgd.Tfidf_HSGD(config)
             repeat_train(
                 config,
-                partial(tfidf_hsgd.gen, config, hierarchy),
-                tfidf_hsgd.train,
-                tfidf_hsgd.test,
+                model,
                 train_loader,
-                None, # No validation set for pure ML
+                None,  # No validation set for pure ML
                 test_loader,
                 repeat,
                 metrics_func=tfidf_hsgd.get_metrics,

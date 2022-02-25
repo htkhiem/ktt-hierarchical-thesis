@@ -217,13 +217,12 @@ class DB_BHCN(torch.nn.Module):
 
     def __init__(
         self,
-        input_dim,
         hierarchy,
         config,
         awx=False,
     ):
         """Construct module."""
-        super(BHCN_AWX, self).__init__()
+        super(DB_BHCN, self).__init__()
         self.encoder = get_pretrained().to(config['device'])
         if awx:
             self.classifier = BHCN_AWX(
@@ -298,7 +297,7 @@ class DB_BHCN(torch.nn.Module):
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
         return checkpoint['optimizer_state_dict']
 
-    def train_bhcn(
+    def fit_bhcn(
         self,
         optimizer,
         loss_L_weights,
@@ -492,7 +491,7 @@ class DB_BHCN(torch.nn.Module):
             'outputs': all_outputs,
         }
 
-    def train_bhcn_awx(
+    def fit_bhcn_awx(
         self,
         optimizer,
         loss_L_weights,
@@ -677,7 +676,7 @@ class DB_BHCN(torch.nn.Module):
             'outputs': all_outputs,
         }
 
-    def train(self, train_loader, val_loader, path=None, best_path=None):
+    def fit(self, train_loader, val_loader, path=None, best_path=None):
         """Initialise training resources and call the corresponding script.
 
         Either train_bhcn or train_bhcn_awx will be called, depending on
