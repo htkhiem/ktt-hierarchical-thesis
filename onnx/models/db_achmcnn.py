@@ -1,13 +1,10 @@
 import torch
-import os
 import numpy as np
 from tqdm import tqdm
 
-from utils.checkpoint import save_checkpoint
 from utils.distilbert import get_pretrained
 from utils.metric import get_metrics
 
-from tqdm import tqdm
 
 class MCM(torch.nn.Module):
     def __init__(self, M):
@@ -16,14 +13,15 @@ class MCM(torch.nn.Module):
 
     def forward(self, x):
         n = self.M.shape[1]
-        H = x.unsqueeze(1) # Add a new dimension
+        H = x.unsqueeze(1)  # Add a new dimension
         # Duplicate x along the new dimension to create a list of 2D matrices
         # of size n x n (same as R). Note that x can be a list of vectors instead of one.
         H = H.expand(len(x), n, n)
         # We'll have to duplicate R to multiply with the entire batch here
         M_batch = self.M.expand(len(x), n, n)
-        final_out, _ = torch.max(M_batch*H, dim = 2)
+        final_out, _ = torch.max(M_batch*H, dim=2)
         return final_out
+
 
 class H_MCM_Model(torch.nn.Module):
     def __init__(self, input_dim, hierarchy, config):
@@ -35,17 +33,28 @@ class H_MCM_Model(torch.nn.Module):
         self.layer_count = config['h_layer_count']
         self.mcm = MCM(hierarchy.M)
 
+        output_dim = len(hierarchy.classes)
+
         fc = []
         if self.layer_count == 1:
             fc.append(torch.nn.Linear(input_dim, output_dim))
         else:
             for i in range(self.layer_count):
                 if i == 0:
-                    fc.append(torch.nn.Linear(input_dim, config['h_hidden_dim']))
+                    fc.append(torch.nn.Linear(
+                        input_dim,
+                        config['h_hidden_dim']
+                    ))
                 elif i == self.layer_count - 1:
-                    fc.append(torch.nn.Linear(config['h_hidden_dim'], len(hierarchy.classes)))
+                    fc.append(torch.nn.Linear(
+                        config['h_hidden_dim'],
+                        output_dim
+                    ))
                 else:
-                    fc.append(torch.nn.Linear(config['h_hidden_dim'], config['h_hidden_dim']))
+                    fc.append(torch.nn.Linear(
+                        config['h_hidden_dim'],
+                        config['h_hidden_dim']
+                    ))
 
         self.fc = torch.nn.ModuleList(fc)
         self.drop = torch.nn.Dropout(config['h_dropout'])
@@ -66,152 +75,213 @@ class H_MCM_Model(torch.nn.Module):
             return x
         return self.mcm(x)
 
-def gen(config, hierarchy):
-    encoder = get_pretrained()
-    encoder.to(config['device'])
-    depth = len(hierarchy.levels)
 
-    classifier = H_MCM_Model(
-        768, # DistilBERT outputs 768 values.
-        hierarchy,
-        config
-    )
-    classifier.to(config['device'])
-    return encoder, classifier
+class AC_HMCNN(torch.nn.Module):
+    def __init__(self, input_dim, hierarchy, config):
+        super(AC_HMCNN, self).__init__()
+        self.encoder = get_pretrained().to(config['device'])
+        self.classifier = H_MCM_Model(
+            768,  # DistilBERT outputs 768 values.
+            hierarchy,
+            config
+        ).to(config['device'])
+        self.config = config
 
-def train(config, train_loader, val_loader, gen_model, path=None, best_path=None):
-    encoder, classifier = gen_model()
+    def forward(self, ids, mask):
+        return self.classifier(self.encoder(ids, mask)[0][:, 0, :])
 
-    criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.Adam(
-        [
-            {'params': encoder.parameters(), 'lr': config['encoder_lr'],},
-            {'params': classifier.parameters(), 'lr': config['classifier_lr']}
-        ],
-    )
-    val_loss_min = np.Inf
-    # Store validation metrics after each epoch
-    val_metrics = np.empty((4, 0), dtype=float)
-    for epoch in range(1, config['epoch'] + 1):
-        train_loss = 0
-        val_loss = 0
-        encoder.train()
-        classifier.train()
-        print('Epoch {}: Training'.format(epoch))
-        for batch_idx, data in enumerate(tqdm(train_loader)):
-            ids = data['ids'].to(config['device'], dtype = torch.long)
-            mask = data['mask'].to(config['device'], dtype = torch.long)
-            targets_b = data['labels_b'].to(config['device'], dtype = torch.double)
+    def save(self, path, optim):
+        checkpoint = {
+            'encoder_state_dict': self.encoder.state_dict(),
+            'classifier_state_dict': self.classifier.state_dict(),
+            'optimizer_state_dict': optim
+        }
+        torch.save(checkpoint, path)
 
-            features = encoder(ids, mask)[0][:,0,:]
-            outputs = classifier(features)
+    def load(self, path):
+        checkpoint = torch.load(path)
+        self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
+        self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
+        return checkpoint['optimizer_state_dict']
 
-            # Notation: H = output stacked, Hbar = hbar stacked
-            constr_outputs = classifier.mcm(outputs) # MCM = max(M * H, dim=1)
-            train_outputs = targets_b * outputs.double() # hbar = y * h
-            train_outputs = classifier.mcm(train_outputs) # max(M * Hbar, dim = 1)
-
-            # (1-y) + max(M * H, dim = 1) + y * max(M * Hbar, dim = 1) versus y
-            train_outputs = (1-targets_b)*constr_outputs.double() + targets_b*train_outputs
-            loss = criterion(train_outputs, targets_b)
-
-            predicted = constr_outputs.data > 0.5
-
-            optimizer.zero_grad()
-
-            loss.backward()
-            optimizer.step()
-
-            train_loss = train_loss + ((1 / (batch_idx + 1)) * (loss.item() - train_loss))
-
-        print('Epoch {}: Validating'.format(epoch))
-        encoder.eval()
-        classifier.eval()
-
-        val_targets = np.empty((0, classifier.depth), dtype=int)
-        val_outputs = [np.empty((0, classifier.level_sizes[level]), dtype=float) for level in range(classifier.depth)]
-        # We're only testing here, so don't run the backward direction (no_grad).
-        with torch.no_grad():
-            for batch_idx, data in enumerate(tqdm(val_loader)):
-                ids = data['ids'].to(config['device'], dtype = torch.long)
-                mask = data['mask'].to(config['device'], dtype = torch.long)
-                targets = data['labels']
-                targets_b = data['labels_b'].to(config['device'], dtype = torch.double)
-
-                features = encoder(ids, mask)[0][:,0,:]
-                constrained_outputs = classifier(features).double()
-
-                loss = criterion(constrained_outputs, targets_b)
-
-                # Split local outputs
-                local_outputs = [ constrained_outputs[:, classifier.level_offsets[i] : classifier.level_offsets[i+1]] for i in range(classifier.depth)]
-
-                val_loss = val_loss + ((1 / (batch_idx + 1)) * (loss.item() - val_loss))
-
-                val_targets = np.concatenate([val_targets, targets.cpu().detach().numpy()])
-                for i in range(len(val_outputs)):
-                    val_outputs[i] = np.concatenate([val_outputs[i], local_outputs[i].cpu().detach().numpy()])
-
-            train_loss = train_loss/len(train_loader)
-            val_loss = val_loss/len(val_loader)
-
-            val_metrics = np.concatenate(
-                [
-                    val_metrics,
-                    np.expand_dims(
-                        get_metrics({'outputs': val_outputs, 'targets': val_targets}, display='print'), axis=1
-                    )
-                ],
-                axis=1
-            )
-
-            if path is not None and best_path is not None:
-                # create checkpoint variable and add important data
-                checkpoint = {
-                    'encoder_state_dict': encoder.state_dict(),
-                    'classifier_state_dict': classifier.state_dict(),
-                    'optimizer': optimizer.state_dict()
+    def train(
+            self,
+            train_loader,
+            val_loader,
+            path=None,
+            best_path=None,
+            resume_from=None
+    ):
+        """Training script for DistilBERT + Adapted C-HMCNN."""
+        criterion = torch.nn.BCELoss()
+        optimizer = torch.optim.Adam(
+            [
+                {
+                    'params': self.encoder.parameters(),
+                    'lr': self.config['encoder_lr'],
+                },
+                {
+                    'params': self.classifier.parameters(),
+                    'lr': self.config['classifier_lr']
                 }
-                # save checkpoint
-                best_yet = False
-                if val_loss <= val_loss_min:
-                    best_yet = True
-                    print('Validation loss decreased ({:.6f} --> {:.6f}). Saving best model...'.format(val_loss_min,val_loss))
-                    # save checkpoint as best model
-                    val_loss_min = val_loss
-                save_checkpoint(checkpoint, best_yet, path, best_path)
-        print('Epoch {}: Done\n'.format(epoch))
-    return (encoder, classifier), val_metrics
+            ],
+        )
+        val_loss_min = np.Inf
+        # Store validation metrics after each epoch
+        val_metrics = np.empty((4, 0), dtype=float)
+        for epoch in range(1, self.config['epoch'] + 1):
+            train_loss = 0
+            val_loss = 0
+            self.train()
+            print('Epoch {}: Training'.format(epoch))
+            for batch_idx, data in enumerate(tqdm(train_loader)):
+                ids = data['ids'].to(self.config['device'], dtype=torch.long)
+                mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                targets_b = data['labels_b'].to(
+                    self.config['device'], dtype=torch.double
+                )
 
-# Alternative: just load from disk
-def test(model, config, loader):
-    encoder, classifier = model
-    encoder.eval()
-    classifier.eval()
+                outputs = self.forward(ids, mask)
 
-    all_targets = np.empty((0, classifier.depth), dtype=bool)
-    all_outputs = [np.empty((0, classifier.level_sizes[level]), dtype=float) for level in range(classifier.depth)]
+                # Notation: H = output stacked, Hbar = hbar stacked
+                # MCM = max(M * H, dim=1)
+                constr_outputs = self.classifier.mcm(outputs)
+                # hbar = y * h
+                train_outputs = targets_b * outputs.double()
+                # max(M * Hbar, dim = 1)
+                train_outputs = self.classifier.mcm(train_outputs)
 
-    # We're only testing here, so don't run the backward direction (no_grad).
-    with torch.no_grad():
-        for batch_idx, data in enumerate(tqdm(loader)):
-            ids = data['ids'].to(config['device'], dtype = torch.long)
-            mask = data['mask'].to(config['device'], dtype = torch.long)
-            targets = data['labels']
+                # (1-y) + max(M * H, dim = 1) + y * max(M * Hbar, dim = 1)
+                train_outputs = (1-targets_b)*constr_outputs.double() + (
+                    targets_b*train_outputs
+                )
+                loss = criterion(train_outputs, targets_b)
 
-            features = encoder(ids, mask)[0][:,0,:]
-            constrained_outputs = classifier(features).double()
-            # Split local outputs
-            local_outputs = [ constrained_outputs[:, classifier.level_offsets[i] : classifier.level_offsets[i+1]] for i in range(classifier.depth)]
+                optimizer.zero_grad()
 
-            all_targets = np.concatenate([all_targets, targets])
-            for i in range(len(all_outputs)):
-                all_outputs[i] = np.concatenate([all_outputs[i], local_outputs[i].cpu().detach().numpy()])
+                loss.backward()
+                optimizer.step()
 
-    return {
-        'targets': all_targets,
-        'outputs': all_outputs,
-    }
+                train_loss = train_loss + ((1 / (batch_idx + 1)) * (
+                    loss.item() - train_loss
+                ))
+
+            print('Epoch {}: Validating'.format(epoch))
+            self.eval()
+
+            val_targets = np.empty((0, self.classifier.depth), dtype=int)
+            val_outputs = [
+                np.empty(
+                    (0, self.classifier.level_sizes[level]),
+                    dtype=float)
+                for level in range(self.classifier.depth)
+            ]
+
+            # Validation
+            with torch.no_grad():
+                for batch_idx, data in enumerate(tqdm(val_loader)):
+                    ids = data['ids'].to(self.config['device'],
+                                         dtype=torch.long)
+                    mask = data['mask'].to(self.config['device'],
+                                           dtype=torch.long)
+                    targets = data['labels']
+                    targets_b = data['labels_b'].to(self.config['device'],
+                                                    dtype=torch.double)
+
+                    constrained_outputs = self.forward(ids, mask).double()
+
+                    loss = criterion(constrained_outputs, targets_b)
+
+                    # Split local outputs
+                    local_outputs = [
+                        constrained_outputs[
+                            :,
+                            self.classifier.level_offsets[i]:
+                            self.classifier.level_offsets[i+1]
+                        ] for i in range(self.classifier.depth)
+                    ]
+
+                    val_loss = val_loss + ((1 / (batch_idx + 1)) * (
+                        loss.item() - val_loss
+                    ))
+
+                    val_targets = np.concatenate([
+                        val_targets,
+                        targets.cpu().detach().numpy()])
+                    for i in range(len(val_outputs)):
+                        val_outputs[i] = np.concatenate([
+                            val_outputs[i],
+                            local_outputs[i].cpu().detach().numpy()
+                        ])
+
+                train_loss = train_loss/len(train_loader)
+                val_loss = val_loss/len(val_loader)
+
+                val_metrics = np.concatenate(
+                    [
+                        val_metrics,
+                        np.expand_dims(
+                            get_metrics({
+                                'outputs': val_outputs,
+                                'targets': val_targets
+                            }, display='print'), axis=1
+                        )
+                    ],
+                    axis=1
+                )
+
+                if path is not None and best_path is not None:
+                    self.save(path, optimizer.state_dict())
+                    if val_loss <= val_loss_min:
+                        print('Validation loss decreased ({:.6f} --> {:.6f}). Saving best model...'.format(val_loss_min,val_loss))
+                        val_loss_min = val_loss
+                        self.save(best_path)
+            print('Epoch {}: Done\n'.format(epoch))
+        return val_metrics
+
+    def test(self, loader):
+        """Test this model on a dataset."""
+        self.eval()
+
+        all_targets = np.empty((0, self.classifier.depth), dtype=bool)
+        all_outputs = [
+            np.empty(
+                (0, self.classifier.level_sizes[level]),
+                dtype=float
+            )
+            for level in range(self.classifier.depth)
+        ]
+
+        # Validation
+        with torch.no_grad():
+            for batch_idx, data in enumerate(tqdm(loader)):
+                ids = data['ids'].to(self.config['device'], dtype=torch.long)
+                mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                targets = data['labels']
+
+                constrained_outputs = self.forward(ids, mask).double()
+                # Split local outputs
+                local_outputs = [
+                    constrained_outputs[
+                        :,
+                        self.classifier.level_offsets[i]:
+                        self.classifier.level_offsets[i+1]
+                    ]
+                    for i in range(self.classifier.depth)
+                ]
+
+                all_targets = np.concatenate([all_targets, targets])
+                for i in range(len(all_outputs)):
+                    all_outputs[i] = np.concatenate([
+                        all_outputs[i],
+                        local_outputs[i].cpu().detach().numpy()
+                    ])
+
+        return {
+            'targets': all_targets,
+            'outputs': all_outputs,
+        }
+
 
 if __name__ == "__main__":
     pass
