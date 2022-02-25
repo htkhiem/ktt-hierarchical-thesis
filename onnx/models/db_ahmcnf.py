@@ -161,13 +161,13 @@ class DB_AHMCN_F(torch.nn.Module):
         ]
         return output, local_outputs
 
-    def save(self, optim):
+    def save(self, path, optim):
         """Save model state to disk using PyTorch's pickle facilities."""
         checkpoint = {
             'classifier_state_dict': self.classifier.state_dict(),
             'optimizer_state_dict': optim
         }
-        torch.save(checkpoint)
+        torch.save(checkpoint, path)
 
     def load(self, path):
         """Load model state from disk."""

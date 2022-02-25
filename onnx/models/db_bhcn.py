@@ -281,14 +281,14 @@ class DB_BHCN(torch.nn.Module):
             return self.forward_bhcn_awx(ids, mask)
         return self.forward_bhcn(ids, mask)
 
-    def save(self, optim):
+    def save(self, path, optim):
         """Save model state to disk using PyTorch's pickle facilities."""
         checkpoint = {
             'encoder_state_dict': self.encoder.state_dict(),
             'classifier_state_dict': self.classifier.state_dict(),
             'optimizer': optim
         }
-        torch.save(checkpoint)
+        torch.save(checkpoint, path)
 
     def load(self, path):
         """Load model state from disk."""
@@ -705,7 +705,7 @@ class DB_BHCN(torch.nn.Module):
         loss_L_weights -= deviations
 
         if self.awx:
-            return self.train_bhcn_awx(
+            return self.fit_bhcn_awx(
                 optimizer,
                 loss_L_weights,
                 train_loader,
@@ -714,7 +714,7 @@ class DB_BHCN(torch.nn.Module):
                 best_path
             )
 
-        return self.train_bhcn(
+        return self.fit_bhcn(
             optimizer,
             loss_L_weights,
             train_loader,
@@ -726,7 +726,7 @@ class DB_BHCN(torch.nn.Module):
     def test(self, loader):
         """Call the corresponding test script.
 
-        Either train_bhcn or train_bhcn_awx will be called, depending on
+        Either fit_bhcn or fit_bhcn_awx will be called, depending on
         whether this model instance was configured with AWX or not.
         """
         if self.awx:
