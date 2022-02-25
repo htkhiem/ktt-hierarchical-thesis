@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
+from models import model
 from utils.distilbert import get_pretrained
 from utils.metric import get_metrics
 
@@ -84,7 +85,7 @@ class H_MCM_Model(torch.nn.Module):
         return self.mcm(x)
 
 
-class DB_AC_HMCNN(torch.nn.Module):
+class DB_AC_HMCNN(model.Model, torch.nn.Module):
     """Wrapper class combining DistilBERT and the adapted C-HMCNN model."""
 
     def __init__(self, hierarchy, config):
@@ -296,6 +297,10 @@ class DB_AC_HMCNN(torch.nn.Module):
             'targets': all_targets,
             'outputs': all_outputs,
         }
+
+    def export(self, dataset_name, bento=False):
+        """Export model to ONNX/Bento."""
+        raise RuntimeError
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
+from models import model
 from utils.distilbert import get_pretrained
 from utils.metric import get_metrics
 
@@ -128,7 +129,7 @@ class AHMCN_F(torch.nn.Module):
         return output, local_outputs
 
 
-class DB_AHMCN_F(torch.nn.Module):
+class DB_AHMCN_F(model.Model, torch.nn.Module):
     """Wrapper class combining DistilBERT with the adapted HMCN-F classifier model."""
 
     def __init__(
@@ -355,6 +356,10 @@ class DB_AHMCN_F(torch.nn.Module):
             'targets': all_targets,
             'outputs': all_outputs,
         }
+
+    def export(self, dataset_name, bento=False):
+        """Export model to ONNX/Bento."""
+        raise RuntimeError
 
 
 if __name__ == "__main__":

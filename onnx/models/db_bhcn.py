@@ -1,7 +1,9 @@
+"""Implementation of the DistilBERT Branching Hierarchical Classification Network."""
 import torch
 import numpy as np
 from tqdm import tqdm
 
+from models import model
 from utils.distilbert import get_pretrained
 from utils.metric import get_metrics
 
@@ -212,7 +214,7 @@ class BHCN_AWX(torch.nn.Module):
         return local_outputs, awx_output
 
 
-class DB_BHCN(torch.nn.Module):
+class DB_BHCN(model.Model, torch.nn.Module):
     """The whole DB-BHCN model, DistilBERT included. AWX is optional."""
 
     def __init__(
@@ -273,7 +275,7 @@ class DB_BHCN(torch.nn.Module):
     def forward(self, ids, mask):
         """Wrap around the two forward propagation routine variants.
 
-        This is only implemented for manual single-example FP.
+        This is only implemented for manual single-example FP convenience.
         Internal training scripts call the corresponding forward functions
         directly, avoiding repetitive conditional branching.
         """
@@ -455,7 +457,7 @@ class DB_BHCN(torch.nn.Module):
                 optim = optimizer.state_dict()
                 self.save(path, optim)
                 if val_loss <= val_loss_min:
-                    print('Validation loss decreased ({:.6f} --> {:.6f}). Saving best model...'.format(val_loss_min,val_loss))
+                    print('Validation loss decreased ({:.6f} --> {:.6f}). Saving best model...'.format(val_loss_min, val_loss))
                     val_loss_min = val_loss
                     self.save(best_path, optim)
             print('Epoch {}: Done\n'.format(epoch))
@@ -631,7 +633,7 @@ class DB_BHCN(torch.nn.Module):
                 optim = optimizer.state_dict()
                 self.save(path, optim)
                 if val_loss <= val_loss_min:
-                    print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving best model...'.format(val_loss_min,val_loss))
+                    print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving best model...'.format(val_loss_min, val_loss))
                     val_loss_min = val_loss
                     self.save(best_path, optim)
             print('Epoch {}: Done\n'.format(epoch))
@@ -732,6 +734,10 @@ class DB_BHCN(torch.nn.Module):
         if self.awx:
             return self.test_bhcn_awx(loader)
         return self.test_bhcn(loader)
+
+    def export(self, dataset_name, bento=False):
+        """Export model to ONNX/Bento."""
+        raise RuntimeError
 
 
 if __name__ == "__main__":

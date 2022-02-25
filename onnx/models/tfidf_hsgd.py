@@ -16,6 +16,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from tempfile import mkdtemp
 
+from models import model
 from utils.dataset import RANDOM_SEED, TRAIN_SET_RATIO, VAL_SET_RATIO
 
 cachedir = mkdtemp()
@@ -144,7 +145,7 @@ def get_loaders(
     return (X_train, y_train), (X_test, y_test), hierarchy
 
 
-class Tfidf_HSGD:
+class Tfidf_HSGD(model.Model):
     """
     A wrapper class around the scikit-learn-based tfidf-HSGD model.
 
@@ -169,6 +170,14 @@ class Tfidf_HSGD:
         ])
         self.config = config
 
+    def save(self, path, optim=None):
+        """Serialise pipeline into a pickle."""
+        joblib.dump(self.pipeline, path)
+
+    def load(self, path):
+        """Unpickle saved pipeline."""
+        self.pipeline = joblib.load(path)
+
     def fit(
             self,
             train_loader,
@@ -181,7 +190,7 @@ class Tfidf_HSGD:
         if path is not None or best_path is not None:
             # There's no distinction between path and best_path as there is
             # no validation phase.
-            joblib.dump(self.pipeline, path if path is not None else best_path)
+            self.save(path if path is not None else best_path)
         return None
 
     def test(self, loader):
@@ -199,6 +208,10 @@ class Tfidf_HSGD:
             'predictions': predictions,
             'scores': scores,
         }
+
+    def export(self, dataset_name, bento=False):
+        """Export model to ONNX/Bento."""
+        raise RuntimeError
 
 
 def get_metrics(test_output, display='log', compute_auprc=True):
