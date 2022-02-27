@@ -248,10 +248,19 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
     @classmethod
     def from_checkpoint(cls, path):
-        """Construct model from saved checkpoint."""
+        """
+        Construct model from saved checkpoint.
+
+        AWX availability is automatically determined based on availability
+        of the R-matrix.
+        """
         checkpoint = torch.load(path)
         hierarchy = PerLevelHierarchy.from_dict(checkpoint['hierarchy'])
-        instance = cls(hierarchy, checkpoint['config'])
+        instance = cls(
+            hierarchy,
+            checkpoint['config'],
+            hierarchy.R is not None
+        )
         instance.encoder.load_state_dict(checkpoint['encoder_state_dict'])
         instance.classifier.load_state_dict(
             checkpoint['classifier_state_dict']

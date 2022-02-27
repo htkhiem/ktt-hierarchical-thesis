@@ -20,6 +20,18 @@ class Model(ABC):
     """
 
     @abstractmethod
+    @classmethod
+    def from_checkpoint(cls, path):
+        """
+        Construct model from saved checkpoint.
+
+        If the model's topology depends on the specific dataset it was trained
+        against, this will only work with checkpoints that were created with
+        the config file saved within.
+        """
+        pass
+
+    @abstractmethod
     def fit(
             self,
             train_loader,
