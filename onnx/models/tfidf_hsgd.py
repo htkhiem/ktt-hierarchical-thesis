@@ -154,7 +154,7 @@ class Tfidf_HSGD(model.Model):
     ease of use in the main training controller.
     """
 
-    def __init__(self, config, hierarchy=None, verbose=False):
+    def __init__(self, config=None, hierarchy=None, verbose=False):
         """Construct the classifier."""
         bclf = make_pipeline(linear_model.SGDClassifier(
             loss='modified_huber',
@@ -170,6 +170,13 @@ class Tfidf_HSGD(model.Model):
             ('clf', clf),
         ])
         self.config = config
+
+    @classmethod
+    def from_checkpoint(cls, path):
+        """Construct model from saved checkpoint."""
+        instance = cls()
+        instance.pipeline = joblib.load(path)
+        return instance
 
     def save(self, path, optim=None):
         """Serialise pipeline into a pickle."""

@@ -7,6 +7,7 @@ from tqdm import tqdm
 import bentoml
 
 from models import model
+from utils.hierarchy import PerLevelHierarchy
 from utils.distilbert import get_pretrained
 from utils.metric import get_metrics
 
@@ -154,6 +155,17 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
         ).to(config['device'])
         self.config = config
 
+    @classmethod
+    def from_checkpoint(cls, path):
+        """Construct model from saved checkpoint."""
+        checkpoint = torch.load(path)
+        hierarchy = PerLevelHierarchy.from_dict(checkpoint['hierarchy'])
+        instance = cls(hierarchy, checkpoint['config'])
+        instance.classifier.load_state_dict(
+            checkpoint['classifier_state_dict']
+        )
+        return instance
+
     def forward(self, ids, mask):
         """Forward-propagate input to generate classification."""
         output, local_outputs = self.classifier(
@@ -172,6 +184,8 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
     def save(self, path, optim):
         """Save model state to disk using PyTorch's pickle facilities."""
         checkpoint = {
+            'config': self.config,
+            'hierarchy': self.classifier.hierarchy.to_dict(),
             'classifier_state_dict': self.classifier.state_dict(),
             'optimizer_state_dict': optim
         }
@@ -401,7 +415,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
             }
         )
 
-        hierarchy_json = self.hierarchy.export(
+        hierarchy_json = self.hierarchy.to_json(
             "output/{}/hierarchy.json".format(name)
         )
 
