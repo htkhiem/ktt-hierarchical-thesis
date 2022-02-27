@@ -25,12 +25,25 @@ class MCM(torch.nn.Module):
         n = self.M.shape[1]
         H = x.unsqueeze(1)  # Add a new dimension
         # Duplicate x along the new dimension to create a list of 2D matrices
-        # of size n x n (same as R). Note that x can be a list of vectors instead of one.
+        # of size n x n (same as R). Note that x can be a list of vectors
+        # instead of one.
         H = H.expand(len(x), n, n)
         # We'll have to duplicate R to multiply with the entire batch here
         M_batch = self.M.expand(len(x), n, n)
         final_out, _ = torch.max(M_batch*H, dim=2)
         return final_out
+
+    def to(self, device=None):
+        """
+        Move this module to specified device.
+
+        This overloads the default PT module's to() method to additionally
+        move the M-matrix along.
+        """
+        super().to(device)
+        if device is not None:
+            self.M = self.M.to(device)
+        return self
 
 
 class H_MCM_Model(torch.nn.Module):
@@ -92,6 +105,18 @@ class H_MCM_Model(torch.nn.Module):
             return x
         return self.mcm(x)
 
+    def to(self, device=None):
+        """
+        Move this module to specified device.
+
+        This overloads the default PT module's to() method to additionally
+        move the MCM layer along.
+        """
+        super().to(device)
+        if device is not None:
+            self.mcm = self.mcm.to(device)
+        return self
+
 
 class DB_AC_HMCNN(model.Model, torch.nn.Module):
     """Wrapper class combining DistilBERT and the adapted C-HMCNN model."""
@@ -99,13 +124,14 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
     def __init__(self, hierarchy, config):
         """Construct module."""
         super(DB_AC_HMCNN, self).__init__()
-        self.encoder = get_pretrained().to(config['device'])
+        self.encoder = get_pretrained()
         self.classifier = H_MCM_Model(
             768,  # DistilBERT outputs 768 values.
             hierarchy,
             config
-        ).to(config['device'])
+        )
         self.config = config
+        self.device = 'cpu'
 
     @classmethod
     def from_checkpoint(cls, path):
@@ -172,10 +198,10 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
             self.train()
             print('Epoch {}: Training'.format(epoch))
             for batch_idx, data in enumerate(tqdm(train_loader)):
-                ids = data['ids'].to(self.config['device'], dtype=torch.long)
-                mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
                 targets_b = data['labels_b'].to(
-                    self.config['device'], dtype=torch.double
+                    self.device, dtype=torch.double
                 )
 
                 outputs = self.forward(ids, mask)
@@ -217,12 +243,12 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
             # Validation
             with torch.no_grad():
                 for batch_idx, data in enumerate(tqdm(val_loader)):
-                    ids = data['ids'].to(self.config['device'],
+                    ids = data['ids'].to(self.device,
                                          dtype=torch.long)
-                    mask = data['mask'].to(self.config['device'],
+                    mask = data['mask'].to(self.device,
                                            dtype=torch.long)
                     targets = data['labels']
-                    targets_b = data['labels_b'].to(self.config['device'],
+                    targets_b = data['labels_b'].to(self.device,
                                                     dtype=torch.double)
 
                     constrained_outputs = self.forward(ids, mask).double()
@@ -293,8 +319,8 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
         # Validation
         with torch.no_grad():
             for batch_idx, data in enumerate(tqdm(loader)):
-                ids = data['ids'].to(self.config['device'], dtype=torch.long)
-                mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
 
                 constrained_outputs = self.forward(ids, mask).double()
@@ -328,7 +354,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
         # Create dummy input for tracing
         batch_size = 1  # Dummy batch size. When exported, it will be dynamic
         x = torch.randn(batch_size, 768, requires_grad=True).to(
-            self.config['device']
+            self.device
         )
         name = '{}_{}'.format('db_achmcnn', dataset_name)
         path = 'output/{}/classifier/'.format(name)
@@ -370,6 +396,20 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
                 path,
                 metadata=hierarchy_json
             )
+
+    def to(self, device=None):
+        """
+        Move this module to specified device.
+
+        This overloads the default PT module's to() method to additionally
+        set its internal device variable and moves its submodules.
+        """
+        super().to(device)
+        if device is not None:
+            self.encoder.to(device)
+            self.classifier.to(device)
+            self.device = device
+        return self
 
 
 if __name__ == "__main__":

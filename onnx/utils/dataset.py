@@ -149,7 +149,13 @@ def get_loaders(
         build_M
     ).to(config['device'])
     if binary:
-        index_to_binary(data, 'codes', hierarchy.level_offsets, len(hierarchy.classes), verbose)
+        index_to_binary(
+            data,
+            'codes',
+            hierarchy.level_offsets,
+            len(hierarchy.classes),
+            verbose
+        )
         columns = [input_col_name, 'codes', 'codes_b']
     else:
         columns = [input_col_name, 'codes']
@@ -159,14 +165,15 @@ def get_loaders(
     train_set = None
     test_set = None
     if not full_set:
-        filtered = data.sample(frac = partial_set_frac, random_state=RANDOM_SEED)[columns]
+        filtered = data.sample(frac=partial_set_frac, random_state=RANDOM_SEED)[columns]
     else:
         filtered = data[columns]
 
-    train_set = filtered.sample(frac = TRAIN_SET_RATIO, random_state=RANDOM_SEED)
+    train_set = filtered.sample(frac=TRAIN_SET_RATIO, random_state=RANDOM_SEED)
     val_test_set = filtered.drop(train_set.index)
 
-    val_set = val_test_set.sample(frac = VAL_SET_RATIO / (1-TRAIN_SET_RATIO), random_state=RANDOM_SEED)
+    val_set = val_test_set.sample(frac=VAL_SET_RATIO / (1-TRAIN_SET_RATIO),
+                                  random_state=RANDOM_SEED)
     test_set = val_test_set.drop(val_set.index)
 
     train_set = train_set.reset_index(drop=True)

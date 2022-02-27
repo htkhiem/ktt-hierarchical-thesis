@@ -19,8 +19,8 @@ class Model(ABC):
     within the training and testing methods for consistency.
     """
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def from_checkpoint(cls, path):
         """
         Construct model from saved checkpoint.

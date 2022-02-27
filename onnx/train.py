@@ -154,7 +154,7 @@ By default, all models are run.""")
                 full_set=full_set,
                 verbose=verbose,
             )
-            model = db_bhcn.DB_BHCN(hierarchy, config)
+            model = db_bhcn.DB_BHCN(hierarchy, config).to(device)
             repeat_train(
                 config,
                 model,
@@ -184,7 +184,7 @@ By default, all models are run.""")
                 build_R=True,
                 verbose=verbose,
             )
-            model = db_bhcn.DB_BHCN(hierarchy, config, awx=True)
+            model = db_bhcn.DB_BHCN(hierarchy, config, awx=True).to(device)
             repeat_train(
                 config,
                 model,
@@ -213,7 +213,7 @@ By default, all models are run.""")
                 binary=True,
                 verbose=verbose,
             )
-            model = db_ahmcnf.DB_AHMCN_F(hierarchy, config)
+            model = db_ahmcnf.DB_AHMCN_F(hierarchy, config).to(device)
             repeat_train(
                 config,
                 model,
@@ -243,7 +243,7 @@ By default, all models are run.""")
                 build_M=True,
                 verbose=verbose,
             )
-            model = db_achmcnn.DB_AC_HMCNN(hierarchy, config)
+            model = db_achmcnn.DB_AC_HMCNN(hierarchy, config).to(device)
             repeat_train(
                 config,
                 model,

@@ -67,6 +67,18 @@ class AWX(torch.nn.Module):
             output = torch.max(torch.mul(output, R_batch), 2)[0]
         return output
 
+    def to(self, device=None):
+        """
+        Move this module to specified device.
+
+        This overloads the default PT module's to() method to additionally
+        move the R-matrix along.
+        """
+        super().to(device)
+        if device is not None:
+            self.R = self.R.to(device)
+        return self
+
 
 class BHCN(torch.nn.Module):
     """Implementation of the classifier part of the DB-BHCN model."""
@@ -86,7 +98,10 @@ class BHCN(torch.nn.Module):
         self.level_sizes = hierarchy.levels
         self.level_offsets = hierarchy.level_offsets
         self.parent_of = hierarchy.parent_of
-        self.device = config['device']
+        self.device = 'cpu'  # default
+
+        # Back up for save/export
+        self.hierarchy = hierarchy
 
         # First layer only takes in BERT encodings
         self.fc_layers = torch.nn.ModuleList([
@@ -136,6 +151,18 @@ class BHCN(torch.nn.Module):
 
         return local_outputs
 
+    def to(self, device=None):
+        """
+        Move this module to specified device.
+
+        This overloads the default PT module's to() method to additionally
+        set its internal device flag.
+        """
+        super().to(device)
+        if device is not None:
+            self.device = device
+        return self
+
 
 class BHCN_AWX(torch.nn.Module):
     """Implementation of DB-BHCN's classifier with AWX integration."""
@@ -156,6 +183,9 @@ class BHCN_AWX(torch.nn.Module):
         self.level_offsets = hierarchy.level_offsets
         self.parent_of = hierarchy.parent_of
         self.device = config['device']
+
+        # Back up for save/export
+        self.hierarchy = hierarchy
 
         # First layer only takes in BERT encodings
         self.fc_layers = torch.nn.ModuleList([
@@ -217,6 +247,19 @@ class BHCN_AWX(torch.nn.Module):
         awx_output = self.awx(prev_output)
         return local_outputs, awx_output
 
+    def to(self, device=None):
+        """
+        Move this module to specified device.
+
+        This overloads the default PT module's to() method to additionally
+        move the AWX layer along.
+        """
+        super().to(device)
+        if device is not None:
+            self.awx = self.awx.to(device)
+            self.device = device
+        return self
+
 
 class DB_BHCN(model.Model, torch.nn.Module):
     """The whole DB-BHCN model, DistilBERT included. AWX is optional."""
@@ -229,7 +272,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
     ):
         """Construct module."""
         super(DB_BHCN, self).__init__()
-        self.encoder = get_pretrained().to(config['device'])
+        self.encoder = get_pretrained()
         if awx:
             self.classifier = BHCN_AWX(
                 768,
@@ -242,9 +285,9 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 hierarchy,
                 config
             )
-        self.classifier.to(config['device'])
         self.config = config
         self.awx = awx
+        self.device = 'cpu'  # default
 
     @classmethod
     def from_checkpoint(cls, path):
@@ -350,8 +393,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
             self.train()
             print('Epoch {}: Training'.format(epoch))
             for batch_idx, data in enumerate(tqdm(train_loader)):
-                ids = data['ids'].to(self.config['device'], dtype=torch.long)
-                mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
 
                 local_outputs = self.forward_bhcn(ids, mask)
@@ -372,7 +415,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 loss_h_levels = []
                 for level in range(self.classifier.depth-1):
                     target_child_indices = torch.unsqueeze(
-                        targets[:, level + 1], 1).to(self.config['device'])
+                        targets[:, level + 1], 1).to(self.device)
                     transformed = local_outputs[level + 1] * -1
                     transformed -= transformed.min(1, keepdim=True)[0]
                     transformed /= transformed.max(1, keepdim=True)[0]
@@ -384,7 +427,9 @@ class DB_BHCN(model.Model, torch.nn.Module):
                             torch.index_select(
                                 self.classifier.parent_of[level + 1],
                                 0,
-                                torch.argmax(local_outputs[level + 1], dim=1)
+                                torch.argmax(
+                                    local_outputs[level + 1], dim=1
+                                )
                             )
                         ) * loss_factors)
                     )
@@ -411,8 +456,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
             with torch.no_grad():
                 for batch_idx, data in enumerate(tqdm(val_loader)):
-                    ids = data['ids'].to(self.config['device'], dtype=torch.long)
-                    mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                    ids = data['ids'].to(self.device, dtype=torch.long)
+                    mask = data['mask'].to(self.device, dtype=torch.long)
                     targets = data['labels']
 
                     local_outputs = self.forward_bhcn(ids, mask)
@@ -433,7 +478,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
                     loss_h_levels = []
                     for level in range(self.classifier.depth-1):
                         target_child_indices = torch.unsqueeze(
-                            targets[:, level + 1], 1).to(self.config['device'])
+                            targets[:, level + 1], 1).to(self.device)
                         transformed = local_outputs[level + 1] * -1
                         transformed -= transformed.min(1, keepdim=True)[0]
                         transformed /= transformed.max(1, keepdim=True)[0]
@@ -502,8 +547,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
         with torch.no_grad():
             for batch_idx, data in enumerate(tqdm(loader)):
-                ids = data['ids'].to(self.config['device'], dtype=torch.long)
-                mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
 
                 local_outputs = self.forward_bhcn(ids, mask)
@@ -557,11 +602,11 @@ class DB_BHCN(model.Model, torch.nn.Module):
             self.train()
             print('Epoch {}: Training'.format(epoch))
             for batch_idx, data in enumerate(tqdm(train_loader)):
-                ids = data['ids'].to(self.config['device'], dtype=torch.long)
-                mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
                 targets_b = data['labels_b'].to(
-                    self.config['device'], dtype=torch.float)
+                    self.device, dtype=torch.float)
 
                 local_outputs, awx_output = self.forward_bhcn_awx(ids, mask)
 
@@ -597,12 +642,12 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
             with torch.no_grad():
                 for batch_idx, data in enumerate(tqdm(val_loader)):
-                    ids = data['ids'].to(self.config['device'],
+                    ids = data['ids'].to(self.device,
                                          dtype=torch.long)
-                    mask = data['mask'].to(self.config['device'],
+                    mask = data['mask'].to(self.device,
                                            dtype=torch.long)
                     targets = data['labels']
-                    targets_b = data['labels_b'].to(self.config['device'],
+                    targets_b = data['labels_b'].to(self.device,
                                                     dtype=torch.float)
 
                     local_outputs, awx_output = self.forward_bhcn_awx(ids, mask)
@@ -678,8 +723,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
         with torch.no_grad():
             for batch_idx, data in enumerate(tqdm(loader)):
-                ids = data['ids'].to(self.config['device'], dtype=torch.long)
-                mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
 
                 _, awx_output = self.forward_bhcn_awx(ids, mask)
@@ -774,7 +819,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
         # Create dummy input for tracing
         batch_size = 1  # Dummy batch size. When exported, it will be dynamic
         x = torch.randn(batch_size, 768, requires_grad=True).to(
-            self.config['device']
+            self.device
         )
         name = '{}_{}'.format(
             'db_bhcn_awx' if self.awx else 'db_bhcn',
@@ -819,6 +864,20 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 path,
                 metadata=hierarchy_json
             )
+
+    def to(self, device=None):
+        """
+        Move this module to specified device.
+
+        This overloads the default PT module's to() method to additionally
+        set its internal device variable and moves its submodules.
+        """
+        super().to(device)
+        if device is not None:
+            self.encoder.to(device)
+            self.classifier.to(device)
+            self.device = device
+        return self
 
 
 if __name__ == "__main__":

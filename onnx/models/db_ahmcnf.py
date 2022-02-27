@@ -147,13 +147,14 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
     ):
         """Construct module."""
         super(DB_AHMCN_F, self).__init__()
-        self.encoder = get_pretrained().to(config['device'])
+        self.encoder = get_pretrained()
         self.classifier = AHMCN_F(
             768,
             hierarchy,
             config
-        ).to(config['device'])
+        )
         self.config = config
+        self.device = 'cpu'
 
     @classmethod
     def from_checkpoint(cls, path):
@@ -209,7 +210,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
         # HMCN-F's implementation uses a global-space vector of
         # parent-class indices.
         global_parent_of = torch.cat(
-            self.classifier.parent_of, axis=0).to(self.config['device'])
+            self.classifier.parent_of, axis=0).to(self.device)
 
         # Keep min validation (test set) loss so we can separately back up our
         # best-yet model
@@ -232,12 +233,12 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
             self.train()
             print('Epoch {}: Training'.format(epoch))
             for batch_idx, data in enumerate(tqdm(train_loader)):
-                ids = data['ids'].to(self.config['device'], dtype=torch.long)
-                mask = data['mask'].to(self.config['device'], dtype=torch.long)
-                targets = data['labels'].to(self.config['device'],
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
+                targets = data['labels'].to(self.device,
                                             dtype=torch.float)
                 targets = data['labels']
-                targets_b = data['labels_b'].to(self.config['device'],
+                targets_b = data['labels_b'].to(self.device,
                                                 dtype=torch.float)
 
                 output, local_outputs = self.forward(ids, mask)
@@ -283,12 +284,12 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
 
             with torch.no_grad():
                 for batch_idx, data in tqdm(enumerate(val_loader)):
-                    ids = data['ids'].to(self.config['device'],
+                    ids = data['ids'].to(self.device,
                                          dtype=torch.long)
-                    mask = data['mask'].to(self.config['device'],
+                    mask = data['mask'].to(self.device,
                                            dtype=torch.long)
                     targets = data['labels']
-                    targets_b = data['labels_b'].to(self.config['device'],
+                    targets_b = data['labels_b'].to(self.device,
                                                     dtype=torch.float)
 
                     output, local_outputs = self.forward(ids, mask)
@@ -361,8 +362,8 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
 
         with torch.no_grad():
             for batch_idx, data in enumerate(tqdm(loader)):
-                ids = data['ids'].to(self.config['device'], dtype=torch.long)
-                mask = data['mask'].to(self.config['device'], dtype=torch.long)
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
 
                 _, local_outputs = self.forward(ids, mask)
@@ -385,7 +386,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
         # Create dummy input for tracing
         batch_size = 1  # Dummy batch size. When exported, it will be dynamic
         x = torch.randn(batch_size, 768, requires_grad=True).to(
-            self.config['device']
+            self.device
         )
         name = '{}_{}'.format('db_ahmcnf', dataset_name)
         path = 'output/{}/classifier/'.format(name)
@@ -427,6 +428,19 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
                 path,
                 metadata=hierarchy_json
             )
+
+    def to(self, device=None):
+        """
+        Move this module to specified device.
+
+        This overloads the default PT module's to() method to additionally
+        set its internal device variable and moves its submodules.
+        """
+        super().to(device)
+        if device is not None:
+            self.classifier.to(device)
+            self.device = device
+        return self
 
 
 if __name__ == "__main__":
