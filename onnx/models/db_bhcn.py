@@ -1,10 +1,13 @@
 """Implementation of the DistilBERT Branching Hierarchical Classification Network."""
+import os
+
 import torch
 import numpy as np
 from tqdm import tqdm
+import bentoml
 
 from models import model
-from utils.distilbert import get_pretrained
+from utils.distilbert import get_pretrained, export_trained
 from utils.metric import get_metrics
 
 
@@ -737,7 +740,61 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
     def export(self, dataset_name, bento=False):
         """Export model to ONNX/Bento."""
-        raise RuntimeError
+        self.eval()
+        export_trained(
+            self.encoder,
+            dataset_name,
+            'db_bhcn_awx' if self.awx else 'db_bhcn'
+        )
+
+        # Create dummy input for tracing
+        batch_size = 1  # Dummy batch size. When exported, it will be dynamic
+        x = torch.randn(batch_size, 768, requires_grad=True).to(
+            self.config['device']
+        )
+        name = '{}_{}'.format(
+            'db_bhcn_awx' if self.awx else 'db_bhcn',
+            dataset_name
+        )
+        path = 'output/{}/classifier/'.format(name)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        path += 'classifier.onnx'
+
+        # Clear previous versions
+        if os.path.exists(path):
+            os.remove(path)
+
+        # Export into transformers model .bin format
+        torch.onnx.export(
+            self.classifier,
+            x,
+            path,
+            export_params=True,
+            opset_version=11,
+            do_constant_folding=True,
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'}
+            }
+        )
+
+        hierarchy_json = self.hierarchy.export(
+            "output/{}/hierarchy.json".format(name)
+        )
+
+        # Optionally save to BentoML model store. Pack hierarchical metadata
+        # along with model for convenience.
+        if bento:
+            bentoml.onnx.save(
+                'classifier_' + name,
+                path,
+                metadata=hierarchy_json
+            )
 
 
 if __name__ == "__main__":

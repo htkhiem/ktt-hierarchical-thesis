@@ -1,9 +1,13 @@
+"""Implementation of the Adapted C-HMCNN classifier atop DistilBERT."""
+import os
+
 import torch
 import numpy as np
 from tqdm import tqdm
+import bentoml
 
 from models import model
-from utils.distilbert import get_pretrained
+from utils.distilbert import get_pretrained, export_trained
 from utils.metric import get_metrics
 
 
@@ -40,6 +44,9 @@ class H_MCM_Model(torch.nn.Module):
         self.level_offsets = hierarchy.level_offsets
         self.layer_count = config['h_layer_count']
         self.mcm = MCM(hierarchy.M)
+
+        # Back up the hierarchy object for exporting
+        self.hierarchy = hierarchy
 
         output_dim = len(hierarchy.classes)
 
@@ -300,7 +307,54 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
 
     def export(self, dataset_name, bento=False):
         """Export model to ONNX/Bento."""
-        raise RuntimeError
+        self.eval()
+        export_trained(self.encoder, dataset_name, 'db_achmcnn')
+
+        # Create dummy input for tracing
+        batch_size = 1  # Dummy batch size. When exported, it will be dynamic
+        x = torch.randn(batch_size, 768, requires_grad=True).to(
+            self.config['device']
+        )
+        name = '{}_{}'.format('db_achmcnn', dataset_name)
+        path = 'output/{}/classifier/'.format(name)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        path += 'classifier.onnx'
+
+        # Clear previous versions
+        if os.path.exists(path):
+            os.remove(path)
+
+        # Export into transformers model .bin format
+        torch.onnx.export(
+            self.classifier,
+            x,
+            path,
+            export_params=True,
+            opset_version=11,
+            do_constant_folding=True,
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'}
+            }
+        )
+
+        hierarchy_json = self.hierarchy.export(
+            "output/{}/hierarchy.json".format(name)
+        )
+
+        # Optionally save to BentoML model store. Pack hierarchical metadata
+        # along with model for convenience.
+        if bento:
+            bentoml.onnx.save(
+                'classifier_' + name,
+                path,
+                metadata=hierarchy_json
+            )
 
 
 if __name__ == "__main__":

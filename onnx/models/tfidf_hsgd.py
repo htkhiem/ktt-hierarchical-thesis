@@ -1,3 +1,4 @@
+"""Implementation of the tfidf + hierarchical SGD classifier model."""
 import pandas as pd
 import joblib
 import logging
