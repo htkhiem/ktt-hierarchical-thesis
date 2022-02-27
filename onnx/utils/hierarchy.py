@@ -15,7 +15,6 @@ class PerLevelHierarchy:
 
     def __init__(
             self,
-            config,
             codes,
             cls2idx,
             build_parent=True,
@@ -49,14 +48,14 @@ class PerLevelHierarchy:
         if build_parent:
             # Use -1 to indicate 'undiscovered'
             self.parent_of = [
-                torch.LongTensor([-1] * level_size).to(config['device'])
+                torch.LongTensor([-1] * level_size)
                 for level_size in self.levels
             ]
         if build_R:
             self.R = torch.zeros(
                 (self.levels[-1], len(self.classes)),
                 dtype=bool
-            ).to(config['device'])
+            )
             # Every leaf has an edge to itself
             self.R[
                 np.arange(self.levels[-1]),
@@ -67,7 +66,7 @@ class PerLevelHierarchy:
             ] = 1
         if build_M:
             n = len(self.classes)
-            self.M = torch.zeros((n, n), dtype=torch.bool).to(config['device'])
+            self.M = torch.zeros((n, n), dtype=torch.bool)
             self.M.fill_diagonal_(1)  # Every class is an ancestor of itself
 
         for lst in codes:
@@ -102,11 +101,13 @@ class PerLevelHierarchy:
                         self.M[ancestor_idx, offspring_idx] = 1
 
     @classmethod
-    def from_dict(cls, h_dict, config):
+    def from_dict(cls, h_dict, config=None):
         """
         Create a new PerLevelHierarchy instance from a Python dict.
 
         Said dict must be in the schema exported by to_dict().
+        If config is specified, the 'device' key will be read and the instance
+        will be moved to the specified device.
         """
         instance = cls(
             config,
@@ -128,16 +129,21 @@ class PerLevelHierarchy:
         if 'R' in h_dict.keys():
             instance.R = torch.LongTensor(h_dict['R'])
 
+        if config is not None:
+            instance.to(config['device'])
+
         return instance
 
     @classmethod
-    def from_json(cls, json, config):
+    def from_json(cls, json, config=None):
         """
         Create a new PerLevelHierarchy instance from a JSON string (or path).
 
         If a path string is specified, the corresponding JSON file on disk will
         be used.
         Said dict must be in the schema exported by to_dict().
+        If config is specified, the 'device' key will be read and the instance
+        will be moved to the specified device.
         """
         if isinstance(json, str):
             with open(json, 'r') as f:
@@ -163,6 +169,9 @@ class PerLevelHierarchy:
             instance.M = torch.LongTensor(serial['M'])
         if 'R' in serial.keys():
             instance.R = torch.LongTensor(serial['R'])
+
+        if config is not None:
+            instance.to(config['device'])
 
         return instance
 
@@ -204,3 +213,17 @@ class PerLevelHierarchy:
                 # Convert parent_of back to lists
                 json.dump(hierarchy_json, outfile)
         return hierarchy_json
+
+    def to(self, device):
+        """
+        Move PyTorch tensors to specified device.
+
+        This is implemented to expose a PyTorch-like interface to this class.
+        """
+        if self.parent_of is not None:
+            for level in self.parent_of:
+                level.to(device)
+        if self.M is not None:
+            self.M.to(device)
+        if self.R is not None:
+            self.R.to(device)

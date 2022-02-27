@@ -142,13 +142,12 @@ def get_loaders(
     class_to_index(data, class_col_name, cls2idx, depth)
     # Generate hierarchy
     hierarchy = PerLevelHierarchy(
-        config,
         data['codes'],
         cls2idx,
         build_parent,
         build_R,
         build_M
-    )
+    ).to(config['device'])
     if binary:
         index_to_binary(data, 'codes', hierarchy.level_offsets, len(hierarchy.classes), verbose)
         columns = [input_col_name, 'codes', 'codes_b']
