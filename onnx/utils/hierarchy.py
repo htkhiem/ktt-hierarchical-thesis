@@ -221,9 +221,11 @@ class PerLevelHierarchy:
         This is implemented to expose a PyTorch-like interface to this class.
         """
         if self.parent_of is not None:
-            for level in self.parent_of:
-                level.to(device)
+            for i, level in enumerate(self.parent_of):
+                self.parent_of[i] = level.to(device)
         if self.M is not None:
             self.M.to(device)
         if self.R is not None:
             self.R.to(device)
+
+        return self
