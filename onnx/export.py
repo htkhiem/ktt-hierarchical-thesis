@@ -33,6 +33,7 @@ def get_path(model_name, dataset_name, best=True, idx=None):
     ))
     return weight_names[-1]
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset', help='Pass a comma-separated list of dataset names (excluding .parquet) to use. This is a required argument.')
@@ -87,29 +88,7 @@ By default, all models are exported. An error will be raised if a model has not 
 
     distilbert.init()
 
-    # Specific requirements from each model
-    build_R = 'db_bhcn_awx' in model_lst
-    build_M = 'db_achmcnn' in model_lst
-
-    with open('./hyperparams.json', 'r') as j:
-        hyperparams = json.loads(j.read())
-
     for dataset_name in dataset_lst:
-        config = {
-            'device': device,
-            'dataset_name': dataset_name,
-            'train_minibatch_size': 1,
-            'val_test_minibatch_size': 1,
-        }
-        # Generate enough hierarchical data for all selected models
-        _, _, _, hierarchy = dataset.get_loaders(
-            '../datasets/{}.parquet'.format(dataset_name),
-            config,
-            full_set=True,
-            build_R=build_R,
-            build_M=build_M,
-            verbose=verbose,
-        )
         if 'db_bhcn' in model_lst:
             model = db_bhcn.DB_BHCN.from_checkpoint(
                 get_path('db_bhcn', dataset_name, best, index)
