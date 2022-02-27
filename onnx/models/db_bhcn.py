@@ -156,11 +156,12 @@ class BHCN(torch.nn.Module):
         Move this module to specified device.
 
         This overloads the default PT module's to() method to additionally
-        set its internal device flag.
+        set its internal device flag and move its internal components.
         """
         super().to(device)
         if device is not None:
             self.device = device
+            self.hierarchy = self.hierarchy.to(device)
         return self
 
 
@@ -252,12 +253,13 @@ class BHCN_AWX(torch.nn.Module):
         Move this module to specified device.
 
         This overloads the default PT module's to() method to additionally
-        move the AWX layer along.
+        move the AWX layer and other components along.
         """
         super().to(device)
         if device is not None:
-            self.awx = self.awx.to(device)
             self.device = device
+            self.awx = self.awx.to(device)
+            self.hierarchy = self.hierarchy.to(device)
         return self
 
 
@@ -852,7 +854,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
             }
         )
 
-        hierarchy_json = self.hierarchy.to_json(
+        hierarchy_json = self.classifier.hierarchy.to_json(
             "output/{}/hierarchy.json".format(name)
         )
 

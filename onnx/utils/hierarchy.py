@@ -15,8 +15,8 @@ class PerLevelHierarchy:
 
     def __init__(
             self,
-            codes,
-            cls2idx,
+            codes=None,
+            cls2idx=None,
             build_parent=True,
             build_R=True,
             build_M=True
@@ -32,105 +32,100 @@ class PerLevelHierarchy:
         self.parent_of = None
         self.R = None
         self.M = None
-        self.levels = [
-            len(d.keys()) for d in cls2idx
-        ]  # TODO: Rename to level_sizes
-        self.classes = reduce(lambda acc, elem: acc + elem, [
-            list(d.keys()) for d in cls2idx
-        ], [])
-        # Where each level starts in a global n-hot category vector
-        # Its last element is coincidentally the length, which also allows us
-        # to simplify the slicing code by blindly doing
-        # [offset[i] : offset[i+1]]
-        self.level_offsets = reduce(
-            lambda acc, elem: acc + [acc[len(acc) - 1] + elem], self.levels, [0]
-        )
-        if build_parent:
-            # Use -1 to indicate 'undiscovered'
-            self.parent_of = [
-                torch.LongTensor([-1] * level_size)
-                for level_size in self.levels
-            ]
-        if build_R:
-            self.R = torch.zeros(
-                (self.levels[-1], len(self.classes)),
-                dtype=bool
+        self.levels = []
+        self.classes = []
+        self.level_offsets = []
+
+        # Non-basic constructor requested
+        if codes is not None and cls2idx is not None:
+            self.levels = [
+                len(d.keys()) for d in cls2idx
+            ]  # TODO: Rename to level_sizes
+            self.classes = reduce(lambda acc, elem: acc + elem, [
+                list(d.keys()) for d in cls2idx
+            ], [])
+            # Where each level starts in a global n-hot category vector
+            # Its last element is coincidentally the length, which also allows
+            # us to simplify the slicing code by blindly doing
+            # [offset[i] : offset[i+1]].
+            self.level_offsets = reduce(
+                lambda acc, elem: acc + [acc[len(acc) - 1] + elem], self.levels, [0]
             )
-            # Every leaf has an edge to itself
-            self.R[
-                np.arange(self.levels[-1]),
-                np.arange(
-                    self.level_offsets[-2],
-                    self.level_offsets[-2] + self.levels[-1]
-                )
-            ] = 1
-        if build_M:
-            n = len(self.classes)
-            self.M = torch.zeros((n, n), dtype=torch.bool)
-            self.M.fill_diagonal_(1)  # Every class is an ancestor of itself
-
-        for lst in codes:
             if build_parent:
-                # Build parent() (Algorithm 1)
-                # First-level classes' parent is root, but here we set them to
-                # themselves.
-                # This effectively zeroes out the hierarchical loss for this
-                # level.
-                self.parent_of[0][lst[0]] = lst[0]
-                for i in range(1, len(self.levels)):
-                    child_idx = lst[i]
-                    parent_idx = lst[i-1]
-                    if self.parent_of[i][child_idx] == -1:
-                        self.parent_of[i][child_idx] = parent_idx
-
+                # Use -1 to indicate 'undiscovered'
+                self.parent_of = [
+                    torch.LongTensor([-1] * level_size)
+                    for level_size in self.levels
+                ]
             if build_R:
-                # Build R (Algorithm 2)
-                # Get level-local leaf index. Assume codes column has already
-                # been trimmed to the used depth.
-                leaf_idx = lst[-1]
-                for level, code in enumerate(lst[:-1]):
-                    self.R[leaf_idx, code + self.level_offsets[level]] = 1
-
+                self.R = torch.zeros(
+                    (self.levels[-1], len(self.classes)),
+                    dtype=bool
+                )
+                # Every leaf has an edge to itself
+                self.R[
+                    np.arange(self.levels[-1]),
+                    np.arange(
+                        self.level_offsets[-2],
+                        self.level_offsets[-2] + self.levels[-1]
+                    )
+                ] = 1
             if build_M:
-                # Build M (for C-HMCNN). Basically R, but for all classes
-                # instead of just leaf classes.
-                for i, ancestor in enumerate(lst):
-                    ancestor_idx = ancestor + self.level_offsets[i] - 1
-                    for j, offspring in enumerate(lst[i+1:]):
-                        offspring_idx = offspring + self.level_offsets[j+i+1] - 1
-                        self.M[ancestor_idx, offspring_idx] = 1
+                n = len(self.classes)
+                self.M = torch.zeros((n, n), dtype=torch.bool)
+                # Every class is an ancestor of itself
+                self.M.fill_diagonal_(1)
+
+            for lst in codes:
+                if build_parent:
+                    # Build parent() (Algorithm 1)
+                    # First-level classes' parent is root, but here we set them
+                    # to themselves.
+                    # This effectively zeroes out the hierarchical loss for
+                    # this level.
+                    self.parent_of[0][lst[0]] = lst[0]
+                    for i in range(1, len(self.levels)):
+                        child_idx = lst[i]
+                        parent_idx = lst[i-1]
+                        if self.parent_of[i][child_idx] == -1:
+                            self.parent_of[i][child_idx] = parent_idx
+
+                if build_R:
+                    # Build R (Algorithm 2)
+                    # Get level-local leaf index. Assume codes column has
+                    # already been trimmed to the used depth.
+                    leaf_idx = lst[-1]
+                    for level, code in enumerate(lst[:-1]):
+                        self.R[leaf_idx, code + self.level_offsets[level]] = 1
+
+                if build_M:
+                    # Build M (for C-HMCNN). Basically R, but for all classes
+                    # instead of just leaf classes.
+                    for i, ancestor in enumerate(lst):
+                        ancestor_idx = ancestor + self.level_offsets[i] - 1
+                        for j, offspring in enumerate(lst[i+1:]):
+                            offspring_idx = offspring + self.level_offsets[j+i+1] - 1
+                            self.M[ancestor_idx, offspring_idx] = 1
 
     @classmethod
-    def from_dict(cls, h_dict, config=None):
+    def from_dict(cls, h_dict):
         """
         Create a new PerLevelHierarchy instance from a Python dict.
 
         Said dict must be in the schema exported by to_dict().
-        If config is specified, the 'device' key will be read and the instance
-        will be moved to the specified device.
         """
-        instance = cls(
-            config,
-            [],
-            [],
-            False,
-            False,
-            False
-        )
+        instance = cls()
         instance.classes = h_dict['classes']
         instance.level_offsets = h_dict['level_offsets']
-        instance.levels = h_dict['level_offsets']
+        instance.levels = h_dict['level_sizes']
         instance.parent_of = [
-            torch.LongTensor(level).to(config['device'])
+            torch.LongTensor(level)
             for level in h_dict['parent_of']
         ]
-        if 'M' in h_dict.keys():
-            instance.M = torch.LongTensor(h_dict['M'])
-        if 'R' in h_dict.keys():
-            instance.R = torch.LongTensor(h_dict['R'])
-
-        if config is not None:
-            instance.to(config['device'])
+        if h_dict['M'] is not None:
+            instance.M = torch.BoolTensor(h_dict['M'])
+        if h_dict['R'] is not None:
+            instance.R = torch.BoolTensor(h_dict['R'])
 
         return instance
 
@@ -166,9 +161,9 @@ class PerLevelHierarchy:
             for level in serial['parent_of']
         ]
         if 'M' in serial.keys():
-            instance.M = torch.LongTensor(serial['M'])
+            instance.M = torch.BoolTensor(serial['M'])
         if 'R' in serial.keys():
-            instance.R = torch.LongTensor(serial['R'])
+            instance.R = torch.BoolTensor(serial['R'])
 
         if config is not None:
             instance.to(config['device'])
@@ -204,10 +199,10 @@ class PerLevelHierarchy:
             'parent_of': parent_of
         }
         # Special metadata for some models
-        if hasattr(self, 'M'):
-            hierarchy_json['M'] = self.M
-        if hasattr(self, 'R'):
-            hierarchy_json['R'] = self.R
+        if self.M is not None:
+            hierarchy_json['M'] = self.M.int().tolist()
+        if self.R is not None:
+            hierarchy_json['R'] = self.R.int().tolist()
         if path is not None:
             with open(path, "w") as outfile:
                 # Convert parent_of back to lists

@@ -1,7 +1,9 @@
 """Utilities for initialising and exporting DistilBERT instances."""
 import transformers as tr
 import os
+import shutil
 import bentoml
+
 
 def get_pretrained():
     """Return a DistilBERT instance with distilbert-base-uncased loaded."""
@@ -47,7 +49,7 @@ def export_trained(
                 tmp_path, onnx_path
             )
         )
-        os.rmdir('tmp/')
+        shutil.rmtree('tmp/')
 
 
 def init():

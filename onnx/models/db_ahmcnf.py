@@ -136,6 +136,19 @@ class AHMCN_F(torch.nn.Module):
         output = self.global_weight * global_outputs + (1 - self.global_weight) * local_outputs
         return output, local_outputs
 
+    def to(self, device=None):
+        """
+        Move this module to specified device.
+
+        This overloads the default PT module's to() method to move internal
+        components along.
+        """
+        super().to(device)
+        if device is not None:
+            self.device = device
+            self.hierarchy = self.hierarchy.to(device)
+        return self
+
 
 class DB_AHMCN_F(model.Model, torch.nn.Module):
     """Wrapper class combining DistilBERT with the adapted HMCN-F classifier model."""
@@ -416,7 +429,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
             }
         )
 
-        hierarchy_json = self.hierarchy.to_json(
+        hierarchy_json = self.classifier.hierarchy.to_json(
             "output/{}/hierarchy.json".format(name)
         )
 

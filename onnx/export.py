@@ -48,7 +48,7 @@ By default, all models are exported. An error will be raised if a model has not 
     parser.add_argument('-B', '--best', action='store_true', help='User best-epoch weights instead of latest-epoch.')
     parser.add_argument('-b', '--bento', action='store_true', help='Add exported models to the local BentoML model store.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information to the console (for debugging purposes).')
-    parser.add_argument('-c', '--cpu', action='store_true', help='Only run on CPU. Use this if you have to run without CUDA support (warning: depressingly slow).')
+    parser.add_argument('-c', '--cpu', action='store_true', help='Only trace models using CPU. Use this if you have to run without CUDA support.')
 
     args = parser.parse_args()
 
@@ -56,6 +56,7 @@ By default, all models are exported. An error will be raised if a model has not 
     verbose = False
     bento = False
     best = False
+    index = None
     with open('./hyperparams.json', 'r') as j:
         hyperparams = json.loads(j.read())
     model_lst = [
@@ -92,23 +93,23 @@ By default, all models are exported. An error will be raised if a model has not 
         if 'db_bhcn' in model_lst:
             model = db_bhcn.DB_BHCN.from_checkpoint(
                 get_path('db_bhcn', dataset_name, best, index)
-            )
+            ).to(device)
             model.export(dataset_name, bento)
 
         if 'db_bhcn_awx' in model_lst:
             model = db_bhcn.DB_BHCN.from_checkpoint(
                 get_path('db_bhcn_awx', dataset_name, best, index)
-            )
+            ).to(device)
             model.export(dataset_name, bento)
 
         if 'db_ahmcnf' in model_lst:
-            model = db_bhcn.DB_AHMCN_F.from_checkpoint(
+            model = db_ahmcnf.DB_AHMCN_F.from_checkpoint(
                 get_path('db_ahmcnf', dataset_name, best, index)
-            )
+            ).to(device)
             model.export(dataset_name, bento)
 
         if 'db_achmcnn' in model_lst:
-            model = db_bhcn.DB_AC_HMCNN.from_checkpoint(
+            model = db_achmcnn.DB_AC_HMCNN.from_checkpoint(
                 get_path('db_achmcnn', dataset_name, best, index)
-            )
+            ).to(device)
             model.export(dataset_name, bento)

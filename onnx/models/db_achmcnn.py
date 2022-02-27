@@ -27,9 +27,9 @@ class MCM(torch.nn.Module):
         # Duplicate x along the new dimension to create a list of 2D matrices
         # of size n x n (same as R). Note that x can be a list of vectors
         # instead of one.
-        H = H.expand(len(x), n, n)
+        H = H.expand(x.shape[0], n, n)
         # We'll have to duplicate R to multiply with the entire batch here
-        M_batch = self.M.expand(len(x), n, n)
+        M_batch = self.M.expand(x.shape[0], n, n)
         final_out, _ = torch.max(M_batch*H, dim=2)
         return final_out
 
@@ -115,6 +115,7 @@ class H_MCM_Model(torch.nn.Module):
         super().to(device)
         if device is not None:
             self.mcm = self.mcm.to(device)
+            self.hierarchy = self.hierarchy.to(device)
         return self
 
 
@@ -384,7 +385,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
             }
         )
 
-        hierarchy_json = self.hierarchy.to_json(
+        hierarchy_json = self.classifier.hierarchy.to_json(
             "output/{}/hierarchy.json".format(name)
         )
 
