@@ -378,10 +378,11 @@ class DB_BHCN(model.Model, torch.nn.Module):
         train_loader,
         val_loader,
         path=None,
-        best_path=None
+        best_path=None,
+        balanced=False
     ):
         """Train the normal (hierarchical loss) variant of DB-BHCN."""
-        criterion = torch.nn.NLLLoss()
+        criterion = torch.nn.NLLLoss(reduction='none')
         criterion_h = torch.nn.NLLLoss(reduction='none')
         val_loss_min = np.Inf
         lambda_L = self.config['lambda_l']
@@ -397,6 +398,11 @@ class DB_BHCN(model.Model, torch.nn.Module):
             for batch_idx, data in enumerate(tqdm(train_loader)):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
+                weights = (
+                    data['weights']
+                    if balanced
+                    else torch.FloatTensor([1.0] * ids.shape[0])
+                )
                 targets = data['labels']
 
                 local_outputs = self.forward_bhcn(ids, mask)
@@ -405,10 +411,10 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 # (l)ocal (per-level), and
                 # (h)ierarchical.
                 loss_l = lambda_L * sum([
-                    criterion(
+                    torch.mean(criterion(
                         local_outputs[level].cpu(),
                         targets[:, level]
-                    ) * loss_L_weights[level]
+                    ) * weights) * loss_L_weights[level]
                     for level in range(self.classifier.depth)
                 ])
 
@@ -433,7 +439,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
                                     local_outputs[level + 1], dim=1
                                 )
                             )
-                        ) * loss_factors)
+                        ) * loss_factors * weights.to(self.device))
                     )
                 loss_h = lambda_H * sum(loss_h_levels)
                 loss = loss_l + loss_h
@@ -460,6 +466,11 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 for batch_idx, data in enumerate(tqdm(val_loader)):
                     ids = data['ids'].to(self.device, dtype=torch.long)
                     mask = data['mask'].to(self.device, dtype=torch.long)
+                    weights = (
+                        data['weights']
+                        if balanced
+                        else torch.FloatTensor([1.0] * ids.shape[0])
+                    )
                     targets = data['labels']
 
                     local_outputs = self.forward_bhcn(ids, mask)
@@ -468,10 +479,10 @@ class DB_BHCN(model.Model, torch.nn.Module):
                     # (l)ocal (per-level), and
                     # (h)ierarchical.
                     loss_l = lambda_L * sum([
-                        criterion(
+                        torch.mean(criterion(
                             local_outputs[level].cpu(),
                             targets[:, level]
-                        ) * loss_L_weights[level]
+                        ) * weights) * loss_L_weights[level]
                         for level in range(self.classifier.depth)
                     ])
 
@@ -496,12 +507,14 @@ class DB_BHCN(model.Model, torch.nn.Module):
                                         local_outputs[level + 1], dim=1
                                     )
                                 )
-                            ) * loss_factors)
+                            ) * loss_factors * weights.to(self.device))
                         )
                     loss_h = lambda_H * sum(loss_h_levels)
                     loss = loss_l + loss_h
 
-                    val_loss = val_loss + (loss.item() - val_loss) / (batch_idx + 1)
+                    val_loss = val_loss + (
+                        loss.item() - val_loss
+                    ) / (batch_idx + 1)
 
                     val_targets = np.concatenate([
                         val_targets, targets.cpu().detach().numpy()
@@ -574,14 +587,15 @@ class DB_BHCN(model.Model, torch.nn.Module):
         train_loader,
         val_loader,
         path=None,
-        best_path=None
+        best_path=None,
+        balanced=False
     ):
         """Train the AWX-equipped variant of DB-BHCN."""
         val_loss_min = np.Inf
         lambda_L = self.config['lambda_l']
 
-        criterion_g = torch.nn.BCELoss()
-        criterion_l = torch.nn.NLLLoss()
+        criterion_g = torch.nn.BCELoss(reduction='none')
+        criterion_l = torch.nn.NLLLoss(reduction='none')
 
         optimizer = torch.optim.Adam(
             [
@@ -606,6 +620,11 @@ class DB_BHCN(model.Model, torch.nn.Module):
             for batch_idx, data in enumerate(tqdm(train_loader)):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
+                weights = (
+                    data['weights']
+                    if balanced
+                    else torch.FloatTensor([1.0] * ids.shape[0])
+                )
                 targets = data['labels']
                 targets_b = data['labels_b'].to(
                     self.device, dtype=torch.float)
@@ -615,12 +634,14 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 # We have two loss functions:
                 # (l)ocal (per-level), and
                 # (g)lobal.
-                loss_g = criterion_g(awx_output, targets_b)
+                loss_g = torch.mean(
+                    criterion_g(awx_output, targets_b) * weights.to(self.device)
+                )
                 loss_l = lambda_L * sum([
-                    criterion_l(
+                    torch.mean(criterion_l(
                         local_outputs[level].cpu(),
                         targets[:, level]
-                    ) * loss_L_weights[level]
+                    ) * weights) * loss_L_weights[level]
                     for level in range(self.classifier.depth)
                 ])
 
@@ -648,21 +669,30 @@ class DB_BHCN(model.Model, torch.nn.Module):
                                          dtype=torch.long)
                     mask = data['mask'].to(self.device,
                                            dtype=torch.long)
+                    weights = (
+                        data['weights']
+                        if balanced
+                        else torch.FloatTensor([1.0] * ids.shape[0])
+                    )
                     targets = data['labels']
                     targets_b = data['labels_b'].to(self.device,
                                                     dtype=torch.float)
 
-                    local_outputs, awx_output = self.forward_bhcn_awx(ids, mask)
+                    local_outputs, awx_output = self.forward_bhcn_awx(
+                        ids, mask
+                    )
 
                     # We have two loss functions:
                     # (l)ocal (per-level), and
                     # (g)lobal.
-                    loss_g = criterion_g(awx_output, targets_b)
+                    loss_g = torch.mean(
+                        criterion_g(awx_output, targets_b) * weights.to(self.device)
+                    )
                     loss_l = lambda_L * sum([
-                        criterion_l(
+                        torch.mean(criterion_l(
                             local_outputs[level].cpu(),
                             targets[:, level]
-                        ) * loss_L_weights[level]
+                        ) * weights) * loss_L_weights[level]
                         for level in range(self.classifier.depth)
                     ])
                     loss = loss_g + loss_l
@@ -752,7 +782,10 @@ class DB_BHCN(model.Model, torch.nn.Module):
             'outputs': all_outputs,
         }
 
-    def fit(self, train_loader, val_loader, path=None, best_path=None):
+    def fit(
+            self, train_loader, val_loader, path=None, best_path=None,
+            balanced=False
+    ):
         """Initialise training resources and call the corresponding script.
 
         Either train_bhcn or train_bhcn_awx will be called, depending on
@@ -787,7 +820,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 train_loader,
                 val_loader,
                 path,
-                best_path
+                best_path,
+                balanced=balanced
             )
 
         return self.fit_bhcn(
@@ -796,7 +830,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
             train_loader,
             val_loader,
             path,
-            best_path
+            best_path,
+            balanced=balanced
         )
 
     def test(self, loader):

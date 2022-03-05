@@ -8,10 +8,11 @@ import logging
 # local_outputs: list of Torch tensors, each represeting scores for a hierarchical level.
 # targets: list of category codes, ordered in hierarchical order (top to bottom). This can be taken straight from the 'codes' column.
 def get_metrics(test_output, display=None, compute_auprc = False):
-    local_outputs = test_output['outputs']
+    outputs = test_output['outputs']
     targets = test_output['targets']
-    leaf_size = local_outputs[-1].shape[1]
-    depth = len(local_outputs)
+    leaf_size = outputs[-1].shape[1]
+    depth = len(outputs)
+
     def generate_one_hot(idx):
         b = np.zeros(leaf_size, dtype=bool)
         b[idx] = 1
@@ -19,12 +20,24 @@ def get_metrics(test_output, display=None, compute_auprc = False):
 
     # Get predicted class indices at each level
     level_codes = [
-        np.argmax(local_outputs[level], axis=1)
-        for level in range(len(local_outputs))
+        np.argmax(outputs[level], axis=1)
+        for level in range(len(outputs))
     ]
 
-    accuracies = [ metrics.accuracy_score(targets[:, level], level_codes[level]) for level in range(depth) ]
-    precisions = [ metrics.precision_score(targets[:, level], level_codes[level], average='weighted', zero_division=0) for level in range(depth) ]
+    accuracies = [
+        metrics.accuracy_score(
+            targets[:, level],
+            level_codes[level]
+        ) for level in range(depth)
+    ]
+    precisions = [
+        metrics.precision_score(
+            targets[:, level],
+            level_codes[level],
+            average='weighted',
+            zero_division=0
+        ) for level in range(depth)
+    ]
 
     global_accuracy = sum(accuracies)/len(accuracies)
     global_precision = sum(precisions)/len(precisions)
@@ -47,15 +60,59 @@ def get_metrics(test_output, display=None, compute_auprc = False):
         print("Precision: {}".format(global_precision))
 
     if compute_auprc:
-        binarised_targets = np.array([generate_one_hot(lst[-1]) for lst in targets])
-        rectified_outputs = np.concatenate([local_outputs[-1], np.ones((1, local_outputs[-1].shape[1]))], axis=0)
-        rectified_targets = np.concatenate([binarised_targets, np.ones((1, leaf_size), dtype=bool)], axis=0)
+        binarised_targets = np.array([
+            generate_one_hot(lst[-1]) for lst in targets
+        ])
+        rectified_outputs = np.concatenate(
+            [outputs[-1], np.ones((1, outputs[-1].shape[1]))],
+            axis=0)
+        rectified_targets = np.concatenate(
+            [binarised_targets, np.ones((1, leaf_size), dtype=bool)],
+            axis=0
+        )
 
-        auprc_score = metrics.average_precision_score(rectified_targets, rectified_outputs)
+        auprc_score = metrics.average_precision_score(
+            rectified_targets, rectified_outputs)
         if display == 'log':
-            logging.info('Rectified leaf-level AU(PRC) score: {}'.format(auprc_score))
+            logging.info('Rectified leaf-level AU(PRC) score: {}'.format(
+                auprc_score))
         elif display == 'print':
-            print('Rectified leaf-level AU(PRC) score: {}'.format(auprc_score))
+            print('Rectified leaf-level AU(PRC) score: {}'.format(
+                auprc_score))
 
-        return np.array([accuracies[-1], precisions[-1], global_accuracy, global_precision, auprc_score])
-    return np.array([accuracies[-1], precisions[-1], global_accuracy, global_precision])
+        return np.array([
+            accuracies[-1],
+            precisions[-1],
+            global_accuracy,
+            global_precision,
+            auprc_score
+        ])
+    return np.array([
+        accuracies[-1],
+        precisions[-1],
+        global_accuracy,
+        global_precision
+    ])
+
+
+def get_leaf_report(test_output, display=None):
+    """Generate a readable tabular report of metrics per leaf-level class."""
+    leaf_output = test_output['outputs'][-1]
+    leaf_targets = test_output['targets'][:, -1]
+
+    binarised_output = np.argmax(leaf_output, axis=1)
+    # binarised_targets = np.zeros(
+    #     (leaf_output.shape[0], leaf_output.shape[1]),
+    #     dtype=bool
+    # )
+    # for row, label in enumerate(leaf_targets):
+    #     binarised_targets[row, label] = 1
+    print(binarised_output.shape)
+    print(leaf_targets.shape)
+
+    report = metrics.classification_report(leaf_targets, binarised_output)
+    if display == 'log' or display == 'both':
+        logging.info(report)
+    if display == 'print' or display == 'both':
+        print(report)
+    return report
