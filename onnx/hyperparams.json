@@ -2,8 +2,8 @@
     "db_bhcn": {
         "model_name": "db_bhcn",
         "encoder_lr": 0.00003,
-        "cls_lr": 0.003,
-        "gamma_l": -0.25,
+        "cls_lr": 0.0005,
+        "gamma_l": -0.1,
         "lambda_l": 1.0,
         "lambda_h": 0.7,
         "dropout": 0.3,
