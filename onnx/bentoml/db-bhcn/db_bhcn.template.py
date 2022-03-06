@@ -42,7 +42,7 @@ classifier_runner = bentoml.onnx.load_runner(
 )
 
 hierarchy = bentoml.models.get(
-    'classifier_db_bhcn_walmart_30k:latest'
+    '${classifier}'
 ).info.metadata
 
 level_offsets = hierarchy['level_offsets']
