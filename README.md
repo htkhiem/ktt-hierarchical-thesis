@@ -1,5 +1,5 @@
 # Dependencies
-Just recreate the Anaconda environment using the supplied `environment.yaml` file in the root directory. Alternatively, run the following commands:
+Just recreate the Anaconda environment using the supplied `environment.yaml` file in `./onnx`. Alternatively, run the following commands:
 
 ``` sh
 conda install pytorch cudatoolkit=11.3 -c pytorch
