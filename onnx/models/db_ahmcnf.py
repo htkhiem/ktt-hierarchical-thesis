@@ -21,7 +21,7 @@ class AHMCN_F(torch.nn.Module):
         hierarchy,
         config
     ):
-        """Construct MCM post-processor."""
+        """Construct module."""
         super(AHMCN_F, self).__init__()
 
         # Back up some parameters for use in forward()
@@ -232,7 +232,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(
             params=self.classifier.parameters(),
-            lr=self.config['cls_lr']
+            lr=self.config['classifier_lr']
         )
 
         # Store validation metrics after each epoch
@@ -248,8 +248,6 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
             for batch_idx, data in enumerate(tqdm(train_loader)):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
-                targets = data['labels'].to(self.device,
-                                            dtype=torch.float)
                 targets = data['labels']
                 targets_b = data['labels_b'].to(self.device,
                                                 dtype=torch.float)
@@ -277,9 +275,6 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
                     min=0) ** 2)
                 loss = loss_g + loss_l + loss_h
 
-                # PyTorch defaults to accumulating gradients, but we don't need
-                # that here
-                optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 

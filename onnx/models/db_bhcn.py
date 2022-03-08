@@ -591,7 +591,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 },
                 {
                     'params': self.classifier.parameters(),
-                    'lr': self.config['cls_lr']
+                    'lr': self.config['classifier_lr']
                 }
             ],
         )
@@ -766,7 +766,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 },
                 {
                     'params': self.classifier.parameters(),
-                    'lr': self.config['cls_lr']
+                    'lr': self.config['classifier_lr']
                 }
             ],
         )

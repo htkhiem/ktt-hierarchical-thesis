@@ -2,7 +2,7 @@
     "db_bhcn": {
         "model_name": "db_bhcn",
         "encoder_lr": 0.00003,
-        "cls_lr": 0.0005,
+        "classifier_lr": 0.0005,
         "gamma_l": -0.1,
         "lambda_l": 1.0,
         "lambda_h": 0.7,
@@ -14,7 +14,7 @@
     "db_bhcn_awx": {
         "model_name": "db_bhcn_awx",
         "encoder_lr": 0.00003,
-        "cls_lr": 0.0005,
+        "classifier_lr": 0.0005,
         "gamma_l": -0.5,
         "lambda_l": 0.3,
         "dropout": 0.4,
@@ -25,7 +25,7 @@
     },
     "db_ahmcnf": {
         "model_name": "db_ahmcnf",
-        "cls_lr": 0.001,
+        "classifier_lr": 0.001,
         "lambda_h": 0.05,
         "dropout": 0.25,
         "global_hidden_sizes": [384, 384],
@@ -44,6 +44,14 @@
         "h_hidden_dim": 512,
         "h_layer_count": 3,
         "train_minibatch_size": 16,
+        "val_test_minibatch_size": 64
+    },
+    "db_linear": {
+        "model_name": "db_linear",
+        "encoder_lr": 0.00001,
+        "classifier_lr": 0.00001,
+        "dropout": 0.25,
+        "train_minibatch_size": 32,
         "val_test_minibatch_size": 64
     }
 }

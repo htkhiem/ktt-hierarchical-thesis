@@ -1,5 +1,5 @@
 """
-Service file for DB-BHCN + Walmart_30k.
+Service file for DB-Linear + Walmart_30k.
 """
 
 import bentoml
@@ -42,13 +42,13 @@ hierarchy = bentoml.models.get(
     '${classifier}'
 ).info.metadata
 
-level_offsets = hierarchy['level_offsets']
+leaf_offset = hierarchy['level_offsets'][-2]
 level_sizes = hierarchy['level_sizes']
 classes = hierarchy['classes']
 
 
 svc = bentoml.Service(
-    'db_bhcn',
+    'db_linear',
     runners=[encoder_runner, classifier_runner]
 )
 
@@ -63,14 +63,7 @@ def predict(input_text: str) -> np.ndarray:
 
     scores = classifier_outputs[0]
 
-    # Segmented argmax, as usual
-    pred_codes = [
-        int(
-            np.argmax(
-                scores[
-                    level_offsets[level]:level_offsets[level + 1]]
-            ) + level_offsets[level]
-        )
-        for level in range(len(level_sizes))
-    ]
-    return '\n'.join([classes[i] for i in pred_codes])
+    pred_code = int(
+        np.argmax(scores) + leaf_offset
+    )
+    return classes[pred_code]

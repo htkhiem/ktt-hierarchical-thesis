@@ -16,7 +16,7 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    svc_template = Template(filename='db_bhcn.template.py')
+    svc_template = Template(filename='db_linear.template.py')
     with open('_svc.py', 'w') as svcfile:
         svcfile.write(svc_template.render(
             encoder=args.encoder,
