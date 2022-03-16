@@ -12,7 +12,9 @@ import numpy as np
 import torch
 
 from utils.metric import get_metrics
-from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, tfidf_hsgd
+
+from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, tfidf_hsgd, tfidf_lsgd
+
 from utils import dataset, distilbert
 
 
@@ -83,6 +85,7 @@ if __name__ == "__main__":
 \tdb_achmcnn\t\t(Adapted C-HMCNN model running on DistilBERT encodings)
 \tdb_linear\t\t(DistilBERT+Linear layer)
 \ttfidf_hsgd\t\t(Internal-node SGD classifier hierarchy using tf-idf encodings)
+\ttfidf_lsgd\t\t(Leaf node SGD classifier hierarchy using tf-idf encodings)
 By default, all models are run.""")
     parser.add_argument('-e', '--epoch', const=5, nargs='?', help='How many epochs to train DistilBERT models over. Default is 5.')
     parser.add_argument('-R', '--run', const=5, nargs='?', help='How many times to repeat training. The final result will be an average of all the runs. Default is 5.')
@@ -104,7 +107,8 @@ By default, all models are run.""")
         'db_bhcn_awx',
         'db_ahmcnf',
         'db_achmcnn',
-        'tfidf_hsgd'
+        'tfidf_hsgd',
+        'tfidf_lsgd'
     ]
     epoch = 5
     repeat = 5
@@ -314,3 +318,32 @@ By default, all models are run.""")
                 save_weights=save_weights,
                 verbose=verbose
             )
+
+    if 'tfidf_lsgd' in model_lst:
+        print('Testing tf-idf -> internal-node SGD classifier network...')
+        logging.info('Testing tf-idf -> internal-node SGD classifier network...')
+        for dataset_name in dataset_lst:
+            config = {}
+            config['model_name'] = 'tfidf_lsgd'
+            config['dataset_name'] = dataset_name
+            print('Running on {}...'.format(dataset_name))
+            logging.info('Running on {}...'.format(dataset_name))
+            train_loader, test_loader = tfidf_lsgd.get_loaders(
+                './datasets/{}.parquet'.format(dataset_name),
+                config,
+                full_set=full_set,
+                verbose=verbose,
+            )
+            model = tfidf_lsgd.Tfidf_LSGD(config)
+            repeat_train(
+                config,
+                model,
+                train_loader,
+                None,  # No validation set for pure ML
+                test_loader,
+                repeat,
+                metrics_func=tfidf_lsgd.get_metrics,
+                save_weights=save_weights,
+                verbose=verbose
+            )
+     
