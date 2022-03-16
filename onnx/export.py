@@ -13,7 +13,7 @@ import torch
 from functools import partial
 
 from utils import dataset, distilbert
-from models import db_bhcn, db_ahmcnf, db_achmcnn, tfidf_hsgd
+from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, tfidf_hsgd
 
 
 def get_path(model_name, dataset_name, best=True, idx=None):
@@ -42,6 +42,7 @@ if __name__ == "__main__":
 \tdb_bhcn_awx\t\t(DistilBERT Branching Hierarchical Classifier + Adjacency Wrapping Matrix)
 \tdb_ahmcnf\t\t(Adapted HMCN-F model running on DistilBERT encodings)
 \tdb_achmcnn\t\t(Adapted C-HMCNN model running on DistilBERT encodings)
+\tdb_linear\t\t(DistilBERT + Linear layer)
 \ttfidf_hsgd\t\t(Internal-node SGD classifier hierarchy using tf-idf encodings)
 By default, all models are exported. An error will be raised if a model has not been trained with any of the specified datasets.""")
     parser.add_argument('-i', '--index', help='Optionally specify which trained weights to load by their indices.')
@@ -64,6 +65,7 @@ By default, all models are exported. An error will be raised if a model has not 
         'db_bhcn_awx',
         'db_ahmcnf',
         'db_achmcnn',
+        'db_linear',
         'tfidf_hsgd'
     ]
 
@@ -112,4 +114,16 @@ By default, all models are exported. An error will be raised if a model has not 
             model = db_achmcnn.DB_AC_HMCNN.from_checkpoint(
                 get_path('db_achmcnn', dataset_name, best, index)
             ).to(device)
+            model.export(dataset_name, bento)
+
+        if 'db_linear' in model_lst:
+            model = db_linear.DB_Linear.from_checkpoint(
+                get_path('db_linear', dataset_name, best, index)
+            ).to(device)
+            model.export(dataset_name, bento)
+
+        if 'tfidf_hsgd' in model_lst:
+            model = tfidf_hsgd.Tfidf_HSGD.from_checkpoint(
+                get_path('tfidf_hsgd', dataset_name, best, index)
+            )
             model.export(dataset_name, bento)

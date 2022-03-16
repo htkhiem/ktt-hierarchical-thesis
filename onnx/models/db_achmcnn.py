@@ -350,7 +350,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
     def export(self, dataset_name, bento=False):
         """Export model to ONNX/Bento."""
         self.eval()
-        export_trained(self.encoder, dataset_name, 'db_achmcnn')
+        export_trained(self.encoder, dataset_name, 'db_achmcnn', bento=bento)
 
         # Create dummy input for tracing
         batch_size = 1  # Dummy batch size. When exported, it will be dynamic

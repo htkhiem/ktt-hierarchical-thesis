@@ -1,17 +1,27 @@
-# This file defines the function used to compute and output metrics from the training process.
-# It is capable of printing to the screen and/or a log file.
+"""
+This file defines the function used to compute and output metrics.
+
+It is capable of printing to the screen and/or a log file.
+"""
 from sklearn import metrics
 import numpy as np
-import torch
 import logging
 
-# local_outputs: list of Torch tensors, each represeting scores for a hierarchical level.
-# targets: list of category codes, ordered in hierarchical order (top to bottom). This can be taken straight from the 'codes' column.
-def get_metrics(test_output, display=None, compute_auprc = False):
+
+def get_metrics(test_output, display=None, compute_auprc=False):
+    """
+    Compute metrics for general PyTorch-based hierarchial models.
+
+    local_outputs: list of Torch tensors, each represeting scores for a
+    hierarchical level.
+    targets: list of category codes, ordered in hierarchical order (top to
+    bottom). This can be taken straight from the 'codes' column.
+    """
     local_outputs = test_output['outputs']
     targets = test_output['targets']
     leaf_size = local_outputs[-1].shape[1]
     depth = len(local_outputs)
+
     def generate_one_hot(idx):
         b = np.zeros(leaf_size, dtype=bool)
         b[idx] = 1

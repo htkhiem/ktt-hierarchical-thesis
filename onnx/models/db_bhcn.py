@@ -591,7 +591,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 },
                 {
                     'params': self.classifier.parameters(),
-                    'lr': self.config['cls_lr']
+                    'lr': self.config['classifier_lr']
                 }
             ],
         )
@@ -766,7 +766,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 },
                 {
                     'params': self.classifier.parameters(),
-                    'lr': self.config['cls_lr']
+                    'lr': self.config['classifier_lr']
                 }
             ],
         )
@@ -815,7 +815,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
         export_trained(
             self.encoder,
             dataset_name,
-            'db_bhcn_awx' if self.awx else 'db_bhcn'
+            'db_bhcn_awx' if self.awx else 'db_bhcn',
+            bento=bento
         )
 
         # Create dummy input for tracing

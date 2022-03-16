@@ -12,7 +12,9 @@ import numpy as np
 import torch
 
 from utils.metric import get_metrics
-from models import db_bhcn, db_ahmcnf, db_achmcnn, tfidf_hsgd, tfidf_lsgd
+
+from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, tfidf_hsgd, tfidf_lsgd
+
 from utils import dataset, distilbert
 
 
@@ -81,6 +83,7 @@ if __name__ == "__main__":
 \tdb_bhcn_awx\t\t(DistilBERT Branching Hierarchical Classifier + Adjacency Wrapping Matrix)
 \tdb_ahmcnf\t\t(Adapted HMCN-F model running on DistilBERT encodings)
 \tdb_achmcnn\t\t(Adapted C-HMCNN model running on DistilBERT encodings)
+\tdb_linear\t\t(DistilBERT+Linear layer)
 \ttfidf_hsgd\t\t(Internal-node SGD classifier hierarchy using tf-idf encodings)
 \ttfidf_lsgd\t\t(Leaf node SGD classifier hierarchy using tf-idf encodings)
 By default, all models are run.""")
@@ -257,9 +260,40 @@ By default, all models are run.""")
                 verbose=verbose
             )
 
+    if 'db_linear' in model_lst:
+        print('Training DB -> Linear...')
+        logging.info('Training DB -> Linear...')
+        config = hyperparams['db_linear']
+        config['epoch'] = epoch
+        config['device'] = device
+        for dataset_name in dataset_lst:
+            config['dataset_name'] = dataset_name
+            print('Running on {}...'.format(dataset_name))
+            logging.info('Running on {}...'.format(dataset_name))
+            train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
+                './datasets/{}.parquet'.format(dataset_name),
+                config,
+                full_set=full_set,
+                binary=True,
+                build_M=True,
+                verbose=verbose,
+            )
+            model = db_linear.DB_Linear(hierarchy, config).to(device)
+            repeat_train(
+                config,
+                model,
+                train_loader,
+                val_loader,
+                test_loader,
+                repeat,
+                metrics_func=db_linear.get_metrics,
+                save_weights=save_weights,
+                verbose=verbose
+            )
+
     if 'tfidf_hsgd' in model_lst:
-        print('Testing tf-idf -> internal-node SGD classifier network...')
-        logging.info('Testing tf-idf -> internal-node SGD classifier network...')
+        print('Training tf-idf -> internal-node SGD classifier network...')
+        logging.info('Training tf-idf -> internal-node SGD classifier network...')
         for dataset_name in dataset_lst:
             config = {}
             config['model_name'] = 'tfidf_hsgd'
