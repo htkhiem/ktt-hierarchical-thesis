@@ -17,7 +17,11 @@ class PerLevelHierarchy:
             self,
             codes=None,
             cls2idx=None,
+            classes=None,
+            levels=None,
+            level_offsets=None,
             build_parent=True,
+            parent_of=None,
             build_R=True,
             build_M=True
     ):
@@ -38,20 +42,35 @@ class PerLevelHierarchy:
 
         # Non-basic constructor requested
         if codes is not None and cls2idx is not None:
-            self.levels = [
-                len(d.keys()) for d in cls2idx
-            ]  # TODO: Rename to level_sizes
-            self.classes = reduce(lambda acc, elem: acc + elem, [
-                list(d.keys()) for d in cls2idx
-            ], [])
+            if levels is None:
+                self.levels = [
+                    len(d.keys()) for d in cls2idx
+                ]  # TODO: Rename to level_sizes
+            else:
+                self.levels = levels
+            if classes is None:
+                self.classes = reduce(lambda acc, elem: acc + elem, [
+                    list(d.keys()) for d in cls2idx
+                ], [])
+            else:
+                self.classes = classes
             # Where each level starts in a global n-hot category vector
             # Its last element is coincidentally the length, which also allows
             # us to simplify the slicing code by blindly doing
             # [offset[i] : offset[i+1]].
-            self.level_offsets = reduce(
-                lambda acc, elem: acc + [acc[len(acc) - 1] + elem], self.levels, [0]
-            )
-            if build_parent:
+            if level_offsets is None:
+                self.level_offsets = reduce(
+                    lambda acc, elem: acc + [acc[len(acc) - 1] + elem], self.levels, [0]
+                )
+            else:
+                self.level_offsets = level_offsets
+
+            if parent_of is not None:
+                self.parent_of = [
+                    torch.LongTensor(lvl)
+                    for lvl in parent_of
+                ]
+            elif build_parent:
                 # Use -1 to indicate 'undiscovered'
                 self.parent_of = [
                     torch.LongTensor([-1] * level_size)
@@ -77,7 +96,7 @@ class PerLevelHierarchy:
                 self.M.fill_diagonal_(1)
 
             for lst in codes:
-                if build_parent:
+                if build_parent and parent_of is None:
                     # Build parent() (Algorithm 1)
                     # First-level classes' parent is root, but here we set them
                     # to themselves.

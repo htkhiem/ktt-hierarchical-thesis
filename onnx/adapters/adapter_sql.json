@@ -1,0 +1,8 @@
+{
+    "host": "localhost",
+    "database": "walmart",
+    "user": "postgres",
+    "password": "123456lol",
+    "dataitem_query": "SELECT p.title AS name, p.id AS id, p.category_id AS class_id FROM product p",
+    "class_query": "SELECT c.id AS id, c.parent_id AS parent_id FROM category c"
+}
