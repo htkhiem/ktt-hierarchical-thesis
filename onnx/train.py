@@ -90,7 +90,6 @@ By default, all models are run.""")
     parser.add_argument('-e', '--epoch', const=5, nargs='?', help='How many epochs to train DistilBERT models over. Default is 5.')
     parser.add_argument('-R', '--run', const=5, nargs='?', help='How many times to repeat training. The final result will be an average of all the runs. Default is 5.')
     parser.add_argument('-l', '--log', help='Path to log file. Default path is ./run.log.')
-    parser.add_argument('-p', '--partial', action='store_true', help='Only run on 5% of each dataset (fixed seed). Useful for quick debugging runs.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information to the console (for debugging purposes).')
     parser.add_argument('-c', '--cpu', action='store_true', help='Only run on CPU. Use this if you have to run without CUDA support (warning: depressingly slow).')
 
@@ -113,7 +112,6 @@ By default, all models are run.""")
     epoch = 5
     repeat = 5
     save_weights = True
-    full_set = True
 
     dataset_lst = [name.strip() for name in args.dataset.split(",")]
     if args.model:
@@ -154,9 +152,8 @@ By default, all models are run.""")
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
             train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
-                './datasets/{}.parquet'.format(dataset_name),
+                dataset_name,
                 config,
-                full_set=full_set,
                 verbose=verbose,
             )
             model = db_bhcn.DB_BHCN(hierarchy, config).to(device)
@@ -182,11 +179,8 @@ By default, all models are run.""")
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
             train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
-                './datasets/{}.parquet'.format(dataset_name),
+                dataset_name,
                 config,
-                full_set=full_set,
-                binary=True,
-                build_R=True,
                 verbose=verbose,
             )
             model = db_bhcn.DB_BHCN(hierarchy, config, awx=True).to(device)
@@ -212,10 +206,8 @@ By default, all models are run.""")
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
             train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
-                './datasets/{}.parquet'.format(dataset_name),
+                dataset_name,
                 config,
-                full_set=full_set,
-                binary=True,
                 verbose=verbose,
             )
             model = db_ahmcnf.DB_AHMCN_F(hierarchy, config).to(device)
@@ -241,11 +233,8 @@ By default, all models are run.""")
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
             train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
-                './datasets/{}.parquet'.format(dataset_name),
+                dataset_name,
                 config,
-                full_set=full_set,
-                binary=True,
-                build_M=True,
                 verbose=verbose,
             )
             model = db_achmcnn.DB_AC_HMCNN(hierarchy, config).to(device)
@@ -271,11 +260,8 @@ By default, all models are run.""")
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
             train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
-                './datasets/{}.parquet'.format(dataset_name),
+                dataset_name,
                 config,
-                full_set=full_set,
-                binary=True,
-                build_M=True,
                 verbose=verbose,
             )
             model = db_linear.DB_Linear(hierarchy, config).to(device)
@@ -346,4 +332,3 @@ By default, all models are run.""")
                 save_weights=save_weights,
                 verbose=verbose
             )
-     
