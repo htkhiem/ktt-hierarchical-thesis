@@ -251,7 +251,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
                 mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
                 targets_b = get_hierarchical_one_hot(
-                    targets, self.classifier.levels
+                    targets, self.classifier.hierarchy.levels
                 ).to(self.device, dtype=torch.float)
 
                 output, local_outputs = self.forward(ids, mask)
@@ -300,7 +300,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
                                            dtype=torch.long)
                     targets = data['labels']
                     targets_b = get_hierarchical_one_hot(
-                        targets, self.classifier.levels
+                        targets, self.classifier.hierarchy.levels
                     ).to(self.device, dtype=torch.float)
 
                     output, local_outputs = self.forward(ids, mask)

@@ -1,24 +1,21 @@
 """Implementation of the tfidf + hierarchical SGD classifier model."""
-import pandas as pd
 import joblib
-import logging
 
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import word_tokenize
 
-from sklearn import preprocessing, linear_model, metrics
+from sklearn import preprocessing, linear_model
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import make_pipeline
 from sklearn_hierarchical_classification.classifier import HierarchicalClassifier
-from sklearn_hierarchical_classification.constants import ROOT
+
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from tempfile import mkdtemp
 
 from models import model
-from utils.dataset import RANDOM_SEED, TRAIN_SET_RATIO, VAL_SET_RATIO
 
 cachedir = mkdtemp()
 nltk.download('punkt')
@@ -61,89 +58,6 @@ class ColumnStemmer(BaseEstimator, TransformerMixin):
         if self.verbose:
             print('Stemming column', series.name)
         return series.apply(self.stem_and_concat)
-
-
-def make_hierarchy(classes, depth=None, verbose=False):
-    """Construct a special hierarchy data structure.
-
-    This structure is for sklearn_hierarchical_classification only.
-    """
-    temp = {
-        ROOT: set()
-    }
-    for i in range(0, len(classes)):
-        path = classes[i]
-        if len(path) != 0:
-            if verbose:
-                print(path)
-            limit = min(depth, len(path))
-            if path[0] not in temp[ROOT]:
-                temp[ROOT].add(path[0])
-            for i in range(0, limit - 1):
-                if path[i] not in temp:
-                    temp[path[i]] = set()
-            # add leaf into one of the generated sub-dicts.
-            try:
-                temp[path[limit-2]].add(path[limit-1])
-            except:
-                pass
-
-    hierarchy = {}
-    for key in temp.keys():
-        hierarchy[key] = list(temp[key])
-    return hierarchy
-
-
-def get_loaders(
-        path,
-        config,
-        depth=2,
-        full_set=True,
-        input_col_name='title',
-        class_col_name='category',
-        partial_set_frac=0.05,
-        verbose=False
-):
-    """
-    Generate 'loaders' for scikit-learn models.
-
-    Scikit-learn models simply read directly from lists. There is no
-    special DataLoader object like for PyTorch.
-    """
-    data = pd.read_parquet(path)
-    # Generate hierarchy
-    hierarchy = make_hierarchy(data[class_col_name], depth, verbose)
-    if not full_set:
-        small_data = data.sample(frac=0.25, random_state=RANDOM_SEED)
-        train_set = small_data.sample(
-            frac=TRAIN_SET_RATIO,
-            random_state=RANDOM_SEED
-        )
-        val_test_set = small_data.drop(train_set.index)
-    else:
-        train_set = data.sample(frac=TRAIN_SET_RATIO, random_state=RANDOM_SEED)
-        val_test_set = data.drop(train_set.index)
-
-    val_set = val_test_set.sample(
-        frac=VAL_SET_RATIO / (1-TRAIN_SET_RATIO),
-        random_state=RANDOM_SEED
-    )
-    test_set = val_test_set.drop(val_set.index)
-
-    train_set = train_set.reset_index(drop=True)
-    val_set = val_set.reset_index(drop=True)
-    test_set = test_set.reset_index(drop=True)
-
-    X_train = train_set[input_col_name]
-    X_test = test_set[input_col_name]
-    y_train = train_set[class_col_name].apply(
-        lambda row: row[min(depth - 1, len(row) - 1)]
-    )
-    y_test = test_set[class_col_name].apply(
-        lambda row: row[min(depth - 1, len(row) - 1)]
-    )
-
-    return (X_train, y_train), (X_test, y_test), hierarchy
 
 
 class Tfidf_HSGD(model.Model):
@@ -220,32 +134,3 @@ class Tfidf_HSGD(model.Model):
     def export(self, dataset_name, bento=False):
         """Export model to ONNX/Bento."""
         raise RuntimeError
-
-
-def get_metrics(test_output, display='log', compute_auprc=True):
-    """Specialised metrics function for scikit-learn model."""
-    leaf_accuracy = metrics.accuracy_score(
-        test_output['targets'],
-        test_output['predictions']
-    )
-    leaf_precision = metrics.precision_score(
-        test_output['targets'],
-        test_output['predictions'],
-        average='weighted',
-        zero_division=0
-    )
-    leaf_auprc = metrics.average_precision_score(
-        test_output['targets_b'],
-        test_output['scores'],
-        average="micro"
-    )
-    if display == 'print' or display == 'both':
-        print("Leaf accuracy: {}".format(leaf_accuracy))
-        print("Leaf precision: {}".format(leaf_precision))
-        print("Leaf AU(PRC): {}".format(leaf_auprc))
-    if display == 'log' or display == 'both':
-        logging.info("Leaf accuracy: {}".format(leaf_accuracy))
-        logging.info("Leaf precision: {}".format(leaf_precision))
-        logging.info("Leaf AU(PRC): {}".format(leaf_auprc))
-
-    return (leaf_accuracy, leaf_precision, None, None, leaf_auprc)

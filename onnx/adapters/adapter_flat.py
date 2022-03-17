@@ -63,6 +63,11 @@ if __name__ == '__main__':
         help='Seed used for random sampling in CV-splitting. Default to 0.'
     )
     parser.add_argument(
+        '-P',
+        '--proportion',
+        help='How much of the dataset to actually output. Defaults to 1.0. Range: (0.0, 1.0].'
+    )
+    parser.add_argument(
         '-t',
         '--title',
         required=True,
@@ -80,12 +85,13 @@ if __name__ == '__main__':
     path = args.path
     name_col = 'name' if not args.name else args.name
     depth = 4 if not args.depth else int(args.depth)
+    proportion = 1.0 if not args.proportion else float(args.proportion)
     classes_col = 'classes' if not args.classes else args.classes
     dataset_name = args.title
     json_format = 'records' if not args.json else args.json
     verbose = False if not args.verbose else args.verbose
-    train_ratio = 0.9 if not args.train else args.train
-    val_ratio = 0.5 if not args.validate else args.validate
+    train_ratio = 0.9 if not args.train else float(args.train)
+    val_ratio = 0.5 if not args.validate else float(args.validate)
     seed = 0 if not args.seed else args.seed
 
     assert(train_ratio > 0 and train_ratio < 1)
@@ -159,6 +165,9 @@ if __name__ == '__main__':
 
     # Output dataset as parquets
     data = data[['name', 'codes']]
+
+    if proportion != 1.0:
+        data = data.sample(frac=proportion, random_state=seed)
 
     train_set = data.sample(frac=train_ratio, random_state=seed)
     data = data.drop(train_set.index)

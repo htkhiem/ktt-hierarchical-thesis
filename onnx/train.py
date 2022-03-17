@@ -13,7 +13,7 @@ import torch
 
 from utils.metric import get_metrics
 
-from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, tfidf_hsgd, tfidf_lsgd
+from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, model_sklearn, tfidf_hsgd, tfidf_lsgd
 
 from utils import dataset, distilbert
 
@@ -126,8 +126,6 @@ By default, all models are run.""")
         repeat = int(args.run)
     if args.dry_run:
         save_weights = False
-    if args.partial:
-        full_set = False
     if args.verbose:
         verbose = args.verbose
     device = 'cuda' if torch.cuda.is_available() and not args.cpu else 'cpu'
@@ -286,10 +284,9 @@ By default, all models are run.""")
             config['dataset_name'] = dataset_name
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
-            train_loader, test_loader, hierarchy = tfidf_hsgd.get_loaders(
-                './datasets/{}.parquet'.format(dataset_name),
+            train_loader, test_loader, hierarchy = model_sklearn.get_loaders(
+                dataset_name,
                 config,
-                full_set=full_set,
                 verbose=verbose,
             )
             model = tfidf_hsgd.Tfidf_HSGD(config)
@@ -300,24 +297,23 @@ By default, all models are run.""")
                 None,  # No validation set for pure ML
                 test_loader,
                 repeat,
-                metrics_func=tfidf_hsgd.get_metrics,
+                metrics_func=model_sklearn.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
             )
 
     if 'tfidf_lsgd' in model_lst:
-        print('Testing tf-idf -> internal-node SGD classifier network...')
-        logging.info('Testing tf-idf -> internal-node SGD classifier network...')
+        print('Testing tf-idf -> leaf-node SGD classifier network...')
+        logging.info('Testing tf-idf -> leaf-node SGD classifier network...')
         for dataset_name in dataset_lst:
             config = {}
             config['model_name'] = 'tfidf_lsgd'
             config['dataset_name'] = dataset_name
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
-            train_loader, test_loader = tfidf_lsgd.get_loaders(
-                './datasets/{}.parquet'.format(dataset_name),
+            train_loader, test_loader, _ = model_sklearn.get_loaders(
+                dataset_name,
                 config,
-                full_set=full_set,
                 verbose=verbose,
             )
             model = tfidf_lsgd.Tfidf_LSGD(config)
@@ -328,7 +324,7 @@ By default, all models are run.""")
                 None,  # No validation set for pure ML
                 test_loader,
                 repeat,
-                metrics_func=tfidf_lsgd.get_metrics,
+                metrics_func=model_sklearn.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
             )

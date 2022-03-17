@@ -53,6 +53,11 @@ if __name__ == '__main__':
         help='Seed used for random sampling in CV-splitting. Default to 0.'
     )
     parser.add_argument(
+        '-P',
+        '--proportion',
+        help='How much of the dataset to actually output. Defaults to 1.0. Range: (0.0, 1.0].'
+    )
+    parser.add_argument(
         '-t',
         '--title',
         required=True,
@@ -69,9 +74,10 @@ if __name__ == '__main__':
 
     config_path = './adapter_sql.json' if not args.config else args.config
     dataset_name = args.title
+    proportion = 1.0 if not args.proportion else float(args.proportion)
     verbose = False if not args.verbose else args.verbose
-    train_ratio = 0.9 if not args.train else args.train
-    val_ratio = 0.5 if not args.validate else args.validate
+    train_ratio = 0.9 if not args.train else float(args.train)
+    val_ratio = 0.5 if not args.validate else float(args.validate)
     seed = 0 if not args.seed else args.seed
 
     assert(train_ratio > 0 and train_ratio < 1)
@@ -250,6 +256,10 @@ if __name__ == '__main__':
 
     # Output dataset as parquets
     sql_dataitems = sql_dataitems[['id', 'name', 'codes']]
+
+    if proportion != 1.0:
+        sql_dataitems = sql_dataitems.sample(
+            frac=proportion, random_state=seed)
 
     train_set = sql_dataitems.sample(frac=train_ratio, random_state=seed)
     sql_dataitems = sql_dataitems.drop(train_set.index)

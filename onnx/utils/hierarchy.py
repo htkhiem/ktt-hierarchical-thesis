@@ -149,7 +149,7 @@ class PerLevelHierarchy:
         return instance
 
     @classmethod
-    def from_json(cls, json, config=None):
+    def from_json(cls, json_path, config=None):
         """
         Create a new PerLevelHierarchy instance from a JSON string (or path).
 
@@ -159,11 +159,8 @@ class PerLevelHierarchy:
         If config is specified, the 'device' key will be read and the instance
         will be moved to the specified device.
         """
-        if isinstance(json, str):
-            with open(json, 'r') as f:
-                serial = f.read()
-        else:
-            serial = json
+        with open(json_path, 'r') as f:
+            serial = json.load(f)
         instance = cls(
             config,
             [],
@@ -174,9 +171,9 @@ class PerLevelHierarchy:
         )
         instance.classes = serial['classes']
         instance.level_offsets = serial['level_offsets']
-        instance.levels = serial['level_offsets']
+        instance.levels = serial['level_sizes']
         instance.parent_of = [
-            torch.LongTensor(level).to(config['device'])
+            torch.LongTensor(level)
             for level in serial['parent_of']
         ]
         if 'M' in serial.keys():
