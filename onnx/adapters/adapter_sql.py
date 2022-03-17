@@ -17,9 +17,9 @@ import sys
 sys.path.append('../')
 
 import os
+import json
 import argparse
 import psycopg2
-import json
 import pandas as pd
 import numpy as np
 from queue import Queue
