@@ -9,6 +9,7 @@ import bentoml
 from models import model
 from utils.hierarchy import PerLevelHierarchy
 from utils.distilbert import get_pretrained, export_trained
+from utils.dataset import get_hierarchical_one_hot
 from utils.metric import get_metrics
 
 
@@ -201,9 +202,14 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
             for batch_idx, data in enumerate(tqdm(train_loader)):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
-                targets_b = data['labels_b'].to(
+                targets = data['labels'].to(
                     self.device, dtype=torch.double
                 )
+
+                # Convert targets to one-hot
+                targets_b = get_hierarchical_one_hot(
+                    targets, self.classifier.levels
+                ).to(self.device, dtype=torch.float)
 
                 outputs = self.forward(ids, mask)
 
@@ -249,8 +255,11 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
                     mask = data['mask'].to(self.device,
                                            dtype=torch.long)
                     targets = data['labels']
-                    targets_b = data['labels_b'].to(self.device,
-                                                    dtype=torch.double)
+
+                    # Convert targets to one-hot
+                    targets_b = get_hierarchical_one_hot(
+                        targets, self.classifier.levels
+                    ).to(self.device, dtype=torch.float)
 
                     constrained_outputs = self.forward(ids, mask).double()
 

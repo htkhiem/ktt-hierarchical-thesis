@@ -115,3 +115,30 @@ def get_loaders(
     )
 
     return train_loader, val_loader, test_loader, hierarchy
+
+
+def get_hierarchical_one_hot(labels, level_sizes):
+    """
+    Binarise local-space labels to global-space one-hot vectors.
+
+    Example input:
+    - Labels: [[3, 5], [2, 0]], where axis 0 is minibatch and axis 1 is
+      hierarchical depth.
+    - Level sizes: [4, 6]
+
+    Corresponding output:
+    [[0,0,0,1, 0,0,0,0,0,1], [0,0,1,0, 1,0,0,0,0,0]], where axis 0 is
+    minibatch and axis 1 is global label space.
+    """
+    return torch.cat(
+        [
+            torch.nn.functional.one_hot(
+                label_level,
+                num_classes=level_sizes[i]
+            )
+            for i, label_level in enumerate([
+                    labels[:, i] for i in range(labels.shape[1])
+            ])
+        ],
+        dim=1
+    )
