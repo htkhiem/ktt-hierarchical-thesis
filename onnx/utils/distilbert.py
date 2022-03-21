@@ -28,13 +28,13 @@ def export_trained(
     """
     # Load model with pretrained weights.
     # We also need to export a pretrained tokenizer along to babysit
-    # transformers.onnx.2
+    # transformers.onnx
     model.eval()
     name = '{}_{}'.format(classifier_name, dataset_name)
     if bento:
         bentoml.transformers.save(
             'encoder_' + name,
-            model=model,
+            model,
             tokenizer=tokenizer
         )
     else:
