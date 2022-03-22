@@ -167,7 +167,7 @@ class Tfidf_HSGD(model.Model):
             class_hierarchy=hierarchy,
         )
         self.pipeline = Pipeline([
-            ('stemmer', ColumnStemmer(verbose=verbose)),
+            # ('stemmer', ColumnStemmer(verbose=verbose)),
             ('tfidf', TfidfVectorizer(min_df=50)),
             ('clf', clf),
         ])
@@ -221,9 +221,9 @@ class Tfidf_HSGD(model.Model):
 
     def export(self, dataset_name, bento=False):
         # Convert into ONNX
-        N = 10
-        dummy_input = ''.join(random.choice(string.ascii_lowercase + ' ') for i in range(N))
-        onx = to_onnx(self.pipeline, dummy_input.astype(str),target_opset=11)
+
+        initial_type = [('str_input', StringTensorType([None,1]))]
+        onx = to_onnx(self.pipeline, initial_types=initial_type,target_opset=11)
         # Create path
         name = '{}_{}'.format(
             'tfidf_hsgd',
@@ -238,13 +238,13 @@ class Tfidf_HSGD(model.Model):
 
         # Clear previous versions
         if os.path.exists(path):
-            os.remove(pateh)
+            os.remove(path)
 
         # Export
         with open(path, "wb") as f:
             f.write(onx.SerializeToString())
 
-        )
+        
 
 
 

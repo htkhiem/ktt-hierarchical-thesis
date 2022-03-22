@@ -15,7 +15,6 @@ if __name__ == '__main__':
     svc_template = Template(filename='tfidf_lsgd.template.py')
     with open('_svc.py', 'w') as svcfile:
         svcfile.write(svc_template.render(
-            encoder=args.encoder,
             classifier=args.classifier
         ))
 
