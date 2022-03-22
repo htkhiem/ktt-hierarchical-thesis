@@ -10,15 +10,8 @@ import nltk
 import sklearn
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import word_tokenize
-from sklearn import preprocessing, metrics
-from sklearn.pipeline import make_pipeline, Pipeline
 
 
-# Use load_runner for optimised performance
-# The transformer encoder section uses a directly-exported model, instead of
-# through ONNX, for optimisation.
-
-# PyTorch-based
 
 
 
