@@ -1,8 +1,9 @@
 """Implementation of the tfidf + hierarchical SGD classifier model."""
+import os
 import pandas as pd
 import joblib
 import logging
-import string, random
+
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
@@ -15,14 +16,11 @@ from sklearn_hierarchical_classification.classifier import HierarchicalClassifie
 from sklearn_hierarchical_classification.constants import ROOT
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
-from tempfile import mkdtemp
-from skl2onnx import to_onnx
-from skl2onnx.common.data_types import StringTensorType
+import bentoml
 
 from models import model
 from utils.dataset import RANDOM_SEED, TRAIN_SET_RATIO, VAL_SET_RATIO
 
-cachedir = mkdtemp()
 nltk.download('punkt')
 nltk.download('stopwords')
 # These can't be put inside the class since they don't have _unload(), which
@@ -31,17 +29,9 @@ stemmer = SnowballStemmer('english')
 stop_words = set(stopwords.words('english'))
 
 
-class ColumnStemmer(BaseEstimator, TransformerMixin):
-    """Serialisable pipeline stage wrapper for NLTK SnowballStemmer."""
-
-    def __init__(self, verbose=False):
-        """Construct wrapper.
-
-        Actual stemmer object is in global scope as it cannot be serialised.
-        """
-        self.verbose = verbose
-
-    def stem_and_concat(self, text):
+def stem_series(series):
+    """Call stem_and_concat on series."""
+    def stem_and_concat(text):
         """Stem words that are not stopwords."""
         words = word_tokenize(text)
         result_list = map(
@@ -53,16 +43,7 @@ class ColumnStemmer(BaseEstimator, TransformerMixin):
             words
         )
         return ' '.join(result_list)
-
-    def fit(self, x, y=None):
-        """Do nothing. This is not a trainable stage."""
-        return self
-
-    def transform(self, series):
-        """Call stem_and_concat on series."""
-        if self.verbose:
-            print('Stemming column', series.name)
-        return series.apply(self.stem_and_concat)
+    return series.apply(stem_and_concat)
 
 
 def make_hierarchy(classes, depth=None, verbose=False):
@@ -136,8 +117,8 @@ def get_loaders(
     val_set = val_set.reset_index(drop=True)
     test_set = test_set.reset_index(drop=True)
 
-    X_train = train_set[input_col_name]
-    X_test = test_set[input_col_name]
+    X_train = stem_series(train_set[input_col_name])
+    X_test = stem_series(test_set[input_col_name])
     y_train = train_set[class_col_name].apply(
         lambda row: row[min(depth - 1, len(row) - 1)]
     )
@@ -167,7 +148,6 @@ class Tfidf_HSGD(model.Model):
             class_hierarchy=hierarchy,
         )
         self.pipeline = Pipeline([
-            # ('stemmer', ColumnStemmer(verbose=verbose)),
             ('tfidf', TfidfVectorizer(min_df=50)),
             ('clf', clf),
         ])
@@ -220,32 +200,27 @@ class Tfidf_HSGD(model.Model):
         }
 
     def export(self, dataset_name, bento=False):
-        # Convert into ONNX
+        """
+        Export this model to BentoML.
 
-        initial_type = [('str_input', StringTensorType([None,1]))]
-        onx = to_onnx(self.pipeline, initial_types=initial_type,target_opset=11)
+        Due to the usage of sklearn_hierarchical_classification, this model
+        cannot be exported to ONNX format and only supports direct-to-BentoML
+        exporting.
+        For compatibility, the bento flag is still there but must always be set
+        to True.
+        Failure to do so will raise a RuntimeError.
+        """
+        if not bento:
+            raise RuntimeError('Tfidf-HSGD does not support ONNX exporting!')
+
         # Create path
         name = '{}_{}'.format(
             'tfidf_hsgd',
             dataset_name
         )
-        path = 'output/{}/classifier/'.format(name)
 
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        path += 'classifier.onnx'
-
-        # Clear previous versions
-        if os.path.exists(path):
-            os.remove(path)
-
-        # Export
-        with open(path, "wb") as f:
-            f.write(onx.SerializeToString())
-
-        
-
+        # Only support BentoML scikit-learn runner
+        bentoml.sklearn.save(name, self.pipeline)
 
 
 def get_metrics(test_output, display='log', compute_auprc=True):

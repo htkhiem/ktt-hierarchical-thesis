@@ -1,29 +1,25 @@
 """Implementation of the tfidf + leaf SGD classifier model."""
+import os
 import pandas as pd
 import joblib
 import logging
-import string, random
+
 import nltk
-import os
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import word_tokenize
 
 from sklearn import preprocessing, linear_model, metrics
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import make_pipeline
-from sklearn_hierarchical_classification.classifier import HierarchicalClassifier
-from sklearn_hierarchical_classification.constants import ROOT
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
-from tempfile import mkdtemp
 from skl2onnx import to_onnx
 from skl2onnx.common.data_types import StringTensorType
+import bentoml
 
 from models import model
 from utils.dataset import RANDOM_SEED, TRAIN_SET_RATIO, VAL_SET_RATIO
 
-cachedir = mkdtemp()
 nltk.download('punkt')
 nltk.download('stopwords')
 # These can't be put inside the class since they don't have _unload(), which
@@ -32,17 +28,9 @@ stemmer = SnowballStemmer('english')
 stop_words = set(stopwords.words('english'))
 
 
-class ColumnStemmer(BaseEstimator, TransformerMixin):
-    """Serialisable pipeline stage wrapper for NLTK SnowballStemmer."""
-
-    def __init__(self, verbose=False):
-        """Construct wrapper.
-
-        Actual stemmer object is in global scope as it cannot be serialised.
-        """
-        self.verbose = verbose
-
-    def stem_and_concat(self, text):
+def stem_series(series):
+    """Call stem_and_concat on series."""
+    def stem_and_concat(text):
         """Stem words that are not stopwords."""
         words = word_tokenize(text)
         result_list = map(
@@ -54,16 +42,7 @@ class ColumnStemmer(BaseEstimator, TransformerMixin):
             words
         )
         return ' '.join(result_list)
-
-    def fit(self, x, y=None):
-        """Do nothing. This is not a trainable stage."""
-        return self
-
-    def transform(self, series):
-        """Call stem_and_concat on series."""
-        if self.verbose:
-            print('Stemming column', series.name)
-        return series.apply(self.stem_and_concat)
+    return series.apply(stem_and_concat)
 
 
 def get_loaders(
@@ -81,6 +60,10 @@ def get_loaders(
 
     Scikit-learn models simply read directly from lists. There is no
     special DataLoader object like for PyTorch.
+
+    One thing to note is that this function also stems the inputs.
+    Sklearn-based models cannot stem by themselves as the stemmer
+    is not serialisable to ONNX.
     """
     data = pd.read_parquet(path)
     if not full_set:
@@ -104,8 +87,8 @@ def get_loaders(
     val_set = val_set.reset_index(drop=True)
     test_set = test_set.reset_index(drop=True)
 
-    X_train = train_set[input_col_name]
-    X_test = test_set[input_col_name]
+    X_train = stem_series(train_set[input_col_name])
+    X_test = stem_series(test_set[input_col_name])
     y_train = train_set[class_col_name].apply(
         lambda row: row[1]
     )
@@ -130,17 +113,12 @@ class Tfidf_LSGD(model.Model):
             loss='modified_huber',
             class_weight='balanced',
         ))
-        # clf = HierarchicalClassifier(
-        #     base_estimator=bclf,
-        #     class_hierarchy=hierarchy,
-        # )
         clf = linear_model.SGDClassifier(
             loss='modified_huber',
             verbose=True,
             max_iter=1000
         )
         self.pipeline = Pipeline([
-            # ('stemmer', ColumnStemmer(verbose=verbose)),
             ('tfidf', TfidfVectorizer(min_df=50)),
             ('clf', clf),
         ])
@@ -216,7 +194,9 @@ class Tfidf_LSGD(model.Model):
         # Export
         with open(path, "wb") as f:
             f.write(onx.SerializeToString())
-        
+
+        # Bento support
+        bentoml.sklearn.save(name, self.pipeline)
 
 
 def get_metrics(test_output, display='log', compute_auprc=True):

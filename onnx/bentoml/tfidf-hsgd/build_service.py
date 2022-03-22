@@ -39,9 +39,8 @@ if __name__ == '__main__':
                 'numpy',
                 'pandas',
                 'tensorflow',
-                'onnxruntime-gpu',
-                'onnx',
                 'sklearn',
+                'sklearn_hierarchical_classification',
                 'nltk'
             ]
         }
