@@ -2,7 +2,7 @@
 import pandas as pd
 import joblib
 import logging
-
+import string, random
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
@@ -16,6 +16,8 @@ from sklearn_hierarchical_classification.constants import ROOT
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from tempfile import mkdtemp
+from skl2onnx import to_onnx
+from skl2onnx.common.data_types import StringTensorType
 
 from models import model
 from utils.dataset import RANDOM_SEED, TRAIN_SET_RATIO, VAL_SET_RATIO
@@ -218,8 +220,32 @@ class Tfidf_HSGD(model.Model):
         }
 
     def export(self, dataset_name, bento=False):
-        """Export model to ONNX/Bento."""
-        raise RuntimeError
+        # Convert into ONNX
+        N = 10
+        dummy_input = ''.join(random.choice(string.ascii_lowercase + ' ') for i in range(N))
+        onx = to_onnx(self.pipeline, dummy_input.astype(str),target_opset=11)
+        # Create path
+        name = '{}_{}'.format(
+            'tfidf_hsgd',
+            dataset_name
+        )
+        path = 'output/{}/classifier/'.format(name)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        path += 'classifier.onnx'
+
+        # Clear previous versions
+        if os.path.exists(path):
+            os.remove(pateh)
+
+        # Export
+        with open(path, "wb") as f:
+            f.write(onx.SerializeToString())
+
+        )
+
 
 
 def get_metrics(test_output, display='log', compute_auprc=True):
