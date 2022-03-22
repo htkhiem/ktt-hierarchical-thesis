@@ -10,6 +10,7 @@ cleaning/raw/*
 
 Walmart_30k.parquet
 
+onnx/doc/build/*
 onnx/output/*
 onnx/tmp/*
 onnx/weights/*
