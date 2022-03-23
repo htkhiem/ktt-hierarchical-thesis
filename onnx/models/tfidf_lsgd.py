@@ -1,102 +1,17 @@
 """Implementation of the tfidf + leaf SGD classifier model."""
 import os
 import pandas as pd
-import joblib
-import logging
 
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem.snowball import SnowballStemmer
-from nltk.tokenize import word_tokenize
-
-from sklearn import preprocessing, linear_model, metrics
-from sklearn.pipeline import make_pipeline
+from sklearn import preprocessing, linear_model
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from skl2onnx import to_onnx
 from skl2onnx.common.data_types import StringTensorType
 import bentoml
 
-from models import model
-from utils.dataset import RANDOM_SEED, TRAIN_SET_RATIO, VAL_SET_RATIO
-
-nltk.download('punkt')
-nltk.download('stopwords')
-# These can't be put inside the class since they don't have _unload(), which
-# prevents joblib from correctly parallelising the class if included.
-stemmer = SnowballStemmer('english')
-stop_words = set(stopwords.words('english'))
-
-
-def stem_series(series):
-    """Call stem_and_concat on series."""
-    def stem_and_concat(text):
-        """Stem words that are not stopwords."""
-        words = word_tokenize(text)
-        result_list = map(
-            lambda word: (
-                stemmer.stem(word)
-                if word not in stop_words
-                else word
-            ),
-            words
-        )
-        return ' '.join(result_list)
-    return series.apply(stem_and_concat)
-
-
-def get_loaders(
-        path,
-        config,
-        depth=2,
-        full_set=True,
-        input_col_name='title',
-        class_col_name='category',
-        partial_set_frac=0.05,
-        verbose=False
-):
-    """
-    Generate 'loaders' for scikit-learn models.
-
-    Scikit-learn models simply read directly from lists. There is no
-    special DataLoader object like for PyTorch.
-
-    One thing to note is that this function also stems the inputs.
-    Sklearn-based models cannot stem by themselves as the stemmer
-    is not serialisable to ONNX.
-    """
-    data = pd.read_parquet(path)
-    if not full_set:
-        small_data = data.sample(frac=0.25, random_state=RANDOM_SEED)
-        train_set = small_data.sample(
-            frac=TRAIN_SET_RATIO,
-            random_state=RANDOM_SEED
-        )
-        val_test_set = small_data.drop(train_set.index)
-    else:
-        train_set = data.sample(frac=TRAIN_SET_RATIO, random_state=RANDOM_SEED)
-        val_test_set = data.drop(train_set.index)
-
-    val_set = val_test_set.sample(
-        frac=VAL_SET_RATIO / (1-TRAIN_SET_RATIO),
-        random_state=RANDOM_SEED
-    )
-    test_set = val_test_set.drop(val_set.index)
-
-    train_set = train_set.reset_index(drop=True)
-    val_set = val_set.reset_index(drop=True)
-    test_set = test_set.reset_index(drop=True)
-
-    X_train = stem_series(train_set[input_col_name])
-    X_test = stem_series(test_set[input_col_name])
-    y_train = train_set[class_col_name].apply(
-        lambda row: row[1]
-    )
-    y_test = test_set[class_col_name].apply(
-        lambda row: row[1]
-    )
-
-    return (X_train, y_train), (X_test, y_test)
+from models import model, model_sklearn
 
 
 class Tfidf_LSGD(model.Model):
@@ -109,10 +24,7 @@ class Tfidf_LSGD(model.Model):
 
     def __init__(self, config=None, verbose=False):
         """Construct the classifier."""
-        bclf = make_pipeline(linear_model.SGDClassifier(
-            loss='modified_huber',
-            class_weight='balanced',
-        ))
+
         clf = linear_model.SGDClassifier(
             loss='modified_huber',
             verbose=True,
@@ -172,9 +84,10 @@ class Tfidf_LSGD(model.Model):
 
     def export(self, dataset_name, bento=False):
         """Export model to ONNX/Bento."""
-        # Convert into ONNX
-        initial_type = [('str_input', StringTensorType([None,1]))]
-        onx = to_onnx(self.pipeline, initial_types=initial_type,target_opset=11)
+        initial_type = [('str_input', StringTensorType([None, 1]))]
+        onx = to_onnx(
+            self.pipeline, initial_types=initial_type, target_opset=11
+        )
         # Create path
         name = '{}_{}'.format(
             'tfidf_lsgd',

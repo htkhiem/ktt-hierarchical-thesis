@@ -9,6 +9,7 @@ import bentoml
 from models import model
 from utils.hierarchy import PerLevelHierarchy
 from utils.distilbert import get_pretrained, export_trained
+from utils.dataset import get_hierarchical_one_hot
 from utils.metric import get_metrics
 
 
@@ -201,9 +202,12 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
             for batch_idx, data in enumerate(tqdm(train_loader)):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
-                targets_b = data['labels_b'].to(
-                    self.device, dtype=torch.double
-                )
+                targets = data['labels']
+                # Convert targets to one-hot
+                targets_b = get_hierarchical_one_hot(
+                    targets, self.classifier.hierarchy.levels
+                ).to(self.device, dtype=torch.float)
+                targets = targets.to(self.device, dtype=torch.float)
 
                 outputs = self.forward(ids, mask)
 
@@ -211,12 +215,12 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
                 # MCM = max(M * H, dim=1)
                 constr_outputs = self.classifier.mcm(outputs)
                 # hbar = y * h
-                train_outputs = targets_b * outputs.double()
+                train_outputs = targets_b * outputs.float()
                 # max(M * Hbar, dim = 1)
                 train_outputs = self.classifier.mcm(train_outputs)
 
                 # (1-y) + max(M * H, dim = 1) + y * max(M * Hbar, dim = 1)
-                train_outputs = (1-targets_b)*constr_outputs.double() + (
+                train_outputs = (1-targets_b)*constr_outputs.float() + (
                     targets_b*train_outputs
                 )
                 loss = criterion(train_outputs, targets_b)
@@ -249,10 +253,12 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
                     mask = data['mask'].to(self.device,
                                            dtype=torch.long)
                     targets = data['labels']
-                    targets_b = data['labels_b'].to(self.device,
-                                                    dtype=torch.double)
+                    # Convert targets to one-hot
+                    targets_b = get_hierarchical_one_hot(
+                        targets, self.classifier.hierarchy.levels
+                    ).to(self.device, dtype=torch.float)
 
-                    constrained_outputs = self.forward(ids, mask).double()
+                    constrained_outputs = self.forward(ids, mask).float()
 
                     loss = criterion(constrained_outputs, targets_b)
 
@@ -271,7 +277,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
 
                     val_targets = np.concatenate([
                         val_targets,
-                        targets.cpu().detach().numpy()])
+                        targets])
                     for i in range(len(val_outputs)):
                         val_outputs[i] = np.concatenate([
                             val_outputs[i],
@@ -324,7 +330,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
                 mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
 
-                constrained_outputs = self.forward(ids, mask).double()
+                constrained_outputs = self.forward(ids, mask).float()
                 # Split local outputs
                 local_outputs = [
                     constrained_outputs[
