@@ -422,7 +422,26 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
         return val_metrics
 
     def test(self, loader):
-        """Test this model on a dataset."""
+        """Test this model on a dataset.
+        This method can be used to run this instance (trained or not) over any
+        dataset wrapped in a suitable PyTorch DataLoader. No gradient descent
+        or backpropagation will take place.
+
+        Parameters
+        ----------
+        loader : torch.utils.data.DataLoader
+            A minibatched, shuffled PyTorch DataLoader containing the training
+            set.
+
+        Returns
+        -------
+        test_metrics : numpy.ndarray of size (epoch_count, 4)
+            Accumulated validation set metrics over all epochs. Four metrics are
+            stored: leaf-level accuracy, leaf-level precision, averaged accuracy
+            and averaged precision (over all levels).
+
+
+        """
         self.eval()
 
         all_targets = np.empty((0, self.classifier.depth), dtype=bool)
