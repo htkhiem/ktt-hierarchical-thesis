@@ -303,7 +303,7 @@ By default, all models are run.""")
             )
 
     if 'tfidf_lsgd' in model_lst:
-        print('Testing tf-idf -> leaf-node SGD classifier network...')
+        print('Training tf-idf -> leaf-node SGD classifier network...')
         logging.info('Testing tf-idf -> leaf-node SGD classifier network...')
         for dataset_name in dataset_lst:
             config = {}

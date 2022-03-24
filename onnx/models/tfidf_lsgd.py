@@ -1,60 +1,16 @@
 """Implementation of the tfidf + leaf SGD classifier model."""
+import os
 import joblib
 
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem.snowball import SnowballStemmer
-from nltk.tokenize import word_tokenize
-
 from sklearn import preprocessing, linear_model
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
+
 from sklearn.feature_extraction.text import TfidfVectorizer
-from tempfile import mkdtemp
+from skl2onnx import to_onnx
+from skl2onnx.common.data_types import StringTensorType
+import bentoml
 
 from models import model
-
-cachedir = mkdtemp()
-nltk.download('punkt')
-nltk.download('stopwords')
-# These can't be put inside the class since they don't have _unload(), which
-# prevents joblib from correctly parallelising the class if included.
-stemmer = SnowballStemmer('english')
-stop_words = set(stopwords.words('english'))
-
-
-class ColumnStemmer(BaseEstimator, TransformerMixin):
-    """Serialisable pipeline stage wrapper for NLTK SnowballStemmer."""
-
-    def __init__(self, verbose=False):
-        """Construct wrapper.
-
-        Actual stemmer object is in global scope as it cannot be serialised.
-        """
-        self.verbose = verbose
-
-    def stem_and_concat(self, text):
-        """Stem words that are not stopwords."""
-        words = word_tokenize(text)
-        result_list = map(
-            lambda word: (
-                stemmer.stem(word)
-                if word not in stop_words
-                else word
-            ),
-            words
-        )
-        return ' '.join(result_list)
-
-    def fit(self, x, y=None):
-        """Do nothing. This is not a trainable stage."""
-        return self
-
-    def transform(self, series):
-        """Call stem_and_concat on series."""
-        if self.verbose:
-            print('Stemming column', series.name)
-        return series.apply(self.stem_and_concat)
 
 
 class Tfidf_LSGD(model.Model):
@@ -73,7 +29,6 @@ class Tfidf_LSGD(model.Model):
             max_iter=1000
         )
         self.pipeline = Pipeline([
-            ('stemmer', ColumnStemmer(verbose=verbose)),
             ('tfidf', TfidfVectorizer(min_df=50)),
             ('clf', clf),
         ])
@@ -127,4 +82,30 @@ class Tfidf_LSGD(model.Model):
 
     def export(self, dataset_name, bento=False):
         """Export model to ONNX/Bento."""
-        raise RuntimeError
+        initial_type = [('str_input', StringTensorType([None, 1]))]
+        onx = to_onnx(
+            self.pipeline, initial_types=initial_type, target_opset=11
+        )
+        # Create path
+        name = '{}_{}'.format(
+            'tfidf_lsgd',
+            dataset_name
+        )
+        path = 'output/{}/classifier/'.format(name)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        path += 'classifier.onnx'
+
+        # Clear previous versions
+        if os.path.exists(path):
+            os.remove(path)
+
+        # Export
+        with open(path, "wb") as f:
+            f.write(onx.SerializeToString())
+
+        # Bento support
+        if bento:
+            bentoml.sklearn.save(name, self.pipeline)
