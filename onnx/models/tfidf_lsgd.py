@@ -1,60 +1,17 @@
 """Implementation of the tfidf + leaf SGD classifier model."""
-import joblib
-
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem.snowball import SnowballStemmer
-from nltk.tokenize import word_tokenize
+import os
+import pandas as pd
 
 from sklearn import preprocessing, linear_model
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
+
 from sklearn.feature_extraction.text import TfidfVectorizer
-from tempfile import mkdtemp
+from skl2onnx import to_onnx
+from skl2onnx.common.data_types import StringTensorType
+import bentoml
 
-from models import model
-
-cachedir = mkdtemp()
-nltk.download('punkt')
-nltk.download('stopwords')
-# These can't be put inside the class since they don't have _unload(), which
-# prevents joblib from correctly parallelising the class if included.
-stemmer = SnowballStemmer('english')
-stop_words = set(stopwords.words('english'))
-
-
-class ColumnStemmer(BaseEstimator, TransformerMixin):
-    """Serialisable pipeline stage wrapper for NLTK SnowballStemmer."""
-
-    def __init__(self, verbose=False):
-        """Construct wrapper.
-
-        Actual stemmer object is in global scope as it cannot be serialised.
-        """
-        self.verbose = verbose
-
-    def stem_and_concat(self, text):
-        """Stem words that are not stopwords."""
-        words = word_tokenize(text)
-        result_list = map(
-            lambda word: (
-                stemmer.stem(word)
-                if word not in stop_words
-                else word
-            ),
-            words
-        )
-        return ' '.join(result_list)
-
-    def fit(self, x, y=None):
-        """Do nothing. This is not a trainable stage."""
-        return self
-
-    def transform(self, series):
-        """Call stem_and_concat on series."""
-        if self.verbose:
-            print('Stemming column', series.name)
-        return series.apply(self.stem_and_concat)
+from models import model, model_sklearn
 
 
 class Tfidf_LSGD(model.Model):
@@ -67,13 +24,13 @@ class Tfidf_LSGD(model.Model):
 
     def __init__(self, config=None, verbose=False):
         """Construct the classifier."""
+
         clf = linear_model.SGDClassifier(
             loss='modified_huber',
             verbose=True,
             max_iter=1000
         )
         self.pipeline = Pipeline([
-            ('stemmer', ColumnStemmer(verbose=verbose)),
             ('tfidf', TfidfVectorizer(min_df=50)),
             ('clf', clf),
         ])
@@ -127,4 +84,58 @@ class Tfidf_LSGD(model.Model):
 
     def export(self, dataset_name, bento=False):
         """Export model to ONNX/Bento."""
-        raise RuntimeError
+        initial_type = [('str_input', StringTensorType([None, 1]))]
+        onx = to_onnx(
+            self.pipeline, initial_types=initial_type, target_opset=11
+        )
+        # Create path
+        name = '{}_{}'.format(
+            'tfidf_lsgd',
+            dataset_name
+        )
+        path = 'output/{}/classifier/'.format(name)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        path += 'classifier.onnx'
+
+        # Clear previous versions
+        if os.path.exists(path):
+            os.remove(path)
+
+        # Export
+        with open(path, "wb") as f:
+            f.write(onx.SerializeToString())
+
+        # Bento support
+        bentoml.sklearn.save(name, self.pipeline)
+
+
+def get_metrics(test_output, display='log', compute_auprc=True):
+    """Specialised metrics function for scikit-learn model."""
+    leaf_accuracy = metrics.accuracy_score(
+        test_output['targets'],
+        test_output['predictions']
+    )
+    leaf_precision = metrics.precision_score(
+        test_output['targets'],
+        test_output['predictions'],
+        average='weighted',
+        zero_division=0
+    )
+    leaf_auprc = metrics.average_precision_score(
+        test_output['targets_b'],
+        test_output['scores'],
+        average="micro"
+    )
+    if display == 'print' or display == 'both':
+        print("Leaf accuracy: {}".format(leaf_accuracy))
+        print("Leaf precision: {}".format(leaf_precision))
+        print("Leaf AU(PRC): {}".format(leaf_auprc))
+    if display == 'log' or display == 'both':
+        logging.info("Leaf accuracy: {}".format(leaf_accuracy))
+        logging.info("Leaf precision: {}".format(leaf_precision))
+        logging.info("Leaf AU(PRC): {}".format(leaf_auprc))
+
+    return (leaf_accuracy, leaf_precision, None, None, leaf_auprc)

@@ -1,63 +1,16 @@
 """Implementation of the tfidf + hierarchical SGD classifier model."""
 import joblib
 
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem.snowball import SnowballStemmer
-from nltk.tokenize import word_tokenize
-
 from sklearn import preprocessing, linear_model
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import make_pipeline
 from sklearn_hierarchical_classification.classifier import HierarchicalClassifier
-
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
-from tempfile import mkdtemp
+
+import bentoml
 
 from models import model
-
-cachedir = mkdtemp()
-nltk.download('punkt')
-nltk.download('stopwords')
-# These can't be put inside the class since they don't have _unload(), which
-# prevents joblib from correctly parallelising the class if included.
-stemmer = SnowballStemmer('english')
-stop_words = set(stopwords.words('english'))
-
-
-class ColumnStemmer(BaseEstimator, TransformerMixin):
-    """Serialisable pipeline stage wrapper for NLTK SnowballStemmer."""
-
-    def __init__(self, verbose=False):
-        """Construct wrapper.
-
-        Actual stemmer object is in global scope as it cannot be serialised.
-        """
-        self.verbose = verbose
-
-    def stem_and_concat(self, text):
-        """Stem words that are not stopwords."""
-        words = word_tokenize(text)
-        result_list = map(
-            lambda word: (
-                stemmer.stem(word)
-                if word not in stop_words
-                else word
-            ),
-            words
-        )
-        return ' '.join(result_list)
-
-    def fit(self, x, y=None):
-        """Do nothing. This is not a trainable stage."""
-        return self
-
-    def transform(self, series):
-        """Call stem_and_concat on series."""
-        if self.verbose:
-            print('Stemming column', series.name)
-        return series.apply(self.stem_and_concat)
 
 
 class Tfidf_HSGD(model.Model):
@@ -79,7 +32,6 @@ class Tfidf_HSGD(model.Model):
             class_hierarchy=hierarchy,
         )
         self.pipeline = Pipeline([
-            ('stemmer', ColumnStemmer(verbose=verbose)),
             ('tfidf', TfidfVectorizer(min_df=50)),
             ('clf', clf),
         ])
@@ -132,5 +84,24 @@ class Tfidf_HSGD(model.Model):
         }
 
     def export(self, dataset_name, bento=False):
-        """Export model to ONNX/Bento."""
-        raise RuntimeError
+        """
+        Export this model to BentoML.
+
+        Due to the usage of sklearn_hierarchical_classification, this model
+        cannot be exported to ONNX format and only supports direct-to-BentoML
+        exporting.
+        For compatibility, the bento flag is still there but must always be set
+        to True.
+        Failure to do so will raise a RuntimeError.
+        """
+        if not bento:
+            raise RuntimeError('Tfidf-HSGD does not support ONNX exporting!')
+
+        # Create path
+        name = '{}_{}'.format(
+            'tfidf_hsgd',
+            dataset_name
+        )
+
+        # Only support BentoML scikit-learn runner
+        bentoml.sklearn.save(name, self.pipeline)

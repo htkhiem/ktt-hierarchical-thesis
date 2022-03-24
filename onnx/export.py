@@ -13,7 +13,7 @@ import torch
 from functools import partial
 
 from utils import dataset, distilbert
-from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, tfidf_hsgd
+from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, tfidf_hsgd, tfidf_lsgd
 
 
 def get_path(model_name, dataset_name, best=True, idx=None):
@@ -44,6 +44,7 @@ if __name__ == "__main__":
 \tdb_achmcnn\t\t(Adapted C-HMCNN model running on DistilBERT encodings)
 \tdb_linear\t\t(DistilBERT + Linear layer)
 \ttfidf_hsgd\t\t(Internal-node SGD classifier hierarchy using tf-idf encodings)
+\ttfidf_lsgd\t\t(ILeaf node SGD classifier hierarchy using tf-idf encodings)
 By default, all models are exported. An error will be raised if a model has not been trained with any of the specified datasets.""")
     parser.add_argument('-i', '--index', help='Optionally specify which trained weights to load by their indices.')
     parser.add_argument('-B', '--best', action='store_true', help='User best-epoch weights instead of latest-epoch.')
@@ -66,7 +67,8 @@ By default, all models are exported. An error will be raised if a model has not 
         'db_ahmcnf',
         'db_achmcnn',
         'db_linear',
-        'tfidf_hsgd'
+        'tfidf_hsgd',
+        'tfidf_lsgd'
     ]
 
     dataset_lst = [name.strip() for name in args.dataset.split(",")]
@@ -125,5 +127,11 @@ By default, all models are exported. An error will be raised if a model has not 
         if 'tfidf_hsgd' in model_lst:
             model = tfidf_hsgd.Tfidf_HSGD.from_checkpoint(
                 get_path('tfidf_hsgd', dataset_name, best, index)
+            )
+            model.export(dataset_name, bento)
+
+        if 'tfidf_lsgd' in model_lst:
+            model = tfidf_lsgd.Tfidf_LSGD.from_checkpoint(
+                get_path('tfidf_lsgd', dataset_name, best, index)
             )
             model.export(dataset_name, bento)
