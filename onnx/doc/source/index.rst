@@ -15,6 +15,8 @@ Welcome to ktt-hierarchical-system's documentation!
 
    indepth/index
 
+   models/index
+
    dev/intro
 
 Indices and tables
