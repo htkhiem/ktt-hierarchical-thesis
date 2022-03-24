@@ -2,10 +2,8 @@
 import joblib
 
 from sklearn import preprocessing, linear_model
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn_hierarchical_classification.classifier import HierarchicalClassifier
-from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 import bentoml

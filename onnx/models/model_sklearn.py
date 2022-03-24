@@ -5,6 +5,20 @@ from sklearn_hierarchical_classification.constants import ROOT
 import pandas as pd
 import json
 
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem.snowball import SnowballStemmer
+from nltk.tokenize import word_tokenize
+
+
+# Initialise NLTK material
+nltk.download('punkt')
+nltk.download('stopwords')
+# These can't be put inside the class since they don't have _unload(), which
+# prevents joblib from correctly parallelising the class if included.
+stemmer = SnowballStemmer('english')
+stop_words = set(stopwords.words('english'))
+
 
 def make_hierarchy(hierarchy_dict):
     """Construct a special hierarchy data structure.
@@ -35,6 +49,23 @@ def make_hierarchy(hierarchy_dict):
     return hierarchy
 
 
+def stem_series(series):
+    """Call stem_and_concat on series."""
+    def stem_and_concat(text):
+        """Stem words that are not stopwords."""
+        words = word_tokenize(text)
+        result_list = map(
+            lambda word: (
+                stemmer.stem(word)
+                if word not in stop_words
+                else word
+            ),
+            words
+        )
+        return ' '.join(result_list)
+    return series.apply(stem_and_concat)
+
+
 def get_loaders(
         dataset_name,
         config,
@@ -49,11 +80,13 @@ def get_loaders(
     train = pd.read_parquet('../datasets/{}/train.parquet'.format(dataset_name))
     test = pd.read_parquet('../datasets/{}/test.parquet'.format(dataset_name))
     # Generate hierarchy
-    with open('../datasets/{}/hierarchy.json'.format(dataset_name), 'r') as hierarchy_file:
+    with open(
+            '../datasets/{}/hierarchy.json'.format(dataset_name), 'r'
+    ) as hierarchy_file:
         hierarchy = make_hierarchy(json.load(hierarchy_file))
 
-    X_train = train['name']
-    X_test = test['name']
+    X_train = stem_series(train['name'])
+    X_test = stem_series(test['name'])
     y_train = train['codes'].apply(
         lambda row: row[-1]
     )

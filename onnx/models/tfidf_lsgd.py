@@ -1,9 +1,8 @@
 """Implementation of the tfidf + leaf SGD classifier model."""
 import os
-import pandas as pd
+import joblib
 
 from sklearn import preprocessing, linear_model
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -11,7 +10,7 @@ from skl2onnx import to_onnx
 from skl2onnx.common.data_types import StringTensorType
 import bentoml
 
-from models import model, model_sklearn
+from models import model
 
 
 class Tfidf_LSGD(model.Model):
@@ -24,7 +23,6 @@ class Tfidf_LSGD(model.Model):
 
     def __init__(self, config=None, verbose=False):
         """Construct the classifier."""
-
         clf = linear_model.SGDClassifier(
             loss='modified_huber',
             verbose=True,
@@ -109,33 +107,5 @@ class Tfidf_LSGD(model.Model):
             f.write(onx.SerializeToString())
 
         # Bento support
-        bentoml.sklearn.save(name, self.pipeline)
-
-
-def get_metrics(test_output, display='log', compute_auprc=True):
-    """Specialised metrics function for scikit-learn model."""
-    leaf_accuracy = metrics.accuracy_score(
-        test_output['targets'],
-        test_output['predictions']
-    )
-    leaf_precision = metrics.precision_score(
-        test_output['targets'],
-        test_output['predictions'],
-        average='weighted',
-        zero_division=0
-    )
-    leaf_auprc = metrics.average_precision_score(
-        test_output['targets_b'],
-        test_output['scores'],
-        average="micro"
-    )
-    if display == 'print' or display == 'both':
-        print("Leaf accuracy: {}".format(leaf_accuracy))
-        print("Leaf precision: {}".format(leaf_precision))
-        print("Leaf AU(PRC): {}".format(leaf_auprc))
-    if display == 'log' or display == 'both':
-        logging.info("Leaf accuracy: {}".format(leaf_accuracy))
-        logging.info("Leaf precision: {}".format(leaf_precision))
-        logging.info("Leaf AU(PRC): {}".format(leaf_auprc))
-
-    return (leaf_accuracy, leaf_precision, None, None, leaf_auprc)
+        if bento:
+            bentoml.sklearn.save(name, self.pipeline)
