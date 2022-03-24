@@ -7,10 +7,15 @@ Welcome to ktt-hierarchical-system's documentation!
 ===================================================
 
 .. toctree::
+   :hidden:
    :maxdepth: 2
    :caption: Contents:
 
+   usage/index
 
+   indepth/index
+
+   dev/intro
 
 Indices and tables
 ==================
