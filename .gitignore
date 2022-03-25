@@ -8,8 +8,6 @@ checkpoint.ipynb
 
 cleaning/raw/*
 
-Walmart_30k.parquet
-
 onnx/doc/build/*
 onnx/output/*
 onnx/tmp/*
