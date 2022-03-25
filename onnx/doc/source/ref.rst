@@ -1,0 +1,6 @@
+.. Cited Reference.
+
+References
+==========
+
+.. bibliography::

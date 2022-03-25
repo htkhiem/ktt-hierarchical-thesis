@@ -60,5 +60,3 @@ This post-processing necessitates a special loss function which the paper termed
    \text{MCLoss}(y, h, \text{MCM}) & = \text{MCLoss}_A(y, \text{MCM}_A) + \text{MCLoss}_B(y, h, \text{MCM}_B)
 
 A proof of the necessity for this novel loss function, which itself is derived from the typical BCE loss that we are familiar with, can be found in the titular paper.
-
-.. bibliography::
