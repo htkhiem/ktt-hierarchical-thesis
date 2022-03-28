@@ -184,7 +184,7 @@ class DB_Linear(model.Model, torch.nn.Module):
                                     'outputs': val_outputs,
                                     'targets': val_targets
                                 },
-                                display='print'),
+                                display=None),
                             axis=1
                         )
                     ], axis=1)

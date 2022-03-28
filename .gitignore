@@ -13,6 +13,9 @@ Walmart_30k.parquet
 onnx/output/*
 onnx/tmp/*
 onnx/weights/*
+onnx/airflow/*
+!onnx/airflow/airflow.cfg
+!onnx/airflow/webserver_config.py
 
 # Byte-compiled / optimized / DLL files
 */__pycache__/*

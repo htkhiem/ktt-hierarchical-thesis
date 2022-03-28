@@ -5,22 +5,22 @@ Use this Python script to initiate batched training of any combination of model
 and dataset.
 """
 import os
+from textwrap import dedent
+import datetime
 import argparse
 import logging
 import json
-import numpy as np
 import torch
 
 from models import model_pytorch, model_sklearn
 
 
-def repeat_train(
+def train_and_test(
         config,
         model,
         train_loader,
         val_loader,
         test_loader,
-        repeat,
         metrics_func=model_pytorch.get_metrics,
         save_weights=True,
         verbose=False
@@ -35,38 +35,44 @@ def repeat_train(
     """
     model_name = config['model_name']
     dataset_name = config['dataset_name']
-    all_test_metrics = np.zeros((repeat, 5), dtype=float)
     checkpoint_dir = './weights/{}/{}'.format(model_name, dataset_name)
+    start_datetime = datetime.datetime.now().replace(microsecond=0).isoformat()
     if save_weights:
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-    for i in range(repeat):
-        print('RUN #{} ----'.format(i))
-        logging.info('RUN #{} ----'.format(i))
-        if save_weights:
-            model.fit(
-                train_loader,
-                val_loader,
-                path='{}/run_{}.pt'.format(checkpoint_dir, repeat),
-                best_path='{}/run_{}_best.pt'.format(checkpoint_dir, repeat)
-            )
-        else:
-            model.fit(
-                train_loader,
-                val_loader,
-            )
-        test_output = model.test(test_loader)
-        test_metrics = metrics_func(
+        model.fit(
+            train_loader,
+            val_loader,
+            path='{}/last_{}.pt'.format(checkpoint_dir, start_datetime),
+            best_path='{}/best_{}.pt'.format(checkpoint_dir, start_datetime)
+        )
+    else:
+        model.fit(
+            train_loader,
+            val_loader,
+        )
+    test_output = model.test(test_loader)
+    test_metrics = metrics_func(
             test_output,
             display='both',
             compute_auprc=True
-        )
-        all_test_metrics[i, :] = test_metrics
-    averaged = np.average(all_test_metrics, axis=0)
-    averaged_display = '--- Average of {} runs:\nLeaf accuracy: {}\nLeaf precision: {}\nPath accuracy: {}\nPath precision: {}\nLeaf AU(PRC): {}'.format(
-        repeat, averaged[0], averaged[1], averaged[2], averaged[3], averaged[4])
-    print(averaged_display)
-    logging.info(averaged_display)
+    )
+    report = dedent("""
+    Test set metrics:
+    \tLeaf accuracy:  {}
+    \tLeaf precision: {}
+    \tPath accuracy:  {}
+    \tPath precision: {}
+    \tLeaf AU(PRC):   {}
+    """.format(
+        test_metrics[0],
+        test_metrics[1],
+        test_metrics[2],
+        test_metrics[3],
+        test_metrics[4],
+    ))
+    print(report)
+    logging.info(report)
 
 
 if __name__ == "__main__":
@@ -84,7 +90,6 @@ if __name__ == "__main__":
 \ttfidf_lsgd\t\t(Leaf node SGD classifier hierarchy using tf-idf encodings)
 By default, all models are run.""")
     parser.add_argument('-e', '--epoch', const=5, nargs='?', help='How many epochs to train DistilBERT models over. Default is 5.')
-    parser.add_argument('-R', '--run', const=5, nargs='?', help='How many times to repeat training. The final result will be an average of all the runs. Default is 5.')
     parser.add_argument('-l', '--log', help='Path to log file. Default path is ./run.log.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information to the console (for debugging purposes).')
     parser.add_argument('-c', '--cpu', action='store_true', help='Only run on CPU. Use this if you have to run without CUDA support (warning: depressingly slow).')
@@ -102,11 +107,11 @@ By default, all models are run.""")
         'db_bhcn_awx',
         'db_ahmcnf',
         'db_achmcnn',
+        'db_linear',
         'tfidf_hsgd',
         'tfidf_lsgd'
     ]
     epoch = 5
-    repeat = 5
     save_weights = True
 
     dataset_lst = [name.strip() for name in args.dataset.split(",")]
@@ -118,8 +123,6 @@ By default, all models are run.""")
         os.environ['TRANNSFORMERS_OFFLINE'] = '1'
     if args.epoch:
         epoch = int(args.epoch)
-    if args.run:
-        repeat = int(args.run)
     if args.dry_run:
         save_weights = False
     if args.verbose:
@@ -134,8 +137,8 @@ By default, all models are run.""")
 
     # Train models and log test set performance
     if 'db_bhcn' in model_lst:
-        print('Testing DB-BHCN...')
-        logging.info('Testing DB-BHCN...')
+        print('Training DB-BHCN...')
+        logging.info('Training DB-BHCN...')
 
         db_bhcn = __import__(
             'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
@@ -153,21 +156,20 @@ By default, all models are run.""")
                 verbose=verbose,
             )
             model = db_bhcn.DB_BHCN(hierarchy, config).to(device)
-            repeat_train(
+            train_and_test(
                 config,
                 model,
                 train_loader,
                 val_loader,
                 test_loader,
-                repeat,
                 metrics_func=model_pytorch.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
             )
 
     if 'db_bhcn_awx' in model_lst:
-        print('Testing DB-BHCN+AWX...')
-        logging.info('Testing DB-BHCN+AWX...')
+        print('Training DB-BHCN+AWX...')
+        logging.info('Training DB-BHCN+AWX...')
 
         db_bhcn = __import__(
             'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
@@ -185,21 +187,20 @@ By default, all models are run.""")
                 verbose=verbose,
             )
             model = db_bhcn.DB_BHCN(hierarchy, config, awx=True).to(device)
-            repeat_train(
+            train_and_test(
                 config,
                 model,
                 train_loader,
                 val_loader,
                 test_loader,
-                repeat,
                 metrics_func=model_pytorch.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
             )
 
     if 'db_ahmcnf' in model_lst:
-        print('Testing DB -> adapted HMCN-F...')
-        logging.info('Testing DB -> adapted HMCN-F...')
+        print('Training DB -> adapted HMCN-F...')
+        logging.info('Training DB -> adapted HMCN-F...')
 
         db_ahmcnf = __import__(
             'models', globals(), locals(), ['db_ahmcnf'], 0).db_ahmcnf
@@ -217,21 +218,20 @@ By default, all models are run.""")
                 verbose=verbose,
             )
             model = db_ahmcnf.DB_AHMCN_F(hierarchy, config).to(device)
-            repeat_train(
+            train_and_test(
                 config,
                 model,
                 train_loader,
                 val_loader,
                 test_loader,
-                repeat,
                 metrics_func=model_pytorch.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
             )
 
     if 'db_achmcnn' in model_lst:
-        print('Testing DB -> adapted C-HMCNN...')
-        logging.info('Testing DB -> adapted C-HMCNN...')
+        print('Training DB -> adapted C-HMCNN...')
+        logging.info('Training DB -> adapted C-HMCNN...')
 
         db_achmcnn = __import__(
             'models', globals(), locals(), ['db_achmcnn'], 0).db_achmcnn
@@ -249,13 +249,12 @@ By default, all models are run.""")
                 verbose=verbose,
             )
             model = db_achmcnn.DB_AC_HMCNN(hierarchy, config).to(device)
-            repeat_train(
+            train_and_test(
                 config,
                 model,
                 train_loader,
                 val_loader,
                 test_loader,
-                repeat,
                 metrics_func=model_pytorch.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
@@ -281,13 +280,12 @@ By default, all models are run.""")
                 verbose=verbose,
             )
             model = db_linear.DB_Linear(hierarchy, config).to(device)
-            repeat_train(
+            train_and_test(
                 config,
                 model,
                 train_loader,
                 val_loader,
                 test_loader,
-                repeat,
                 metrics_func=db_linear.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
@@ -312,13 +310,12 @@ By default, all models are run.""")
                 verbose=verbose,
             )
             model = tfidf_hsgd.Tfidf_HSGD(config)
-            repeat_train(
+            train_and_test(
                 config,
                 model,
                 train_loader,
                 None,  # No validation set for pure ML
                 test_loader,
-                repeat,
                 metrics_func=model_sklearn.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
@@ -326,7 +323,7 @@ By default, all models are run.""")
 
     if 'tfidf_lsgd' in model_lst:
         print('Training tf-idf -> leaf-node SGD classifier network...')
-        logging.info('Testing tf-idf -> leaf-node SGD classifier network...')
+        logging.info('Training tf-idf -> leaf-node SGD classifier network...')
 
         tfidf_lsgd = __import__(
             'models', globals(), locals(), ['tfidf_lsgd'], 0).tfidf_lsgd
@@ -343,13 +340,12 @@ By default, all models are run.""")
                 verbose=verbose,
             )
             model = tfidf_lsgd.Tfidf_LSGD(config)
-            repeat_train(
+            train_and_test(
                 config,
                 model,
                 train_loader,
                 None,  # No validation set for pure ML
                 test_loader,
-                repeat,
                 metrics_func=model_sklearn.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose

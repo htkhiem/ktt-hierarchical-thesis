@@ -300,14 +300,14 @@ class DB_BHCN(model.Model, torch.nn.Module):
         Construct model from saved checkpoint.
 
         AWX availability is automatically determined based on availability
-        of the R-matrix.
+        of the `awx_norm` field in the packaged config.
         """
         checkpoint = torch.load(path)
         hierarchy = PerLevelHierarchy.from_dict(checkpoint['hierarchy'])
         instance = cls(
             hierarchy,
             checkpoint['config'],
-            hierarchy.R is not None
+            'awx_norm' in checkpoint['config'].keys()
         )
         instance.encoder.load_state_dict(checkpoint['encoder_state_dict'])
         instance.classifier.load_state_dict(
@@ -365,6 +365,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
             'classifier_state_dict': self.classifier.state_dict(),
             'optimizer': optim
         }
+        if self.awx:
+            checkpoint['awx_norm'] = self.config['awx_norm']
         torch.save(checkpoint, path)
 
     def load(self, path):

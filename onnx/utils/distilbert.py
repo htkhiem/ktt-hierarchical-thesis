@@ -52,8 +52,8 @@ def export_trained(
     if bento:
         bentoml.transformers.save(
             'encoder_' + name,
-            model,
-            tokenizer=tokenizer
+            model=model,
+            tokenizer=get_tokenizer()
         )
     else:
         # Export into transformers model .bin format

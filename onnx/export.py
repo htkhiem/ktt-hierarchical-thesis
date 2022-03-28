@@ -5,30 +5,25 @@ This script controls the exporting of models, either directly to ONNX,
 or to a BentoML ModelStorage.
 """
 import argparse
-import logging
 import json
-import numpy as np
-import os, glob
+import glob
 import torch
-from functools import partial
-
-from utils import dataset, distilbert
-from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, tfidf_hsgd, tfidf_lsgd
 
 
-def get_path(model_name, dataset_name, best=True, idx=None):
+def get_path(model_name, dataset_name, best=True, time=None):
     """
     Grabs latest checkpoint in the automatic folder structure.
 
     If best is True, get paths for 'best' weights instead of last-epoch.
-    If idx is specified, get that index specifically. If not, get the latest.
+    If time is specified, get that iteration specifically.
+    If not, get the latest.
     """
     weight_names = sorted(glob.glob(
-        'weights/{}/{}/run_{}{}.pt'.format(
+        'weights/{}/{}/{}_{}.pt'.format(
             model_name,
             dataset_name,
-            str(idx) if idx is not None else '*',
-            '_best' if best else ''
+            'best' if best else 'last',
+            str(time) if time is not None else '*'
         )
     ))
     return weight_names[-1]
@@ -89,48 +84,60 @@ By default, all models are exported. An error will be raised if a model has not 
         best = True
 
     device = 'cuda' if torch.cuda.is_available() and not args.cpu else 'cpu'
-    print('Using', device)
-
-    distilbert.init()
+    print('Using', device.upper())
 
     for dataset_name in dataset_lst:
         if 'db_bhcn' in model_lst:
+            db_bhcn = __import__(
+                'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
             model = db_bhcn.DB_BHCN.from_checkpoint(
                 get_path('db_bhcn', dataset_name, best, index)
             ).to(device)
             model.export(dataset_name, bento)
 
         if 'db_bhcn_awx' in model_lst:
+            db_bhcn = __import__(
+                'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
             model = db_bhcn.DB_BHCN.from_checkpoint(
                 get_path('db_bhcn_awx', dataset_name, best, index)
             ).to(device)
             model.export(dataset_name, bento)
 
         if 'db_ahmcnf' in model_lst:
+            db_ahmcnf = __import__(
+                'models', globals(), locals(), ['db_ahmcnf'], 0).db_ahmcnf
             model = db_ahmcnf.DB_AHMCN_F.from_checkpoint(
                 get_path('db_ahmcnf', dataset_name, best, index)
             ).to(device)
             model.export(dataset_name, bento)
 
         if 'db_achmcnn' in model_lst:
+            db_achmcnn = __import__(
+                'models', globals(), locals(), ['db_achmcnn'], 0).db_achmcnn
             model = db_achmcnn.DB_AC_HMCNN.from_checkpoint(
                 get_path('db_achmcnn', dataset_name, best, index)
             ).to(device)
             model.export(dataset_name, bento)
 
         if 'db_linear' in model_lst:
+            db_linear = __import__(
+                'models', globals(), locals(), ['db_linear'], 0).db_linear
             model = db_linear.DB_Linear.from_checkpoint(
                 get_path('db_linear', dataset_name, best, index)
             ).to(device)
             model.export(dataset_name, bento)
 
         if 'tfidf_hsgd' in model_lst:
+            tfidf_hsgd = __import__(
+                'models', globals(), locals(), ['tfidf_hsgd'], 0).tfidf_hsgd
             model = tfidf_hsgd.Tfidf_HSGD.from_checkpoint(
                 get_path('tfidf_hsgd', dataset_name, best, index)
             )
             model.export(dataset_name, bento)
 
         if 'tfidf_lsgd' in model_lst:
+            tfidf_lsgd = __import__(
+                'models', globals(), locals(), ['tfidf_lsgd'], 0).tfidf_lsgd
             model = tfidf_lsgd.Tfidf_LSGD.from_checkpoint(
                 get_path('tfidf_lsgd', dataset_name, best, index)
             )
