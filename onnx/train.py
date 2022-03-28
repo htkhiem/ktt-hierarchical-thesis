@@ -11,11 +11,7 @@ import json
 import numpy as np
 import torch
 
-from utils.metric import get_metrics
-
-from models import db_bhcn, db_ahmcnf, db_achmcnn, db_linear, model_sklearn, tfidf_hsgd, tfidf_lsgd
-
-from utils import dataset, distilbert
+from models import model_pytorch, model_sklearn
 
 
 def repeat_train(
@@ -25,7 +21,7 @@ def repeat_train(
         val_loader,
         test_loader,
         repeat,
-        metrics_func=get_metrics,
+        metrics_func=model_pytorch.get_metrics,
         save_weights=True,
         verbose=False
 ):
@@ -129,9 +125,7 @@ By default, all models are run.""")
     if args.verbose:
         verbose = args.verbose
     device = 'cuda' if torch.cuda.is_available() and not args.cpu else 'cpu'
-    print('Using', device)
-
-    distilbert.init()
+    print('Using', device.upper())
 
     logging.basicConfig(filename=log_path, level=logging.INFO)
 
@@ -142,6 +136,10 @@ By default, all models are run.""")
     if 'db_bhcn' in model_lst:
         print('Testing DB-BHCN...')
         logging.info('Testing DB-BHCN...')
+
+        db_bhcn = __import__(
+            'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
+
         config = hyperparams['db_bhcn']
         config['epoch'] = epoch
         config['device'] = device
@@ -149,7 +147,7 @@ By default, all models are run.""")
             config['dataset_name'] = dataset_name
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
-            train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
+            train_loader, val_loader, test_loader, hierarchy = model_pytorch.get_loaders(
                 dataset_name,
                 config,
                 verbose=verbose,
@@ -162,6 +160,7 @@ By default, all models are run.""")
                 val_loader,
                 test_loader,
                 repeat,
+                metrics_func=model_pytorch.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
             )
@@ -169,6 +168,10 @@ By default, all models are run.""")
     if 'db_bhcn_awx' in model_lst:
         print('Testing DB-BHCN+AWX...')
         logging.info('Testing DB-BHCN+AWX...')
+
+        db_bhcn = __import__(
+            'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
+
         config = hyperparams['db_bhcn_awx']
         config['epoch'] = epoch
         config['device'] = device
@@ -176,7 +179,7 @@ By default, all models are run.""")
             config['dataset_name'] = dataset_name
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
-            train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
+            train_loader, val_loader, test_loader, hierarchy = model_pytorch.get_loaders(
                 dataset_name,
                 config,
                 verbose=verbose,
@@ -189,6 +192,7 @@ By default, all models are run.""")
                 val_loader,
                 test_loader,
                 repeat,
+                metrics_func=model_pytorch.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
             )
@@ -196,6 +200,10 @@ By default, all models are run.""")
     if 'db_ahmcnf' in model_lst:
         print('Testing DB -> adapted HMCN-F...')
         logging.info('Testing DB -> adapted HMCN-F...')
+
+        db_ahmcnf = __import__(
+            'models', globals(), locals(), ['db_ahmcnf'], 0).db_ahmcnf
+
         config = hyperparams['db_ahmcnf']
         config['epoch'] = epoch
         config['device'] = device
@@ -203,7 +211,7 @@ By default, all models are run.""")
             config['dataset_name'] = dataset_name
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
-            train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
+            train_loader, val_loader, test_loader, hierarchy = model_pytorch.get_loaders(
                 dataset_name,
                 config,
                 verbose=verbose,
@@ -216,6 +224,7 @@ By default, all models are run.""")
                 val_loader,
                 test_loader,
                 repeat,
+                metrics_func=model_pytorch.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
             )
@@ -223,6 +232,10 @@ By default, all models are run.""")
     if 'db_achmcnn' in model_lst:
         print('Testing DB -> adapted C-HMCNN...')
         logging.info('Testing DB -> adapted C-HMCNN...')
+
+        db_achmcnn = __import__(
+            'models', globals(), locals(), ['db_achmcnn'], 0).db_achmcnn
+
         config = hyperparams['db_achmcnn']
         config['epoch'] = epoch
         config['device'] = device
@@ -230,7 +243,7 @@ By default, all models are run.""")
             config['dataset_name'] = dataset_name
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
-            train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
+            train_loader, val_loader, test_loader, hierarchy = model_pytorch.get_loaders(
                 dataset_name,
                 config,
                 verbose=verbose,
@@ -243,6 +256,7 @@ By default, all models are run.""")
                 val_loader,
                 test_loader,
                 repeat,
+                metrics_func=model_pytorch.get_metrics,
                 save_weights=save_weights,
                 verbose=verbose
             )
@@ -250,6 +264,10 @@ By default, all models are run.""")
     if 'db_linear' in model_lst:
         print('Training DB -> Linear...')
         logging.info('Training DB -> Linear...')
+
+        db_linear = __import__(
+            'models', globals(), locals(), ['db_linear'], 0).db_linear
+
         config = hyperparams['db_linear']
         config['epoch'] = epoch
         config['device'] = device
@@ -257,7 +275,7 @@ By default, all models are run.""")
             config['dataset_name'] = dataset_name
             print('Running on {}...'.format(dataset_name))
             logging.info('Running on {}...'.format(dataset_name))
-            train_loader, val_loader, test_loader, hierarchy = dataset.get_loaders(
+            train_loader, val_loader, test_loader, hierarchy = model_pytorch.get_loaders(
                 dataset_name,
                 config,
                 verbose=verbose,
@@ -278,6 +296,10 @@ By default, all models are run.""")
     if 'tfidf_hsgd' in model_lst:
         print('Training tf-idf -> internal-node SGD classifier network...')
         logging.info('Training tf-idf -> internal-node SGD classifier network...')
+
+        tfidf_hsgd = __import__(
+            'models', globals(), locals(), ['tfidf_hsgd'], 0).tfidf_hsgd
+
         for dataset_name in dataset_lst:
             config = {}
             config['model_name'] = 'tfidf_hsgd'
@@ -305,6 +327,10 @@ By default, all models are run.""")
     if 'tfidf_lsgd' in model_lst:
         print('Training tf-idf -> leaf-node SGD classifier network...')
         logging.info('Testing tf-idf -> leaf-node SGD classifier network...')
+
+        tfidf_lsgd = __import__(
+            'models', globals(), locals(), ['tfidf_lsgd'], 0).tfidf_lsgd
+
         for dataset_name in dataset_lst:
             config = {}
             config['model_name'] = 'tfidf_lsgd'

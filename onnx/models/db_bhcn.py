@@ -1,4 +1,4 @@
-"""Implementation of the DistilBERT Branching Hierarchical Classification Network."""
+"""Implementation of the DB-BHCN and DB-BHCN+AWX models."""
 import os
 
 import torch
@@ -6,11 +6,9 @@ import numpy as np
 from tqdm import tqdm
 import bentoml
 
-from models import model
+from models import model, model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.distilbert import get_pretrained, export_trained
-from utils.dataset import get_hierarchical_one_hot
-from utils.metric import get_metrics
 
 
 class AWX(torch.nn.Module):
@@ -119,7 +117,8 @@ class BHCN(torch.nn.Module):
             ])
             torch.nn.init.xavier_uniform_(self.fc_layers[i].weight)
             self.norms.extend([
-                torch.nn.LayerNorm(hierarchy.levels[i-1], elementwise_affine=False)
+                torch.nn.LayerNorm(hierarchy.levels[i-1],
+                                   elementwise_affine=False)
             ])
         # Activation functions
         self.hidden_nonlinear = (
@@ -135,7 +134,9 @@ class BHCN(torch.nn.Module):
     def forward(self, x):
         """Forward-propagate input to generate classification."""
         # We have |D| of these
-        local_outputs = torch.zeros((x.shape[0], self.output_dim)).to(self.device)
+        local_outputs = torch.zeros((x.shape[0], self.output_dim)).to(
+            self.device
+        )
         output_l1 = self.fc_layers[0](self.dropout(x))
         local_outputs[:, 0:self.level_offsets[1]] = self.output_nonlinear(
             output_l1)
@@ -204,7 +205,8 @@ class BHCN_AWX(torch.nn.Module):
             ])
             torch.nn.init.xavier_uniform_(self.fc_layers[i].weight)
             self.norms.extend([
-                torch.nn.LayerNorm(hierarchy.levels[i-1], elementwise_affine=False)
+                torch.nn.LayerNorm(hierarchy.levels[i-1],
+                                   elementwise_affine=False)
             ])
         # Activation functions
         self.hidden_nonlinear = (
@@ -443,7 +445,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 loss.backward()
                 optimizer.step()
 
-                train_loss = train_loss + (loss.item() - train_loss) / (batch_idx + 1)
+                train_loss = train_loss + (loss.item() - train_loss) / (
+                    batch_idx + 1)
 
             print('Epoch {}: Validating'.format(epoch))
             self.eval()
@@ -502,7 +505,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
                     loss_h = lambda_H * sum(loss_h_levels)
                     loss = loss_l + loss_h
 
-                    val_loss = val_loss + (loss.item() - val_loss) / (batch_idx + 1)
+                    val_loss = val_loss + (loss.item() - val_loss) / (
+                        batch_idx + 1)
 
                     val_targets = np.concatenate([
                         val_targets, targets.cpu().detach().numpy()
@@ -517,7 +521,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
             val_metrics = np.concatenate([
                 val_metrics,
                 np.expand_dims(
-                    get_metrics(
+                    model_pytorch.get_metrics(
                         {'outputs': val_outputs, 'targets': val_targets},
                         display='print'),
                     axis=1
@@ -532,7 +536,9 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 optim = optimizer.state_dict()
                 self.save(path, optim)
                 if val_loss <= val_loss_min:
-                    print('Validation loss decreased ({:.6f} --> {:.6f}). Saving best model...'.format(val_loss_min, val_loss))
+                    print('Validation loss decreased ({:.6f} --> {:.6f}). '
+                          'Saving best model...'.format(
+                              val_loss_min, val_loss))
                     val_loss_min = val_loss
                     self.save(best_path, optim)
             print('Epoch {}: Done\n'.format(epoch))
@@ -608,7 +614,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
-                targets_b = get_hierarchical_one_hot(
+                targets_b = model_pytorch.get_hierarchical_one_hot(
                     targets, self.classifier.hierarchy.levels
                 ).to(self.device, dtype=torch.float)
 
@@ -651,11 +657,12 @@ class DB_BHCN(model.Model, torch.nn.Module):
                     mask = data['mask'].to(self.device,
                                            dtype=torch.long)
                     targets = data['labels']
-                    targets_b = get_hierarchical_one_hot(
+                    targets_b = model_pytorch.get_hierarchical_one_hot(
                         targets, self.classifier.hierarchy.levels
                     ).to(self.device, dtype=torch.float)
 
-                    local_outputs, awx_output = self.forward_bhcn_awx(ids, mask)
+                    local_outputs, awx_output = self.forward_bhcn_awx(
+                        ids, mask)
 
                     # We have two loss functions:
                     # (l)ocal (per-level), and
@@ -670,7 +677,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
                     ])
                     loss = loss_g + loss_l
 
-                    val_loss = val_loss + (loss.item() - val_loss) / (batch_idx + 1)
+                    val_loss = val_loss + (loss.item() - val_loss) / (
+                        batch_idx + 1)
 
                     val_targets = np.concatenate([
                         val_targets, targets.cpu().detach().numpy()
@@ -694,7 +702,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
             val_metrics = np.concatenate([
                 val_metrics,
                 np.expand_dims(
-                    get_metrics(
+                    model_pytorch.get_metrics(
                         {'outputs': val_outputs, 'targets': val_targets},
                         display='print'
                     ),
@@ -710,7 +718,9 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 optim = optimizer.state_dict()
                 self.save(path, optim)
                 if val_loss <= val_loss_min:
-                    print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving best model...'.format(val_loss_min, val_loss))
+                    print('Validation loss decreased ({:.6f} --> {:.6f}). '
+                          'Saving best model...'.format(
+                              val_loss_min, val_loss))
                     val_loss_min = val_loss
                     self.save(best_path, optim)
             print('Epoch {}: Done\n'.format(epoch))

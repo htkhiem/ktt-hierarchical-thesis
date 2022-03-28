@@ -1,16 +1,34 @@
 """Utilities for initialising and exporting DistilBERT instances."""
-import transformers as tr
 import os
 import shutil
+import transformers as tr
 import bentoml
 
+base_encoder = None
+base_encoder_state = None
+tokenizer = None
 
 def get_pretrained():
     """Return a DistilBERT instance with distilbert-base-uncased loaded."""
+    global base_encoder
+    global base_encoder_state
+    if base_encoder is None or base_encoder_state is None:
+        base_encoder = tr.DistilBertModel.from_pretrained(
+            'distilbert-base-uncased'
+        )
+        base_encoder_state = base_encoder.state_dict()
     encoder = base_encoder
     encoder.load_state_dict(base_encoder_state)
     return encoder
 
+def get_tokenizer():
+    """Return a DistilBERTFastTokenizer instance."""
+    global tokenizer
+    if tokenizer is None:
+        tokenizer = tr.DistilBertTokenizerFast.from_pretrained(
+            'distilbert-base-uncased'
+        )
+    return tokenizer
 
 def export_trained(
         model,
@@ -50,20 +68,6 @@ def export_trained(
             )
         )
         shutil.rmtree('tmp/')
-
-
-def init():
-    """Initialise the backup global DistilBERT instance."""
-    global tokenizer
-    global base_encoder
-    global base_encoder_state
-    tokenizer = tr.DistilBertTokenizerFast.from_pretrained(
-        'distilbert-base-uncased'
-    )
-    base_encoder = tr.DistilBertModel.from_pretrained(
-        'distilbert-base-uncased'
-    )
-    base_encoder_state = base_encoder.state_dict()
 
 
 if __name__ == "__main__":

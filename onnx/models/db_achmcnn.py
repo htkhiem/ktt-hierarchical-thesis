@@ -6,11 +6,9 @@ import numpy as np
 from tqdm import tqdm
 import bentoml
 
-from models import model
+from models import model, model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.distilbert import get_pretrained, export_trained
-from utils.dataset import get_hierarchical_one_hot
-from utils.metric import get_metrics
 
 
 class MCM(torch.nn.Module):
@@ -204,7 +202,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
                 mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
                 # Convert targets to one-hot
-                targets_b = get_hierarchical_one_hot(
+                targets_b = model_pytorch.get_hierarchical_one_hot(
                     targets, self.classifier.hierarchy.levels
                 ).to(self.device, dtype=torch.float)
                 targets = targets.to(self.device, dtype=torch.float)
@@ -254,7 +252,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
                                            dtype=torch.long)
                     targets = data['labels']
                     # Convert targets to one-hot
-                    targets_b = get_hierarchical_one_hot(
+                    targets_b = model_pytorch.get_hierarchical_one_hot(
                         targets, self.classifier.hierarchy.levels
                     ).to(self.device, dtype=torch.float)
 
@@ -291,7 +289,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
                     [
                         val_metrics,
                         np.expand_dims(
-                            get_metrics({
+                            model_pytorch.get_metrics({
                                 'outputs': val_outputs,
                                 'targets': val_targets
                             }, display='print'), axis=1
@@ -304,7 +302,10 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
                     optim = optimizer.state_dict()
                     self.save(path, optim)
                     if val_loss <= val_loss_min:
-                        print('Validation loss decreased ({:.6f} --> {:.6f}). Saving best model...'.format(val_loss_min,val_loss))
+                        print('Validation loss decreased ({:.6f} --> {:.6f}). '
+                              'Saving best model...'.format(
+                                  val_loss_min, val_loss
+                              ))
                         val_loss_min = val_loss
                         self.save(best_path, optim)
             print('Epoch {}: Done\n'.format(epoch))

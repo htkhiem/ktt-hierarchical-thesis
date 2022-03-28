@@ -1,4 +1,4 @@
-"""This file defines special functions for sklearn-based models."""
+"""This file defines functions specific to sklearn-based models."""
 import logging
 from sklearn import metrics
 from sklearn_hierarchical_classification.constants import ROOT

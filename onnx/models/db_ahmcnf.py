@@ -6,11 +6,9 @@ import numpy as np
 from tqdm import tqdm
 import bentoml
 
-from models import model
+from models import model, model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.distilbert import get_pretrained
-from utils.dataset import get_hierarchical_one_hot
-from utils.metric import get_metrics
 
 
 class AHMCN_F(torch.nn.Module):
@@ -99,7 +97,9 @@ class AHMCN_F(torch.nn.Module):
     def forward(self, x):
         """Forward-propagate input to generate classification."""
         # We have |D| hidden layers plus one global prediction layer
-        local_outputs = torch.zeros((x.shape[0], self.output_dim)).to(self.device)
+        local_outputs = torch.zeros((x.shape[0], self.output_dim)).to(
+            self.device
+        )
         output = x  # Would be global path output until the last step
         for i in range(len(self.global_layers)):
             # Global path
@@ -119,7 +119,9 @@ class AHMCN_F(torch.nn.Module):
             # and the local layer.
             local_output = self.dropout(
                 self.hidden_nonlinear(
-                    self.local_layer_norms[i](self.transition_layers[i](output))
+                    self.local_layer_norms[i](
+                        self.transition_layers[i](output)
+                    )
                 )
             )
             local_output = self.output_nonlinear(
@@ -134,7 +136,8 @@ class AHMCN_F(torch.nn.Module):
         global_outputs = self.output_nonlinear(
             self.global_prediction_layer(torch.cat([output, x], dim=1))
         )
-        output = self.global_weight * global_outputs + (1 - self.global_weight) * local_outputs
+        output = self.global_weight * global_outputs + (
+            1 - self.global_weight) * local_outputs
         return output, local_outputs
 
     def to(self, device=None):
@@ -152,7 +155,7 @@ class AHMCN_F(torch.nn.Module):
 
 
 class DB_AHMCN_F(model.Model, torch.nn.Module):
-    """Wrapper class combining DistilBERT with the adapted HMCN-F classifier model."""
+    """Wrapper class combining DistilBERT with the adapted HMCN-F model."""
 
     def __init__(
         self,
@@ -250,7 +253,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
-                targets_b = get_hierarchical_one_hot(
+                targets_b = model_pytorch.get_hierarchical_one_hot(
                     targets, self.classifier.hierarchy.levels
                 ).to(self.device, dtype=torch.float)
 
@@ -280,7 +283,8 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
                 loss.backward()
                 optimizer.step()
 
-                train_loss = train_loss + (loss.item() - train_loss) / (batch_idx + 1)
+                train_loss = train_loss + (loss.item() - train_loss) / (
+                    batch_idx + 1)
 
             print('Epoch {}: Validating'.format(epoch))
             self.eval()
@@ -299,7 +303,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
                     mask = data['mask'].to(self.device,
                                            dtype=torch.long)
                     targets = data['labels']
-                    targets_b = get_hierarchical_one_hot(
+                    targets_b = model_pytorch.get_hierarchical_one_hot(
                         targets, self.classifier.hierarchy.levels
                     ).to(self.device, dtype=torch.float)
 
@@ -338,7 +342,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
                     [
                         val_metrics,
                         np.expand_dims(
-                            get_metrics(
+                            model_pytorch.get_metrics(
                                 {
                                     'outputs': val_outputs,
                                     'targets': val_targets
@@ -355,7 +359,9 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
                     optim = optimizer.state_dict()
                     self.save(path, optim)
                     if val_loss <= val_loss_min:
-                        print('Validation loss decreased ({:.6f} --> {:.6f}). Saving best model...'.format(val_loss_min,val_loss))
+                        print('Validation loss decreased ({:.6f} --> {:.6f}). '
+                              'Saving best model...'.format(
+                                  val_loss_min, val_loss))
                         val_loss_min = val_loss
                         self.save(best_path, optim)
                 print('Epoch {}: Done\n'.format(epoch))

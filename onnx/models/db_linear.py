@@ -9,8 +9,10 @@ import bentoml
 from models import model
 from utils.hierarchy import PerLevelHierarchy
 from utils.distilbert import get_pretrained, export_trained
+
 # Special metrics for leaf-only models.
 from sklearn import metrics
+
 import logging
 
 
@@ -145,7 +147,8 @@ class DB_Linear(model.Model, torch.nn.Module):
                 loss.backward()
                 optimizer.step()
 
-                train_loss = train_loss + (loss.item() - train_loss) / (batch_idx + 1)
+                train_loss = train_loss + (loss.item() - train_loss) / (
+                    batch_idx + 1)
 
             print('Epoch {}: Validating'.format(epoch))
             self.eval()
@@ -177,7 +180,10 @@ class DB_Linear(model.Model, torch.nn.Module):
                         val_metrics,
                         np.expand_dims(
                             get_metrics(
-                                {'outputs': val_outputs, 'targets': val_targets},
+                                {
+                                    'outputs': val_outputs,
+                                    'targets': val_targets
+                                },
                                 display='print'),
                             axis=1
                         )
@@ -187,7 +193,9 @@ class DB_Linear(model.Model, torch.nn.Module):
                     optim = optimizer.state_dict()
                     self.save(path, optim)
                     if val_loss <= val_loss_min:
-                        print('Validation loss decreased ({:.6f} --> {:.6f}). Saving best model...'.format(val_loss_min,val_loss))
+                        print('Validation loss decreased ({:.6f} --> {:.6f}).'
+                              'Saving best model...'.format(
+                                  val_loss_min, val_loss))
                         val_loss_min = val_loss
                         self.save(best_path, optim)
                 print('Epoch {}: Done\n'.format(epoch))
@@ -288,6 +296,7 @@ class DB_Linear(model.Model, torch.nn.Module):
 
 
 def get_metrics(test_output, display=None, compute_auprc=False):
+    """Compute metrics for leaf-only models like this one."""
     local_outputs = test_output['outputs']
     targets = test_output['targets']
     leaf_size = local_outputs.shape[1]
@@ -331,7 +340,9 @@ def get_metrics(test_output, display=None, compute_auprc=False):
             rectified_outputs
         )
         if display == 'log':
-            logging.info('Rectified leaf-level AU(PRC) score: {}'.format(auprc_score))
+            logging.info('Rectified leaf-level AU(PRC) score: {}'.format(
+                auprc_score
+            ))
         elif display == 'print':
             print('Rectified leaf-level AU(PRC) score: {}'.format(auprc_score))
 
