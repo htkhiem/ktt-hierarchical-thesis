@@ -1,4 +1,5 @@
 """This file defines functions specific to PyTorch/DistilBERT models."""
+import os
 
 import torch
 import pandas as pd
@@ -67,11 +68,36 @@ def get_loaders(
     name: Dataset folder name in ../datasets.
     This function only works with datasets generated from adapters.
     """
-    train = pd.read_parquet('../datasets/{}/train.parquet'.format(name))
-    val = pd.read_parquet('../datasets/{}/val.parquet'.format(name))
-    test = pd.read_parquet('../datasets/{}/test.parquet'.format(name))
+    train_path = 'datasets/{}/train.parquet'.format(name)
+    val_path = 'datasets/{}/val.parquet'.format(name)
+    test_path = 'datasets/{}/test.parquet'.format(name)
+
+    targets = []
+    if not os.path.exists(train_path):
+        if not os.path.exists(train_path + '.dvc'):
+            raise OSError('Training set not present and cannot be retrieved.')
+        targets.append(train_path + '.dvc')
+
+    if not os.path.exists(val_path):
+        if not os.path.exists(val_path + '.dvc'):
+            raise OSError(
+                'Validation set not present and cannot be retrieved.')
+        targets.append(val_path + '.dvc')
+
+    if not os.path.exists(test_path):
+        if not os.path.exists(train_path + '.dvc'):
+            raise OSError('Test set not present and cannot be retrieved.')
+        targets.append(test_path + '.dvc')
+
+    if len(targets) > 0:
+        os.system('dvc checkout {} {}'.format(
+            ' '.join(targets), '-v' if verbose else ''))
+
+    train = pd.read_parquet(train_path)
+    val = pd.read_parquet(val_path)
+    test = pd.read_parquet(test_path)
     hierarchy = PerLevelHierarchy.from_json(
-        '../datasets/{}/hierarchy.json'.format(name)).to(config['device'])
+        'datasets/{}/hierarchy.json'.format(name)).to(config['device'])
 
     # Pack into DataLoaders using CustomDataset instances
     train_loader = torch.utils.data.DataLoader(

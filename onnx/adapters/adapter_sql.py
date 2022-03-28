@@ -63,11 +63,17 @@ if __name__ == '__main__':
         required=True,
         help='Name of dataset to generate.'
     )
+
     parser.add_argument(
         '-v',
         '--verbose',
         action='store_true',
         help='Path to configuration file. Defaults to adapter_sql.cfg in current directory.'
+    )
+    parser.add_argument(
+        '--dvc',
+        action='store_true',
+        help='Track this dataset using DVC.'
     )
 
     args = parser.parse_args()
@@ -276,5 +282,12 @@ if __name__ == '__main__':
     test_set.to_parquet(path + 'test.parquet')
 
     hierarchy.to_json(path + 'hierarchy.json')
+
+    if args.dvc:
+        os.system('dvc add {} {} {}'.format(
+            path + 'train.parquet',
+            path + 'val.parquet',
+            path + 'test.parquet'
+        ))
 
     print('Finished!')

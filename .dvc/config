@@ -1,2 +1,5 @@
 [core]
     analytics = false
+    remote = thesis-remote
+['remote "thesis-remote"']
+    url = gdrive://1J9CJ91xXLAq47mVUk2ogFoOKKQXvSr9a

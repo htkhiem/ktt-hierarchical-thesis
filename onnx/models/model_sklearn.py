@@ -1,4 +1,5 @@
 """This file defines functions specific to sklearn-based models."""
+import os
 import logging
 from sklearn import metrics
 from sklearn_hierarchical_classification.constants import ROOT
@@ -65,9 +66,8 @@ def stem_series(series):
         return ' '.join(result_list)
     return series.apply(stem_and_concat)
 
-
 def get_loaders(
-        dataset_name,
+        name,
         config,
         verbose=False
 ):
@@ -77,11 +77,29 @@ def get_loaders(
     Scikit-learn models simply read directly from lists. There is no
     special DataLoader object like for PyTorch.
     """
-    train = pd.read_parquet('../datasets/{}/train.parquet'.format(dataset_name))
-    test = pd.read_parquet('../datasets/{}/test.parquet'.format(dataset_name))
+    train_path = 'datasets/{}/train.parquet'.format(name)
+    test_path = 'datasets/{}/test.parquet'.format(name)
+
+    targets = []
+    if not os.path.exists(train_path):
+        if not os.path.exists(train_path + '.dvc'):
+            raise OSError('Training set not present and cannot be retrieved.')
+        targets.append(train_path + '.dvc')
+
+    if not os.path.exists(test_path):
+        if not os.path.exists(train_path + '.dvc'):
+            raise OSError('Test set not present and cannot be retrieved.')
+        targets.append(test_path + '.dvc')
+
+    if len(targets) > 0:
+        os.system('dvc checkout {} {}'.format(
+            ' '.join(targets), '-v' if verbose else ''))
+
+    train = pd.read_parquet(train_path)
+    test = pd.read_parquet(test_path)
     # Generate hierarchy
     with open(
-            '../datasets/{}/hierarchy.json'.format(dataset_name), 'r'
+            'datasets/{}/hierarchy.json'.format(name), 'r'
     ) as hierarchy_file:
         hierarchy = make_hierarchy(json.load(hierarchy_file))
 
