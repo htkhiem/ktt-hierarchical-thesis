@@ -41,7 +41,7 @@ if __name__ == "__main__":
 \ttfidf_hsgd\t\t(Internal-node SGD classifier hierarchy using tf-idf encodings)
 \ttfidf_lsgd\t\t(ILeaf node SGD classifier hierarchy using tf-idf encodings)
 By default, all models are exported. An error will be raised if a model has not been trained with any of the specified datasets.""")
-    parser.add_argument('-i', '--index', help='Optionally specify which trained weights to load by their indices.')
+    parser.add_argument('-t', '--time', help='Optionally specify which trained weights to load by their time.')
     parser.add_argument('-B', '--best', action='store_true', help='User best-epoch weights instead of latest-epoch.')
     parser.add_argument('-b', '--bento', action='store_true', help='Add exported models to the local BentoML model store.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information to the console (for debugging purposes).')
