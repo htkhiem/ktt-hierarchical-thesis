@@ -16,6 +16,7 @@ onnx/weights/*
 onnx/airflow/*
 !onnx/airflow/airflow.cfg
 !onnx/airflow/webserver_config.py
+onnx/datasets/*
 
 # Byte-compiled / optimized / DLL files
 */__pycache__/*
