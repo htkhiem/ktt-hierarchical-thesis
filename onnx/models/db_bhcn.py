@@ -365,8 +365,6 @@ class DB_BHCN(model.Model, torch.nn.Module):
             'classifier_state_dict': self.classifier.state_dict(),
             'optimizer': optim
         }
-        if self.awx:
-            checkpoint['awx_norm'] = self.config['awx_norm']
         torch.save(checkpoint, path)
 
     def load(self, path):
