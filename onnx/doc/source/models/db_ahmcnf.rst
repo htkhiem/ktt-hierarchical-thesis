@@ -14,19 +14,19 @@ Configuration schema
 --------------------
 The configuration for this model defines the following hyperparameters:
 
-* ``encoder_lr``: Encoder (DistilBERT) learning rate.
 * ``classifier_lr``: Classifier (Adapted HMCN-F) learning rate.
-* ``h_dropout``: The fully-connected feed-forward (FCFF) model's dropout rate.
-* ``h_nonlinear``: The FCFF model's nonlinear type, which can be either ``relu`` or ``tanhh``.
-* ``h_hidden_dim``: The hidden layer size in the FCFF.
-* ``h_layer_count``: Number of feedforward layers in the FCFF. Minimum is 1. If 1 is specified, a Linear layer with size (768, `class_count`) will be created and ``h_hidden_dim`` is not used.
+* ``lambda_h``: Hierarchical loss gain.
+* ``dropout``: The adapted HMCN-F model's dropout rate.
+* ``global_hidden_sizes``: Hidden sizes for constructing the global layers (main flow).
+* ``local_hidden_sizes``: Hidden sizes for constructing the local branches (local flow).
+* ``global_weight``: Global weight to be forward-propagated.
+* ``hidden_nonlinear``: Hidden nonlinear type which can be either ``relu`` or ``tanhh``.
 
 Checkpoint schema
 -----------------
 * ``config``: A copy of the configuration dictionary passed to this instance's constructor, either explicitly, or by ``from_checkpoint`` (extracted from a prior checkpoint).
 * ``hierarchy``: A serialised dictionary of hierarchical metadata created by ``PerLevelHierarchy.to_dict()``.
-* ``encoder_state_dict``: Weights of the DistilBERT model.
-* ``classifier_state_dict``: Weights of the classifier (Adapted C-HMCNN).
+* ``classifier_state_dict``: Weights of the classifier (Adapted HMCN-F).
 * ``optimizer_state_dict``: Saved state of the optimiser that was used to train the model for that checkpoint.
 
 Theory
