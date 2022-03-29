@@ -112,7 +112,7 @@ def get_loaders(
         lambda row: row[-1]
     )
 
-    return (X_train, y_train), (X_test, y_test), hierarchy
+    return (X_train, y_train), None, (X_test, y_test), hierarchy
 
 
 def get_metrics(test_output, display='log', compute_auprc=True):
