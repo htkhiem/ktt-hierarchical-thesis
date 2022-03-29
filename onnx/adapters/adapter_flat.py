@@ -13,92 +13,119 @@ import sys
 sys.path.append('../')
 
 import os
+import click
+from textwrap import dedent
 import pathlib
 import argparse
 import pandas as pd
 from utils.hierarchy import PerLevelHierarchy
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-p',
-        '--path',
-        required=True,
-        help='Path to the flat file.'
-    )
-    parser.add_argument(
-        '-N',
-        '--name',
-        help='Title of the name column. Defaults to \'name\'.'
-    )
-    parser.add_argument(
-        '-C',
-        '--classes',
-        help='Title of the classes column. Defaults to \'classes\'.'
-    )
-    parser.add_argument(
-        '-d',
-        '--depth',
-        help='Maximum depth to build hierarchy. Defaults to 4.'
-    )
-    parser.add_argument(
-        '-j',
-        '--json',
-        help='Manually specify the JSON schema, if the file is in JSON format. See pandas read_json documentation. Default to \'records\''
-    )
-    parser.add_argument(
-        '-T',
-        '--train',
-        help='How much to use as training set when CV-splitting SQL data. Default to 0.9. Range: (0, 1).'
-    )
-    parser.add_argument(
-        '-V',
-        '--validate',
-        help='How much of the remaining set to use for validation set when CV-splitting SQL data. Default to 0.5. Range: (0, 1).'
-    )
-    parser.add_argument(
-        '-s',
-        '--seed',
-        help='Seed used for random sampling in CV-splitting. Default to 0.'
-    )
-    parser.add_argument(
-        '-P',
-        '--proportion',
-        help='How much of the dataset to actually output. Defaults to 1.0. Range: (0.0, 1.0].'
-    )
-    parser.add_argument(
-        '-t',
-        '--title',
-        required=True,
-        help='Name of dataset to generate.'
-    )
-    parser.add_argument(
-        '-v',
-        '--verbose',
-        action='store_true',
-        help='Path to configuration file. Defaults to adapter_sql.cfg in current directory.'
-    )
-    parser.add_argument(
-        '--dvc',
-        action='store_true',
-        help='Track this dataset using DVC.'
-    )
+@click.command()
+@click.argument('path', required=1)
+@click.argument('name', required=1)
+@click.option(
+    '-t',
+    '--text',
+    default='text',
+    show_default=True,
+    help='Title of the input column.'
+)
+@click.option(
+    '-c',
+    '--classes',
+    default='classes',
+    show_default=True,
+    help='Title of the classes (labels) column.'
+)
+@click.option(
+    '-d',
+    '--depth',
+    default=2,
+    show_default=True,
+    help='Maximum depth to build hierarchy.'
+)
+@click.option(
+    '-j',
+    '--json-format',
+    default='records',
+    show_default=True,
+    help=dedent("""
+    Manually specify the JSON schema, if the file is in JSON format. See pandas
+    read_json documentation.
+    """)
+)
+@click.option(
+    '--train-ratio',
+    default=0.9,
+    show_default=True,
+    help=dedent("""
+    How much to use as training set when CV-splitting SQL data. Range: (0, 1).
+    """)
+)
+@click.option(
+    '--val-ratio',
+    default=0.5,
+    show_default=True,
+    help=dedent("""
+    How much of the remaining set to use for validation set when CV-splitting
+    data. Range: (0, 1).
+    """)
+)
+@click.option(
+    '--seed',
+    default=0,
+    show_default=True,
+    help=dedent("""
+    Seed used for random sampling in CV-splitting.
+    """)
+)
+@click.option(
+    '-p',
+    '--proportion',
+    default=1.0,
+    show_default=True,
+    help=dedent("""
+    How much of the dataset to actually output. Range: (0.0, 1.0].
+    """)
+)
+@click.option(
+    '-v',
+    '--verbose',
+    is_flag=True,
+    default=False,
+    help=dedent("""
+    Verbose mode (print more information about the process).
+    """)
+)
+@click.option(
+    '--dvc',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help=dedent("""
+    Track this dataset using DVC.
+    """)
+)
+def main(
+        path,
+        name,
+        text,
+        classes,
+        depth,
+        json_format,
+        train_ratio,
+        val_ratio,
+        seed,
+        proportion,
+        verbose,
+        dvc
+):
+    """Adapt a flat file (CSV/JSON/Arrow/...) into the intermediate schema.
 
-    args = parser.parse_args()
-
-    path = args.path
-    name_col = 'name' if not args.name else args.name
-    depth = 4 if not args.depth else int(args.depth)
-    proportion = 1.0 if not args.proportion else float(args.proportion)
-    classes_col = 'classes' if not args.classes else args.classes
-    dataset_name = args.title
-    json_format = 'records' if not args.json else args.json
-    verbose = False if not args.verbose else args.verbose
-    train_ratio = 0.9 if not args.train else float(args.train)
-    val_ratio = 0.5 if not args.validate else float(args.validate)
-    seed = 0 if not args.seed else args.seed
-
+    It takes in a PATH to the flat file and outputs an intermediate dataset
+    named NAME.
+    """
     assert(train_ratio > 0 and train_ratio < 1)
     assert(val_ratio > 0 and val_ratio < 1)
     assert(json_format in ['split', 'records', 'index', 'columns', 'values'])
@@ -123,8 +150,8 @@ if __name__ == '__main__':
     # Rename columns back to standard internal schema
     data.rename(
         columns={
-            name_col: 'name',
-            classes_col: 'classes'
+            text: 'name',
+            classes: 'classes'
         }, inplace=True
     )
 
@@ -164,7 +191,7 @@ if __name__ == '__main__':
         build_M=True
     )
 
-    path = '../datasets/{}/'.format(dataset_name)
+    path = '../datasets/{}/'.format(name)
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -190,7 +217,7 @@ if __name__ == '__main__':
 
     hierarchy.to_json(path + 'hierarchy.json')
 
-    if args.dvc:
+    if dvc:
         os.system('dvc add {} {} {}'.format(
             path + 'train.parquet',
             path + 'val.parquet',
@@ -198,3 +225,7 @@ if __name__ == '__main__':
         ))
 
     print('Finished!')
+
+
+if __name__ == '__main__':
+    main()
