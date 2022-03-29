@@ -104,7 +104,7 @@ def main(
 ):
     """Adapt SQL data into the intermediate schema.
 
-    It takes in a PATH to a configuration file and outputs an intermediate
+    It takes in a configuration file and outputs an intermediate
     dataset named NAME.
     """
 
