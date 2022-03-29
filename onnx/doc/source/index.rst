@@ -19,6 +19,10 @@ KTT Hierarchical Classification System (KTT for short) is a training and inferen
    models/index
 
    dev/intro
+   
+   advanced/index
+   
+   ref
 
 Indices and tables
 ==================
