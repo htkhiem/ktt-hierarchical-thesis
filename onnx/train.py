@@ -124,6 +124,12 @@ def train_and_test(
     """)
 )
 @click.option(
+    '--dvc/--no-dvc', '--verbose', is_flag=True, default=True, show_default=True,
+    help=dedent("""
+    Track model weights using DVC.
+    """)
+)
+@click.option(
     '-v', '--verbose', is_flag=True, default=False, show_default=True,
     help=dedent("""
     Print more information to the console (for debugging purposes).
@@ -142,6 +148,7 @@ def main(
         distilbert,
         models,
         epoch,
+        dvc,
         log_path,
         verbose,
         cpu,
@@ -225,7 +232,8 @@ def main(
                 test_loader,
                 metrics_func=model_pytorch.get_metrics,
                 dry_run=dry_run,
-                verbose=verbose
+                verbose=verbose,
+                dvc=dvc
             )
 
     if 'db_bhcn_awx' in model_lst:
@@ -247,7 +255,8 @@ def main(
                 test_loader,
                 metrics_func=model_pytorch.get_metrics,
                 dry_run=dry_run,
-                verbose=verbose
+                verbose=verbose,
+                dvc=dvc
             )
 
     if 'db_ahmcnf' in model_lst:
@@ -269,7 +278,8 @@ def main(
                 test_loader,
                 metrics_func=model_pytorch.get_metrics,
                 dry_run=dry_run,
-                verbose=verbose
+                verbose=verbose,
+                dvc=dvc
             )
 
     if 'db_achmcnn' in model_lst:
@@ -291,7 +301,8 @@ def main(
                 test_loader,
                 metrics_func=model_pytorch.get_metrics,
                 dry_run=dry_run,
-                verbose=verbose
+                verbose=verbose,
+                dvc=dvc
             )
 
     if 'db_linear' in model_lst:
@@ -313,7 +324,8 @@ def main(
                 test_loader,
                 metrics_func=db_linear.get_metrics,
                 dry_run=dry_run,
-                verbose=verbose
+                verbose=verbose,
+                dvc=dvc
             )
 
     if 'tfidf_hsgd' in model_lst:
@@ -335,7 +347,8 @@ def main(
                 test_loader,
                 metrics_func=model_sklearn.get_metrics,
                 dry_run=dry_run,
-                verbose=verbose
+                verbose=verbose,
+                dvc=dvc
             )
 
     if 'tfidf_lsgd' in model_lst:
@@ -357,7 +370,8 @@ def main(
                 test_loader,
                 metrics_func=model_sklearn.get_metrics,
                 dry_run=dry_run,
-                verbose=verbose
+                verbose=verbose,
+                dvc=dvc
             )
 
 

@@ -218,10 +218,11 @@ def main(
     hierarchy.to_json(path + 'hierarchy.json')
 
     if dvc:
-        os.system('dvc add {} {} {}'.format(
+        os.system('dvc add {} {} {} {}'.format(
             path + 'train.parquet',
             path + 'val.parquet',
-            path + 'test.parquet'
+            path + 'test.parquet',
+            path + 'hierarchy.json'
         ))
 
     print('Finished!')

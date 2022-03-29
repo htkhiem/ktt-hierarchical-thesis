@@ -149,7 +149,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
         """Forward-propagate input to generate classification."""
         return self.classifier(self.encoder(ids, mask)[0][:, 0, :])
 
-    def save(self, path, optim):
+    def save(self, path, optim, dvc=True):
         """Save model state to disk using PyTorch's pickle facilities."""
         checkpoint = {
             'config': self.config,
@@ -160,8 +160,15 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
         }
         torch.save(checkpoint, path)
 
+        if dvc:
+            os.system('dvc add ' + path)
+
     def load(self, path):
         """Load model state from disk."""
+        if not os.path.exists(path):
+            if not os.path.exists(path + '.dvc'):
+                raise OSError('Checkpoint not present and cannot be retrieved')
+            os.system('dvc checkout {}.dvc'.format(path))
         checkpoint = torch.load(path)
         self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
@@ -173,7 +180,8 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
             val_loader,
             path=None,
             best_path=None,
-            resume_from=None
+            resume_from=None,
+            dvc=True
     ):
         """Training script for DistilBERT + Adapted C-HMCNN."""
         criterion = torch.nn.BCELoss()
@@ -300,7 +308,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
 
                 if path is not None and best_path is not None:
                     optim = optimizer.state_dict()
-                    self.save(path, optim)
+                    self.save(path, optim, dvc)
                     if val_loss <= val_loss_min:
                         print('Validation loss decreased ({:.6f} --> {:.6f}). '
                               'Saving best model...'.format(

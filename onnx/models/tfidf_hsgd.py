@@ -1,4 +1,5 @@
 """Implementation of the tfidf + hierarchical SGD classifier model."""
+import os
 import joblib
 
 from sklearn import preprocessing, linear_model
@@ -42,12 +43,18 @@ class Tfidf_HSGD(model.Model):
         instance.pipeline = joblib.load(path)
         return instance
 
-    def save(self, path, optim=None):
+    def save(self, path, optim=None, dvc=True):
         """Serialise pipeline into a pickle."""
         joblib.dump(self.pipeline, path)
+        if dvc:
+            os.system('dvc add ' + path)
 
     def load(self, path):
         """Unpickle saved pipeline."""
+        if not os.path.exists(path):
+            if not os.path.exists(path + '.dvc'):
+                raise OSError('Checkpoint not present and cannot be retrieved')
+            os.system('dvc checkout {}.dvc'.format(path))
         self.pipeline = joblib.load(path)
 
     def fit(
@@ -55,14 +62,15 @@ class Tfidf_HSGD(model.Model):
             train_loader,
             val_loader=None,  # Unused but included for signature compatibility
             path=None,
-            best_path=None
+            best_path=None,
+            dvc=True
     ):
         """Train this tfidf-HSGD model. No validation phase."""
         self.pipeline.fit(train_loader[0], train_loader[1])
         if path is not None or best_path is not None:
             # There's no distinction between path and best_path as there is
             # no validation phase.
-            self.save(path if path is not None else best_path)
+            self.save(path if path is not None else best_path, dvc)
         return None
 
     def test(self, loader):

@@ -199,7 +199,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
         ]
         return output, local_outputs
 
-    def save(self, path, optim):
+    def save(self, path, optim, dvc=True):
         """Save model state to disk using PyTorch's pickle facilities."""
         checkpoint = {
             'config': self.config,
@@ -208,9 +208,15 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
             'optimizer_state_dict': optim
         }
         torch.save(checkpoint, path)
+        if dvc:
+            os.system('dvc add ' + path)
 
     def load(self, path):
         """Load model state from disk."""
+        if not os.path.exists(path):
+            if not os.path.exists(path + '.dvc'):
+                raise OSError('Checkpoint not present and cannot be retrieved')
+            os.system('dvc checkout {}.dvc'.format(path))
         checkpoint = torch.load(path)
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
         return checkpoint['optimizer_state_dict']
@@ -221,7 +227,8 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
             val_loader,
             path=None,
             best_path=None,
-            resume_from=None
+            resume_from=None,
+            dvc=True
     ):
         """Training script."""
         # HMCN-F's implementation uses a global-space vector of
@@ -357,7 +364,7 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
 
                 if path is not None and best_path is not None:
                     optim = optimizer.state_dict()
-                    self.save(path, optim)
+                    self.save(path, optim, dvc)
                     if val_loss <= val_loss_min:
                         print('Validation loss decreased ({:.6f} --> {:.6f}). '
                               'Saving best model...'.format(
