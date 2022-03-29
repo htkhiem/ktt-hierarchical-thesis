@@ -42,6 +42,13 @@ Node = namedtuple('Node', ['db_id', 'parent_db_id'])
     """)
 )
 @click.option(
+    '-d',
+    '--depth',
+    default=2,
+    show_default=True,
+    help='Maximum depth to build hierarchy.'
+)
+@click.option(
     '--train-ratio',
     default=0.9,
     show_default=True,
@@ -99,12 +106,13 @@ def main(
         train_ratio,
         val_ratio,
         seed,
+        proportion,
         verbose,
         dvc
 ):
     """Adapt SQL data into the intermediate schema.
 
-    It takes in a configuration file and outputs an intermediate
+    It takes in a PATH to a configuration file and outputs an intermediate
     dataset named NAME.
     """
 
