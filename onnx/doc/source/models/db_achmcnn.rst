@@ -35,7 +35,7 @@ Theory
 This is an adaptation of the Coherent Hierarchical Multilabel Classification Neural Network, or C-HMCNN for brevity, initially published in :cite:`giunchiglia2020`, to an NLP and BERT-friendly design. It takes in fine-tuned DistilBERT encodings and produces hierarchical classifications.
 An example computation graph for the classifier is given below.
 
-.. image:: topo-achmcnn.png
+.. image:: achmcnn.svg
    :width: 320
    :alt: Topology of the Adapted C-HMCNN classifier.
 

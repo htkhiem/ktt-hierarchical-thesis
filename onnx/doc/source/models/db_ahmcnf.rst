@@ -35,7 +35,7 @@ Theory
 This replaces the simple linear layer found in the `DistilBERT + Linear <db_linear.html>`_ model with an adapted version of the HMCN-F model :cite:`wehrmann2018hierarchical`. HMCN-F is a fully-connected neural network with two flows, a global and a local one, designed to maximise the learning capabilities regarding the hierarchical nature of the data.
 An example computation graph for the classifier is given below.
 
-.. image:: topo-ahmcnf.png
+.. image:: ahmcnf.svg
    :width: 320
    :alt: Topology of the Adapted C-HMCNN classifier.
 

@@ -473,9 +473,11 @@ class DB_AHMCN_F(model.Model, torch.nn.Module):
 
     def test(self, loader):
         """Test this model on a dataset.
+
         This method can be used to run this instance (trained or not) over any
         dataset wrapped in a suitable PyTorch DataLoader. No gradient descent
         or backpropagation will take place.
+        
         Parameters
         ----------
         loader : torch.utils.data.DataLoader

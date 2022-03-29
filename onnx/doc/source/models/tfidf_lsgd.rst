@@ -16,7 +16,7 @@ Theory
 A standard combination between the TF-IDF vectorization algorithm and a machine learning classifier based around stochastic gradient descent. This is a generic classifier and through different loss functions can represent different machine learning algorithms. For example, using a hinge loss would turn it into a multiclass-capable linear SVM :cite:`evgeniou1999support`. 
 An example computation graph for the classifier is given below.
 
-.. image:: topo-lsgd.png
+.. image:: tfidf-lsgd.svg
    :width: 320
    :alt: Topology of the Leaf SGD classifier.
 
