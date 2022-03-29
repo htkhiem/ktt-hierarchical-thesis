@@ -12,20 +12,10 @@ import logging
 import json
 import torch
 
-from utils import cli
+from models.model_list import PYTORCH_MODEL_LIST
+from models.model_list import SKLEARN_MODEL_LIST
 
-# Add your custom model names here
-PYTORCH_MODEL_LIST = [
-    'db_bhcn',
-    'db_bhcn_awx',
-    'db_ahmcnf',
-    'db_achmcnn',
-    'db_linear',
-]
-SKLEARN_MODEL_LIST = [
-    'tfidf_hsgd',
-    'tfidf_lsgd'
-]
+from utils import cli
 
 # Don't touch this
 MODEL_LIST = PYTORCH_MODEL_LIST + SKLEARN_MODEL_LIST
