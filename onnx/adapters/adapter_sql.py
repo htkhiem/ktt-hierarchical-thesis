@@ -18,7 +18,8 @@ sys.path.append('../')
 
 import os
 import json
-import argparse
+import click
+from textwrap import dedent
 import psycopg2
 import pandas as pd
 import numpy as np
@@ -30,66 +31,87 @@ from utils.hierarchy import PerLevelHierarchy
 Node = namedtuple('Node', ['db_id', 'parent_db_id'])
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-c',
-        '--config',
-        help='Path to configuration file. Defaults to adapter_sql.cfg in current directory.'
-    )
-    parser.add_argument(
-        '-T',
-        '--train',
-        help='How much to use as training set when CV-splitting SQL data. Default to 0.9. Range: (0, 1).'
-    )
-    parser.add_argument(
-        '-V',
-        '--validate',
-        help='How much of the remaining set to use for validation set when CV-splitting SQL data. Default to 0.5. Range: (0, 1).'
-    )
-    parser.add_argument(
-        '-s',
-        '--seed',
-        help='Seed used for random sampling in CV-splitting. Default to 0.'
-    )
-    parser.add_argument(
-        '-P',
-        '--proportion',
-        help='How much of the dataset to actually output. Defaults to 1.0. Range: (0.0, 1.0].'
-    )
-    parser.add_argument(
-        '-t',
-        '--title',
-        required=True,
-        help='Name of dataset to generate.'
-    )
+@click.command()
+@click.argument('name', required=1)
+@click.option(
+    '--config',
+    default='./adapter_sql.json',
+    show_default=True,
+    help=dedent("""
+    Path to a configuration file.
+    """)
+)
+@click.option(
+    '--train-ratio',
+    default=0.9,
+    show_default=True,
+    help=dedent("""
+    How much to use as training set when CV-splitting SQL data. Range: (0, 1).
+    """)
+)
+@click.option(
+    '--val-ratio',
+    default=0.5,
+    show_default=True,
+    help=dedent("""
+    How much of the remaining set to use for validation set when CV-splitting
+    data. Range: (0, 1).
+    """)
+)
+@click.option(
+    '--seed',
+    default=0,
+    show_default=True,
+    help=dedent("""
+    Seed used for random sampling in CV-splitting.
+    """)
+)
+@click.option(
+    '-p',
+    '--proportion',
+    default=1.0,
+    show_default=True,
+    help=dedent("""
+    How much of the dataset to actually output. Range: (0.0, 1.0].
+    """)
+)
+@click.option(
+    '-v',
+    '--verbose',
+    is_flag=True,
+    default=False,
+    help=dedent("""
+    Verbose mode (print more information about the process).
+    """)
+)
+@click.option(
+    '--dvc',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help=dedent("""
+    Track this dataset using DVC.
+    """)
+)
+def main(
+        config,
+        name,
+        train_ratio,
+        val_ratio,
+        seed,
+        verbose,
+        dvc
+):
+    """Adapt SQL data into the intermediate schema.
 
-    parser.add_argument(
-        '-v',
-        '--verbose',
-        action='store_true',
-        help='Path to configuration file. Defaults to adapter_sql.cfg in current directory.'
-    )
-    parser.add_argument(
-        '--dvc',
-        action='store_true',
-        help='Track this dataset using DVC.'
-    )
-
-    args = parser.parse_args()
-
-    config_path = './adapter_sql.json' if not args.config else args.config
-    dataset_name = args.title
-    proportion = 1.0 if not args.proportion else float(args.proportion)
-    verbose = False if not args.verbose else args.verbose
-    train_ratio = 0.9 if not args.train else float(args.train)
-    val_ratio = 0.5 if not args.validate else float(args.validate)
-    seed = 0 if not args.seed else args.seed
+    It takes in a PATH to a configuration file and outputs an intermediate
+    dataset named NAME.
+    """
 
     assert(train_ratio > 0 and train_ratio < 1)
     assert(val_ratio > 0 and val_ratio < 1)
 
-    with open(config_path, 'r') as config_file:
+    with open(config, 'r') as config_file:
         config = json.load(config_file)
         print(config)
 
@@ -256,7 +278,7 @@ if __name__ == '__main__':
         build_M=True
     )
 
-    path = '../datasets/{}/'.format(dataset_name)
+    path = '../datasets/{}/'.format(name)
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -283,7 +305,7 @@ if __name__ == '__main__':
 
     hierarchy.to_json(path + 'hierarchy.json')
 
-    if args.dvc:
+    if dvc:
         os.system('dvc add {} {} {}'.format(
             path + 'train.parquet',
             path + 'val.parquet',
@@ -291,3 +313,7 @@ if __name__ == '__main__':
         ))
 
     print('Finished!')
+
+
+if __name__ == '__main__':
+    main()
