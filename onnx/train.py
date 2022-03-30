@@ -124,7 +124,7 @@ def train_and_test(
     """)
 )
 @click.option(
-    '--dvc/--no-dvc', '--verbose', is_flag=True, default=True, show_default=True,
+    '--dvc/--no-dvc', '--verbose', default=True, show_default=True,
     help=dedent("""
     Track model weights using DVC.
     """)

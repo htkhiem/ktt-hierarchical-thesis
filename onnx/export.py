@@ -60,11 +60,11 @@ def get_path(model_name, dataset_name, best=True, time=None):
     """)
 )
 @click.option(
-    '-B', '--best', is_flag=True, default=True, show_default=True,
+    '--best/--latest', default=True, show_default=True,
     help='User best-epoch weights instead of latest-epoch.'
 )
 @click.option(
-    '-b', '--bento', is_flag=True, default=True, show_default=True,
+    '-b', '--bento/--no-bento', default=True, show_default=True,
     help='Add exported models to the local BentoML model store.'
 )
 @click.option(
@@ -72,7 +72,7 @@ def get_path(model_name, dataset_name, best=True, time=None):
     help='Print more information to the console (for debugging purposes).'
 )
 @click.option(
-    '-c', '--cpu', is_flag=True, default=True,
+    '-c', '--cpu/--gpu', is_flag=True, default=False,
     help=dedent("""
     Only trace models using CPU. Use this if you have to run without CUDA
     support.
@@ -88,6 +88,7 @@ def main(
         cpu
 ):
     """Dispatch export operations."""
+    print('Using', 'best' if best else 'latest')
     # Defaults
     with open('./hyperparams.json', 'r') as j:
         hyperparams = json.loads(j.read())
