@@ -92,7 +92,7 @@ Node = namedtuple('Node', ['db_id', 'parent_db_id'])
     """)
 )
 @click.option(
-    '--dvc',
+    '--dvc/--no-dvc',
     is_flag=True,
     default=True,
     show_default=True,

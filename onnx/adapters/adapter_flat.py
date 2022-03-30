@@ -99,7 +99,7 @@ from utils.hierarchy import PerLevelHierarchy
     """)
 )
 @click.option(
-    '--dvc',
+    '--dvc/--no-dvc',
     is_flag=True,
     default=True,
     show_default=True,
