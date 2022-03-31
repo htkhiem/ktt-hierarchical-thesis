@@ -4,9 +4,16 @@ Service file for DB-BHCN + Walmart_30k.
 
 import bentoml
 import torch
+import pandas as pd
 from bentoml.io import Text
 import numpy as np
 import onnxruntime
+
+# Monitoring
+from evidently.pipeline.column_mapping import ColumnMapping
+import yaml
+import ..monitoring
+
 
 # Workaround for a weird implementation quirk inside transformers'
 # pipelines/base.py that compare passed device with 0:
@@ -52,6 +59,22 @@ svc = bentoml.Service(
     runners=[encoder_runner, classifier_runner]
 )
 
+# Init Evidently monitoring service
+with open("evidently.yaml", 'rb') as evidently_config_file:
+    evidently_config = yaml.safe_load(evidently_config_file)
+options = monitoring.MonitoringServiceOptions(**config['service'])
+# Cheat Evidently's inefficient CSV design by using Parquet.
+reference_data = pd.read_parquet(config['reference_path'])
+monitoring_svc = monitoring.MonitoringService(
+    reference_data,
+    options=options,
+    column_mapping=ColumnMapping({
+        'target': 'target',
+        'prediction': classes[level_offsets[-2]:level_offsets[-1]],  # leaves
+        'numerical_features': [str(i) for i in range(768)]
+    })
+ )
+
 
 @svc.api(input=Text(), output=Text())
 def predict(input_text: str) -> np.ndarray:
@@ -73,4 +96,16 @@ def predict(input_text: str) -> np.ndarray:
         )
         for level in range(len(level_sizes))
     ]
+
+    # Send to monitoring service
+    new_row = pd.DataFrame({
+        'targets': [classes[pred_codes[-1]]]
+    })
+    for idx, val in enumerate(last_hidden_layer[0].tolist()):
+        new_row[str(idx)] = [val]
+    for idx, score in enumerate(classifier_outputs.tolist()):
+        new_row[classes[idx]] = [score]
+
+    monitoring_svc.iterate(new_row)
+
     return '\n'.join([classes[i] for i in pred_codes])

@@ -1,0 +1,7 @@
+reference_path: './reference.parquet'
+  min_reference_size: 30
+  use_reference: true
+  moving_reference: false
+  window_size: 30
+  calculation_period_sec: 10
+  monitor: ['prob_classification_performance']

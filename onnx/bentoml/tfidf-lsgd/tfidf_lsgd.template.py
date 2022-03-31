@@ -1,13 +1,17 @@
 """
 Service file for TFIDF-LSGD + Walmart_30k.
 """
+# BentoML
 import bentoml
 from bentoml.io import Text
+
+# The model stuff
 import numpy as np
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import word_tokenize
+
 
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -25,6 +29,17 @@ svc = bentoml.Service(
     'tfidf_lsgd',
     runners=[classifier_runner]
 )
+
+
+# Init Evidently monitoring service
+with open("evidently.yaml", 'rb') as evidently_config_file:
+    evidently_config = yaml.safe_load(evidently_config_file)
+
+ SERVICE = MonitoringService(
+     reference_data,
+     options=options,
+     column_mapping=ColumnMapping(**config['column_mapping'])
+ )
 
 
 @svc.api(input=Text(), output=Text())

@@ -42,7 +42,8 @@ if __name__ == '__main__':
                 'onnxruntime-gpu',
                 'onnx',
                 'sklearn',
-                'nltk'
+                'nltk',
+                'evidently'
             ]
         }
     )
