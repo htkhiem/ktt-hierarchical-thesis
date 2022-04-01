@@ -2,14 +2,14 @@
 .ipynb_checkpoints/*
 checkpoint.ipynb
 *.parquet
+!Walmart_30k.parquet
 .feather
 *_best.pt
 *_current.pt
 
 cleaning/raw/*
 
-Walmart_30k.parquet
-
+onnx/doc/build/*
 onnx/output/*
 onnx/tmp/*
 onnx/weights/*

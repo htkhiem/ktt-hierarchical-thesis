@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="export"
+   class="canvas"
+   preserveAspectRatio="xMidYMid meet"
+   style="width: 312px; height: 411px;"
+   width="123"
+   height="223"
+   version="1.1"
+   sodipodi:docname="linear.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04, custom)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs81" />
+  <sodipodi:namedview
+     id="namedview79"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="3.2511211"
+     inkscape:cx="61.363448"
+     inkscape:cy="111.5"
+     inkscape:window-width="1920"
+     inkscape:window-height="1044"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="export" />
+  <g
+     id="origin"
+     transform="translate(5.5859375, 5.5859375) scale(1)">
+    <g
+       id="clusters"
+       class="clusters" />
+    <g
+       id="edge-paths"
+       class="edge-paths">
+      <defs
+         id="defs10">
+        <marker
+           id="arrowhead-vee"
+           viewBox="0 0 10 10"
+           refX="9"
+           refY="5"
+           markerUnits="strokeWidth"
+           markerWidth="8"
+           markerHeight="6"
+           orient="auto"
+           style="fill: rgb(0, 0, 0);">
+          <path
+             d="M 0 0 L 10 5 L 0 10 L 4 5 z"
+             style="stroke-width: 1;"
+             id="path4" />
+        </marker>
+        <marker
+           id="arrowhead-vee-select"
+           viewBox="0 0 10 10"
+           refX="9"
+           refY="5"
+           markerUnits="strokeWidth"
+           markerWidth="8"
+           markerHeight="6"
+           orient="auto"
+           style="fill: rgb(238, 0, 0);">
+          <path
+             d="M 0 0 L 10 5 L 0 10 L 4 5 z"
+             style="stroke-width: 1;"
+             id="path7" />
+        </marker>
+      </defs>
+      <path
+         id="edge-input"
+         class="edge-path"
+         d="M37.5,23L37.5,24.666666666666668C37.5,26.333333333333332,37.5,29.666666666666668,37.5,35C37.5,40.333333333333336,37.5,47.666666666666664,37.5,55C37.5,62.333333333333336,37.5,69.66666666666667,37.5,75C37.5,80.33333333333333,37.5,83.66666666666667,37.5,85.33333333333333L37.5,87"
+         style="stroke: rgb(0, 0, 0); stroke-width: 1px; fill: none; marker-end: url(&quot;#arrowhead-vee&quot;);" />
+      <path
+         id="edge-output"
+         class="edge-path"
+         d="M37.5,144L37.5,147.66666666666666C37.5,151.33333333333334,37.5,158.66666666666666,37.5,166C37.5,173.33333333333334,37.5,180.66666666666666,37.5,184.33333333333334L37.5,188"
+         style="stroke: rgb(0, 0, 0); stroke-width: 1px; fill: none; marker-end: url(&quot;#arrowhead-vee&quot;);" />
+    </g>
+    <g
+       id="edge-labels"
+       class="edge-labels">
+      <text
+         class="edge-label"
+         id="edge-label-edge-input"
+         transform="translate(42.5,48)"
+         style="opacity: 1; font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe WPC&quot;, &quot;Segoe UI&quot;, Ubuntu, &quot;Droid Sans&quot;, sans-serif, &quot;PingFang SC&quot;; font-size: 10px;"><tspan
+           xml:space="preserve"
+           dy="1em"
+           x="1"
+           id="tspan15">batch_size×768</tspan></text>
+      <text
+         class="edge-label"
+         id="edge-label-edge-output"
+         transform="translate(42.5,159)"
+         style="opacity: 1; font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe WPC&quot;, &quot;Segoe UI&quot;, Ubuntu, &quot;Droid Sans&quot;, sans-serif, &quot;PingFang SC&quot;; font-size: 10px;"><tspan
+           xml:space="preserve"
+           dy="1em"
+           x="1"
+           id="tspan18">batch_size×293</tspan></text>
+    </g>
+    <g
+       id="nodes"
+       class="nodes">
+      <g
+         id="input-name-input"
+         class="node graph-input"
+         transform="translate(17.70947265625,0)"
+         style="opacity: 1;">
+        <g
+           class="node-item graph-item-input"
+           transform="translate(0,0)"
+           id="g28">
+          <path
+             d="M5,0h29.5810546875a5,5 0 0 1 5,5v13a5,5 0 0 1 -5,5h-29.5810546875a5,5 0 0 1 -5,-5v-13a5,5 0 0 1 5,-5z"
+             style="stroke: rgb(0, 0, 0); fill: rgb(238, 238, 238); stroke-width: 0;"
+             id="path22" />
+          <text
+             x="6"
+             y="16"
+             style="font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe WPC&quot;, &quot;Segoe UI&quot;, Ubuntu, &quot;Droid Sans&quot;, sans-serif, &quot;PingFang SC&quot;; font-size: 11px; text-rendering: geometricprecision;"
+             id="text24">input</text>
+          <title
+             id="title26">float32[batch_size,768]</title>
+        </g>
+        <path
+           class="node border"
+           d="M5,0h29.5810546875a5,5 0 0 1 5,5v13a5,5 0 0 1 -5,5h-29.5810546875a5,5 0 0 1 -5,-5v-13a5,5 0 0 1 5,-5z"
+           style="stroke: rgb(51, 51, 51); fill: none; stroke-width: 1px;"
+           id="path30" />
+      </g>
+      <g
+         id="node-name-Gemm_0"
+         class="node graph-node"
+         transform="translate(0,87)"
+         style="opacity: 1;">
+        <g
+           class="node-item node-item-type node-item-type-layer"
+           transform="translate(0,0)"
+           id="g39">
+          <path
+             d="M5,0h65a5,5 0 0 1 5,5v18a0,0 0 0 1 0,0h-75a0,0 0 0 1 0,0v-18a5,5 0 0 1 5,-5z"
+             style="stroke: rgb(0, 0, 0); fill: rgb(51, 85, 136); stroke-width: 0;"
+             id="path33" />
+          <text
+             x="6"
+             y="16"
+             style="font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe WPC&quot;, &quot;Segoe UI&quot;, Ubuntu, &quot;Droid Sans&quot;, sans-serif, &quot;PingFang SC&quot;; font-size: 11px; text-rendering: geometricprecision; fill: rgb(255, 255, 255);"
+             id="text35">Gemm</text>
+          <title
+             id="title37">Gemm_0</title>
+        </g>
+        <g
+           class="node-attribute"
+           transform="translate(0,23)"
+           id="g59">
+          <path
+             d="M0,0h75a0,0 0 0 1 0,0v29a5,5 0 0 1 -5,5h-65a5,5 0 0 1 -5,-5v-29a0,0 0 0 1 0,0z"
+             style="stroke: rgb(0, 0, 0); fill: rgb(255, 255, 255); stroke-width: 0;"
+             id="path41" />
+          <text
+             id="initializer-linear.weight"
+             xml:space="preserve"
+             x="6"
+             y="14"
+             style="font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe WPC&quot;, &quot;Segoe UI&quot;, Ubuntu, &quot;Droid Sans&quot;, sans-serif, &quot;PingFang SC&quot;; font-size: 9px; font-weight: normal; text-rendering: geometricprecision;"><title
+               id="title43">float32[293,768]</title><tspan
+               style="font-weight: bold;"
+               id="tspan45">B</tspan><tspan
+               id="tspan47">〈293×768〉</tspan></text>
+          <text
+             id="initializer-linear.bias"
+             xml:space="preserve"
+             x="6"
+             y="28"
+             style="font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe WPC&quot;, &quot;Segoe UI&quot;, Ubuntu, &quot;Droid Sans&quot;, sans-serif, &quot;PingFang SC&quot;; font-size: 9px; font-weight: normal; text-rendering: geometricprecision;"><title
+               id="title50">float32[293]</title><tspan
+               style="font-weight: bold;"
+               id="tspan52">C</tspan><tspan
+               id="tspan54">〈293〉</tspan></text>
+          <line
+             class="node"
+             x1="0"
+             x2="75"
+             y1="0"
+             y2="0"
+             style="stroke: rgb(51, 51, 51); fill: none; stroke-width: 1px;"
+             id="line57" />
+        </g>
+        <path
+           class="node border"
+           d="M5,0h65a5,5 0 0 1 5,5v47a5,5 0 0 1 -5,5h-65a5,5 0 0 1 -5,-5v-47a5,5 0 0 1 5,-5z"
+           style="stroke: rgb(51, 51, 51); fill: none; stroke-width: 1px;"
+           id="path61" />
+      </g>
+      <g
+         class="node"
+         transform="translate(13.955078125,188)"
+         style="opacity: 1;"
+         id="g74">
+        <g
+           class="node-item graph-item-output"
+           transform="translate(0,0)"
+           id="g70">
+          <path
+             d="M5,0h37.08984375a5,5 0 0 1 5,5v13a5,5 0 0 1 -5,5h-37.08984375a5,5 0 0 1 -5,-5v-13a5,5 0 0 1 5,-5z"
+             style="stroke: rgb(0, 0, 0); fill: rgb(238, 238, 238); stroke-width: 0;"
+             id="path64" />
+          <text
+             x="6"
+             y="16"
+             style="font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe WPC&quot;, &quot;Segoe UI&quot;, Ubuntu, &quot;Droid Sans&quot;, sans-serif, &quot;PingFang SC&quot;; font-size: 11px; text-rendering: geometricprecision;"
+             id="text66">output</text>
+          <title
+             id="title68">float32[batch_size,293]</title>
+        </g>
+        <path
+           class="node border"
+           d="M5,0h37.08984375a5,5 0 0 1 5,5v13a5,5 0 0 1 -5,5h-37.08984375a5,5 0 0 1 -5,-5v-13a5,5 0 0 1 5,-5z"
+           style="stroke: rgb(51, 51, 51); fill: none; stroke-width: 1px;"
+           id="path72" />
+      </g>
+    </g>
+  </g>
+</svg>
