@@ -735,7 +735,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
             print('Epoch {}: Done\n'.format(epoch))
         return val_metrics
 
-    def test_bhcn_awx(self, loader):
+    def test_bhcn_awx(self, loader, return_features=False):
         """Test the AWX variant on a dataset."""
         self.eval()
 
@@ -774,7 +774,10 @@ class DB_BHCN(model.Model, torch.nn.Module):
             'outputs': all_outputs,
         }
 
-    def fit(self, train_loader, val_loader, path=None, best_path=None):
+    def fit(
+            self, train_loader, val_loader, path=None,
+            best_path=None, dvc=True
+    ):
         """Initialise training resources and call the corresponding script.
 
         Either train_bhcn or train_bhcn_awx will be called, depending on
@@ -809,7 +812,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 train_loader,
                 val_loader,
                 path,
-                best_path
+                best_path,
+                dvc=dvc
             )
 
         return self.fit_bhcn(
@@ -818,7 +822,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
             train_loader,
             val_loader,
             path,
-            best_path
+            best_path,
+            dvc=dvc
         )
 
     def test(self, loader):
@@ -831,9 +836,10 @@ class DB_BHCN(model.Model, torch.nn.Module):
             return self.test_bhcn_awx(loader)
         return self.test_bhcn(loader)
 
-    def export(self, dataset_name, bento=False):
+    def export(self, dataset_name, loader, bento=False):
         """Export model to ONNX/Bento."""
         self.eval()
+
         export_trained(
             self.encoder,
             dataset_name,

@@ -28,6 +28,7 @@ def train_and_test(
         val_loader,
         test_loader,
         metrics_func,
+        dvc=True,
         dry_run=False,
         verbose=False
 ):
@@ -50,7 +51,8 @@ def train_and_test(
             train_loader,
             val_loader,
             path='{}/last_{}.pt'.format(checkpoint_dir, start_datetime),
-            best_path='{}/best_{}.pt'.format(checkpoint_dir, start_datetime)
+            best_path='{}/best_{}.pt'.format(checkpoint_dir, start_datetime),
+            dvc=dvc
         )
     else:
         model.fit(

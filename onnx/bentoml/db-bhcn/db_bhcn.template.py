@@ -1,7 +1,6 @@
 """
 Service file for DB-BHCN + Walmart_30k.
 """
-
 import bentoml
 import torch
 import pandas as pd
@@ -10,9 +9,8 @@ import numpy as np
 import onnxruntime
 
 # Monitoring
-from evidently.pipeline.column_mapping import ColumnMapping
 import yaml
-import ..monitoring
+import monitoring
 
 
 # Workaround for a weird implementation quirk inside transformers'
@@ -25,6 +23,7 @@ device = 0 if torch.cuda.is_available() else -1
 # Use load_runner for optimised performance
 # The transformer encoder section uses a directly-exported model, instead of
 # through ONNX, for optimisation.
+
 
 # PyTorch-based
 encoder_runner = bentoml.transformers.load_runner(
@@ -61,14 +60,14 @@ svc = bentoml.Service(
 
 # Init Evidently monitoring service
 with open("evidently.yaml", 'rb') as evidently_config_file:
-    evidently_config = yaml.safe_load(evidently_config_file)
-options = monitoring.MonitoringServiceOptions(**config['service'])
+    config = yaml.safe_load(evidently_config_file)
+options = monitoring.MonitoringServiceOptions(**config)
 # Cheat Evidently's inefficient CSV design by using Parquet.
 reference_data = pd.read_parquet(config['reference_path'])
 monitoring_svc = monitoring.MonitoringService(
     reference_data,
     options=options,
-    column_mapping=ColumnMapping({
+    column_mapping=monitoring.ColumnMapping({
         'target': 'target',
         'prediction': classes[level_offsets[-2]:level_offsets[-1]],  # leaves
         'numerical_features': [str(i) for i in range(768)]

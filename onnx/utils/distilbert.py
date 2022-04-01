@@ -52,7 +52,7 @@ def export_trained(
     if bento:
         bentoml.transformers.save(
             'encoder_' + name,
-            model=model,
+            model,
             tokenizer=get_tokenizer()
         )
     else:
