@@ -1,6 +1,8 @@
 """Implementation of the DB-BHCN and DB-BHCN+AWX models."""
 import os
 
+import pandas as pd
+
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -9,6 +11,10 @@ import bentoml
 from models import model, model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.distilbert import get_pretrained, export_trained
+
+
+REFERENCE_SET_FEATURE_POOL = 32
+POOLED_FEATURE_SIZE = 24
 
 
 class AWX(torch.nn.Module):
@@ -290,6 +296,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
         """
         super(DB_BHCN, self).__init__()
         self.encoder = get_pretrained()
+        # Pooling layer for reference set generation
+        self.pool = torch.nn.AvgPool1d(REFERENCE_SET_FEATURE_POOL)
         if awx:
             self.classifier = BHCN_AWX(
                 768,
@@ -358,7 +366,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
         Returns
         -------
-        scores : torch.FloatTensor of shape (batch_size, class_count)
+        local_outputs : torch.FloatTensor of shape (batch_size, class_count)
             Classification scores within (0, 1). Classes are ordered by their
             hierarchical level. To extract the predicted classes, one can
             `argmax` ranges of the second dimension corresponding to each
@@ -377,6 +385,36 @@ class DB_BHCN(model.Model, torch.nn.Module):
         ]
         return local_outputs
 
+    def forward_bhcn_with_features(self, ids, mask):
+        """Forward-propagate input to generate classification.
+
+        This version additionally returns pooled features from DistilBERT
+        for generating the reference set. By default, a kernel size and
+        stride of 32 is used, which means there are 24 features pooled from
+        the original 768 features.
+
+        Parameters
+        ----------
+        ids : torch.LongTensor of shape (batch_size, num_choices)
+             Indices of input sequence tokens in the vocabulary.
+        mask : torch.FloatTensor of shape (batch_size, num_choices), optional
+            Mask to avoid performing attention on padding token indices. Mask
+            values are 0 for real tokens and 1 for masked tokens such as pads.
+
+        Returns
+        -------
+        leaf_outputs : torch.FloatTensor of size (batch_size, leaf_class_count)
+            Scores for the leaf layer. Only the leaf layer is returned
+            to as Evidently doesn't seem to play well with multilabel tasks.
+        pooled_features: torch.FloatTensor of shape(batch_size, 24)
+        """
+        encoder_outputs = self.encoder(ids, mask)[0][:, 0, :]
+        local_outputs = self.classifier(
+            encoder_outputs
+        )
+        return local_outputs[
+            :, self.classifier.level_offsets[-2]:], self.pool(encoder_outputs)
+
     def forward_bhcn_awx(self, ids, mask):
         """Forward-propagate input to generate classification, with AWX.
 
@@ -393,11 +431,15 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
         Returns
         -------
-        scores : torch.FloatTensor of shape (batch_size, class_count)
-            Classification scores within (0, 1). Classes are ordered by their
-            hierarchical level. To extract the predicted classes, one can
-            `argmax` ranges of the second dimension corresponding to each
-            level.
+        local_outputs : List of torch.FloatTensors
+            Classification scores within (0, 1). There are n tensors in the
+            list where n is the number of layers in the hierarchy. Each
+            tensor is of size (batch_size, level_class_count). To extract the
+            predicted classes, one can `argmax` each tensor in their last
+            dimension.
+        awx_outputs : torch.FloatTensor of size (batch_size, class_count)
+            The same output passed through the AWX layer. This is the output
+            to use as the final answer of the model.
         """
         local_outputs, awx_outputs = self.classifier(
             self.encoder(ids, mask)[0][:, 0, :]
@@ -412,6 +454,38 @@ class DB_BHCN(model.Model, torch.nn.Module):
         ]
         return local_outputs, awx_outputs
 
+    def forward_bhcn_awx_with_features(self, ids, mask):
+        """Forward-propagate input to generate classification, with AWX.
+
+        This version additionally returns pooled features from DistilBERT
+        for generating the reference set. By default, a kernel size and
+        stride of 32 is used, which means there are 24 features pooled from
+        the original 768 features.
+
+        Parameters
+        ----------
+        ids : torch.LongTensor of shape (batch_size, num_choices)
+             Indices of input sequence tokens in the vocabulary.
+        mask : torch.FloatTensor of shape (batch_size, num_choices), optional
+            Mask to avoid performing attention on padding token indices. Mask
+            values are 0 for real tokens and 1 for masked tokens such as pads.
+
+        Returns
+        -------
+        awx_outputs : torch.FloatTensor of size (batch_size, leaf_class_count)
+            AWX'ed scores for the leaf layer. Only the leaf layer is returned
+            to as Evidently doesn't seem to play well with multilabel tasks.
+        pooled_features: torch.FloatTensor of shape(batch_size, 24)
+        """
+        encoder_outputs = self.encoder(ids, mask)[0][:, 0, :]
+        _, awx_outputs = self.classifier(
+            encoder_outputs
+        )
+        return awx_outputs[
+            :,
+            self.classifier.level_offsets[-2]:
+        ], self.pool(encoder_outputs)
+
     def forward(self, ids, mask):
         """Wrap around the two forward propagation routine variants.
 
@@ -425,6 +499,23 @@ class DB_BHCN(model.Model, torch.nn.Module):
         if self.awx:
             return self.forward_bhcn_awx(ids, mask)
         return self.forward_bhcn(ids, mask)
+
+    def forward_with_features(self, ids, mask):
+        """Wrap around the two forward propagation routine variants.
+
+        This model takes in the `ids` and `mask` tensors as generated by a
+        `DistilBertTokenizer` or `DistilBertTokenizerFast` instance.
+
+        This is only implemented for manual single-example FP convenience.
+        Internal training scripts call the corresponding forward functions
+        directly, avoiding repetitive conditional branching.
+
+        It is a version of the normal forward method but also returns
+        average-pooled features.
+        """
+        if self.awx:
+            return self.forward_bhcn_awx_with_features(ids, mask)
+        return self.forward_bhcn_with_features(ids, mask)
 
     def save(self, path, optim, dvc=True):
         """Save model state to disk using PyTorch's pickle facilities.
@@ -669,7 +760,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
         return val_metrics
 
     def test_bhcn(self, loader):
-        """Test the AWX variant on a dataset.
+        """Test DB-BHCN on a dataset.
 
         This method should not be called manually. Please use the normal
         test method, which automatically chooses which specific variant's
@@ -703,6 +794,44 @@ class DB_BHCN(model.Model, torch.nn.Module):
             'targets': all_targets,
             'outputs': all_outputs,
         }
+
+    def gen_reference_set_bhcn(self, loader):
+        """Generate an Evidently-compatible reference dataset.
+
+        This function should not be called manually. Use the
+        general function instead.
+        """
+        self.eval()
+        all_pooled_features = np.empty((0, POOLED_FEATURE_SIZE))
+        all_targets = np.empty((0, 1), dtype=bool)
+        all_outputs = np.empty((0, self.classifier.levels[-1]), dtype=float)
+
+        with torch.no_grad():
+            for batch_idx, data in enumerate(tqdm(loader)):
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
+                targets = data['labels']
+
+                leaf_outputs, pooled_features = self.\
+                    forward_bhcn_with_features(ids, mask)
+                all_pooled_features = np.concatenate(
+                    [all_pooled_features, pooled_features]
+                )
+                # Only store leaves
+                all_targets = np.concatenate([all_targets, targets[:, -1]])
+                all_outputs = np.concatenate([all_outputs, leaf_outputs])
+
+        cols = {
+            'targets': all_targets
+        }
+        leaf_start = self.classifier.hierarchy['level_offsets'][-2]
+        for col_idx in range(all_pooled_features.shape[1]):
+            cols[str(col_idx)] = all_pooled_features[:, col_idx]
+        for col_idx in range(all_outputs.shape[1]):
+            cols[
+                self.classifier.hierarchy['classes'][leaf_start + col_idx]
+            ] = all_outputs[:, col_idx]
+        return pd.DataFrame(cols)
 
     def fit_bhcn_awx(
         self,
@@ -773,8 +902,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
                 optimizer.zero_grad()
                 loss.backward()
-                optimizer.step()
 
+                optimizer.step()
                 train_loss = train_loss + (loss.item() - train_loss) / (
                     batch_idx + 1)
 
@@ -907,6 +1036,44 @@ class DB_BHCN(model.Model, torch.nn.Module):
             'targets': all_targets,
             'outputs': all_outputs,
         }
+
+    def gen_reference_set_bhcn_awx(self, loader):
+        """Generate an Evidently-compatible reference dataset, AWX-enabled.
+
+        This function should not be called manually. Use the
+        general function instead.
+        """
+        self.eval()
+        all_pooled_features = np.empty((0, POOLED_FEATURE_SIZE))
+        all_targets = np.empty((0, 1), dtype=bool)
+        all_outputs = np.empty((0, self.classifier.levels[-1]), dtype=float)
+
+        with torch.no_grad():
+            for batch_idx, data in enumerate(tqdm(loader)):
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
+                targets = data['labels']
+
+                awx_outputs, pooled_features = self.\
+                    forward_bhcn_awx_with_features(ids, mask)
+                all_pooled_features = np.concatenate(
+                    [all_pooled_features, pooled_features]
+                )
+                # Only store leaves
+                all_targets = np.concatenate([all_targets, targets[:, -1]])
+                all_outputs = np.concatenate([all_outputs, awx_outputs])
+
+        cols = {
+            'targets': all_targets
+        }
+        leaf_start = self.classifier.hierarchy['level_offsets'][-2]
+        for col_idx in range(all_pooled_features.shape[1]):
+            cols[str(col_idx)] = all_pooled_features[:, col_idx]
+        for col_idx in range(all_outputs.shape[1]):
+            cols[
+                self.classifier.hierarchy['classes'][leaf_start + col_idx]
+            ] = all_outputs[:, col_idx]
+        return pd.DataFrame(cols)
 
     def fit(
             self, train_loader, val_loader, path=None,
@@ -1073,6 +1240,29 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 path,
                 metadata=hierarchy_json
             )
+
+    def gen_reference_set(self, loader):
+        """Generate an Evidently-compatible reference dataset.
+
+        Due to the data drift tests' computational demands, we only record
+        average-pooled features.
+
+        Parameters
+        ----------
+        loader: torch.utils.data.DataLoader
+            A DataLoader wrapping around a dataset to become the reference
+            dataset (ideally the test set).
+
+        Returns
+        -------
+        reference_set: pandas.DataFrame
+            An Evidently-compatible dataset. Numerical feature column names are
+            simple stringified numbers from 0 to 23 (for the default kernel/
+            stride of 32), while targets are leaf classes' string names.
+        """
+        if self.awx:
+            return self.gen_reference_set_bhcn_awx(loader)
+        return self.gen_reference_set_bhcn(loader)
 
     def to(self, device=None):
         """

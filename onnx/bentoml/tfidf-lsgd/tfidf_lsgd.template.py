@@ -31,17 +31,6 @@ svc = bentoml.Service(
 )
 
 
-# Init Evidently monitoring service
-with open("evidently.yaml", 'rb') as evidently_config_file:
-    evidently_config = yaml.safe_load(evidently_config_file)
-
- SERVICE = MonitoringService(
-     reference_data,
-     options=options,
-     column_mapping=ColumnMapping(**config['column_mapping'])
- )
-
-
 @svc.api(input=Text(), output=Text())
 def predict(input_text: str) -> np.ndarray:
     """Define the entire inference process for this model."""

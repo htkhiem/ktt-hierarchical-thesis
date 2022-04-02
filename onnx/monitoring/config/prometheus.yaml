@@ -9,5 +9,5 @@ scrape_configs:
   honor_labels: true
   static_configs:
   - targets:
-    - localhost:3000  # all of our Bento models run on this port by default
-    # - localhost:6000
+    - localhost:8000  # all of our Bento models run on this port by default
+    - localhost:5000  # for Evidently

@@ -28,6 +28,7 @@ def train_and_test(
         val_loader,
         test_loader,
         metrics_func,
+        gen_reference=False,
         dvc=True,
         dry_run=False,
         verbose=False
@@ -82,6 +83,10 @@ def train_and_test(
     print(report)
     logging.info(report)
 
+    if gen_reference:
+        ref_df = model.gen_reference_set(test_loader)
+        ref_df.to_parquet('{}/last_reference.parquet')
+
 
 @click.command()
 @click.argument('datasets', required=1)
@@ -126,6 +131,12 @@ def train_and_test(
     """)
 )
 @click.option(
+    '-r', '--reference', is_flag=True, default=False, help=dedent("""
+    Generate an Evidently-compatible reference set. Specify this flag if
+    you wish to monitor the model in production using Evidently.
+    """)
+)
+@click.option(
     '--dvc/--no-dvc', '--verbose', default=True, show_default=True,
     help=dedent("""
     Track model weights using DVC.
@@ -150,6 +161,7 @@ def main(
         distilbert,
         models,
         epoch,
+        reference,
         dvc,
         log_path,
         verbose,
@@ -235,6 +247,7 @@ def main(
                 metrics_func=model_pytorch.get_metrics,
                 dry_run=dry_run,
                 verbose=verbose,
+                gen_reference=reference,
                 dvc=dvc
             )
 
@@ -258,6 +271,7 @@ def main(
                 metrics_func=model_pytorch.get_metrics,
                 dry_run=dry_run,
                 verbose=verbose,
+                gen_reference=reference,
                 dvc=dvc
             )
 

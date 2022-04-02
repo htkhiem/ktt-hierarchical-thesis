@@ -1,16 +1,14 @@
 """
 Service file for DB-BHCN + Walmart_30k.
 """
+import requests
+import json
 import bentoml
 import torch
 import pandas as pd
 from bentoml.io import Text
 import numpy as np
 import onnxruntime
-
-# Monitoring
-import yaml
-import monitoring
 
 
 # Workaround for a weird implementation quirk inside transformers'
@@ -48,31 +46,18 @@ hierarchy = bentoml.models.get(
     '${classifier}'
 ).info.metadata
 
+leaf_size = hierarchy['level_sizes'][-1]
+leaf_start = hierarchy['level_offsets'][-2]
+leaf_end = hierarchy['level_offsets'][-1]
+
 level_offsets = hierarchy['level_offsets']
 level_sizes = hierarchy['level_sizes']
 classes = hierarchy['classes']
 
-
 svc = bentoml.Service(
-    'db_bhcn',
+    'db_bhcn_${dataset}',
     runners=[encoder_runner, classifier_runner]
 )
-
-# Init Evidently monitoring service
-with open("evidently.yaml", 'rb') as evidently_config_file:
-    config = yaml.safe_load(evidently_config_file)
-options = monitoring.MonitoringServiceOptions(**config)
-# Cheat Evidently's inefficient CSV design by using Parquet.
-reference_data = pd.read_parquet(config['reference_path'])
-monitoring_svc = monitoring.MonitoringService(
-    reference_data,
-    options=options,
-    column_mapping=monitoring.ColumnMapping({
-        'target': 'target',
-        'prediction': classes[level_offsets[-2]:level_offsets[-1]],  # leaves
-        'numerical_features': [str(i) for i in range(768)]
-    })
- )
 
 
 @svc.api(input=Text(), output=Text())
@@ -80,7 +65,8 @@ def predict(input_text: str) -> np.ndarray:
     """Define the entire inference process for this model."""
     # Pre-processing: tokenisation
     encoder_outputs = encoder_runner.run(input_text)
-    last_hidden_layer = np.array(encoder_outputs)[:, 0, :][0]
+    last_hidden_layer = np.array(
+        encoder_outputs, dtype=np.float32)[:, 0, :][0]
     classifier_outputs = classifier_runner.run(last_hidden_layer)
 
     scores = classifier_outputs[0]
@@ -90,21 +76,26 @@ def predict(input_text: str) -> np.ndarray:
         int(
             np.argmax(
                 scores[
-                    level_offsets[level]:level_offsets[level + 1]]
+                    level_offsets[level]:level_offsets[level + 1]
+                ]
             ) + level_offsets[level]
         )
         for level in range(len(level_sizes))
     ]
 
-    # Send to monitoring service
-    new_row = pd.DataFrame({
+    new_row = {
         'targets': [classes[pred_codes[-1]]]
-    })
-    for idx, val in enumerate(last_hidden_layer[0].tolist()):
-        new_row[str(idx)] = [val]
-    for idx, score in enumerate(classifier_outputs.tolist()):
-        new_row[classes[idx]] = [score]
+    }
+    for col_idx, emb in enumerate(last_hidden_layer):
+        new_row[str(col_idx)] = [emb.astype(np.float64)]
+    for col_idx, score in enumerate(scores):
+        new_row[classes[col_idx]] = [score.astype(np.float64)]
 
-    monitoring_svc.iterate(new_row)
+    new_row_df = pd.DataFrame(new_row)
+    requests.post(
+        "http://localhost:5000/iterate",
+        data=new_row_df.to_json(),
+        headers={"content-type": "application/json"},
+    )
 
     return '\n'.join([classes[i] for i in pred_codes])

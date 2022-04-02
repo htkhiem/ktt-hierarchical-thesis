@@ -11,6 +11,7 @@ import torch
 import onnxruntime
 import bentoml
 from mako.template import Template
+import yaml
 
 
 def generate_reference_data(dataset, encoder_name, classifier_name, cpu=False):
@@ -109,6 +110,7 @@ def generate_reference_data(dataset, encoder_name, classifier_name, cpu=False):
         ] = predictions[:, col_idx]
     reference_set = pd.DataFrame(reference_col_dict)
     reference_set.to_parquet('./reference.parquet')
+    return hierarchy
 
 
 @click.command()
@@ -142,16 +144,21 @@ def build_service(dataset, encoder_id, classifier_id, cpu):
     with open('_svc.py', 'w') as svcfile:
         svcfile.write(svc_template.render(
             encoder=encoder_name,
-            classifier=classifier_name
+            classifier=classifier_name,
+            dataset=dataset_name
         ))
+    with open("evidently.template.yaml", 'r') as evidently_template_file:
+        config = yaml.safe_load(evidently_template_file)
     # Create a same-directory copy of the monitoring code.
     # This makes it possible for BentoML to pre-run the service for
     # checking as in the BentoService, these two files will be in the same directory.
-    shutil.copy('../monitoring.py', 'monitoring.py')
+    shutil.copy('../monitoring.py', '_monitoring.py')
 
     # Generate reference data
-    generate_reference_data(dataset, encoder_name, classifier_name, cpu)
-
+    hierarchy = generate_reference_data(dataset, encoder_name, classifier_name, cpu)
+    config['prediction'] = hierarchy['classes'][hierarchy['level_offsets'][-2]:hierarchy['level_offsets'][-1]]
+    with open("_evidently.yaml", 'w') as evidently_config_file:
+        config = yaml.dump(config, evidently_config_file)
     bentoml.build(
         '_svc.py:svc',
         labels={
@@ -159,7 +166,7 @@ def build_service(dataset, encoder_id, classifier_id, cpu):
             'stage': 'demo'
         },
         description="file: ./README.md",
-        include=['_svc.py', 'monitoring.py', 'references.parquet', 'evidently.yaml'],
+        include=['_svc.py', 'monitoring.py', 'references.parquet', '_evidently.yaml'],
         exclude=['build_service.py'],
         docker={
             'gpu': True
@@ -185,7 +192,8 @@ def build_service(dataset, encoder_id, classifier_id, cpu):
 
     # Clear temporary files
     os.remove('_svc.py')
-    os.remove('monitoring.py')
+    os.remove('_monitoring.py')
+    os.remove('_evidently.yaml')
 
 
 if __name__ == '__main__':
