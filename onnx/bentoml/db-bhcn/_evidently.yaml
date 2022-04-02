@@ -1,0 +1,304 @@
+service:
+  calculation_period_sec: 60
+  min_reference_size: 60
+  monitors:
+    - cat_target_drift
+    - data_drift
+  moving_reference: false
+  reference_path: ./reference.parquet
+  use_reference: true
+  window_size: 60
+prediction:
+- 2-in-1 Hair and Body Care
+- '@ Manual Shelves - Beauty'
+- '@ Manual Shelves - Food'
+- ATV & Off-Road
+- Acid Reflux
+- Action Figures
+- Advance Auto Parts Shop
+- Air Fresheners
+- All Industrial
+- Allergy and Sinus
+- Appliances
+- Aromatherapy
+- Art Supplies
+- Arts & Crafts for Kids
+- As Seen On TV
+- Audio
+- Auto Body
+- Auto Detailing & Car Care
+- Auto Detailing Paint and Paint Tools
+- Auto Electronics
+- Automotive Interior
+- Automotive Replacement Parts
+- Automotive Tools & Equipment
+- Baby & Toddler Toys
+- Baby Activities & Gear
+- Baby Shower Gifts
+- Back to College Beauty
+- Back to School
+- Back to School Health Essentials
+- Bags & Accessories
+- Baking
+- Basketball Party Supplies
+- Bath
+- Bath & Body
+- Bathroom
+- Bathroom Renovation
+- Batteries
+- Beading & Jewelry Making
+- Beauty Next Day
+- Beauty Stock Up
+- Beauty Wellness
+- Beauty by Top Brands
+- Beauty by Topic
+- Bedding
+- Bedroom Safety & Aids
+- Beverages
+- Big & Tall
+- Bikes
+- Body Jewelry
+- Breakfast & Cereal
+- Breakroom Supplies
+- Business & Money Books
+- Cake, Baking & Pastry Supplies
+- Cameras & Camcorders
+- Car Safety & Car Security
+- Car Seats
+- Caregiver
+- Cats
+- Cellphone Accessories
+- Character Shop
+- Childrens & Kids Books
+- Childrens Health
+- Childrens Health Shop
+- Chocolate, Candy & Gum
+- Christmas Trees & Christmas Decor
+- Clean Living Bath & Body
+- Clean Living Shop
+- Cleaning Supplies
+- Clearance on Health Beauty Wellness & Personal Care
+- Coffee
+- Cold Cough and Flu
+- Computers
+- Condiments, Sauces & Spices
+- Cookbooks, Food & Wine
+- DC Comics Characters
+- Decor
+- Deodorants & Antiperspirants
+- Dermatologist Recommended
+- Desk & Workspace Organizers
+- Diabetes Care
+- Diabetes Care Brands
+- Diabetes Management
+- Diabetes Shop
+- Diapering
+- Digestive Health
+- Disney Characters
+- Disney Toys
+- Dog Bark Control
+- Dogs
+- Dolls & Dollhouses
+- Drain & Septic Care
+- Ear Care
+- Electrical
+- Electronics for Kids
+- Emergency Prep
+- Equate
+- Exercise & Fitness
+- Exterior Car Accessories
+- Eye Care
+- Family Planning
+- Farm Animals
+- Fashion Brands
+- Fasteners
+- Featured Shops
+- Feeding
+- Feminine Care
+- Fiber Supplements
+- First Aid
+- Food Service Equipment & Supplies
+- Foot Care
+- Fragrance Best Sellers
+- Fragrances
+- Fresh Cut Flowers
+- Fresh Food
+- Frozen Foods
+- Furniture
+- GPS & Navigation
+- Games & Puzzles
+- Garden Center
+- Gas Relief
+- Gift Baskets
+- Gift Wrap Supplies
+- Gluten-Free Foods
+- Grills & Outdoor Cooking
+- HART Tools
+- Hair Care
+- Halloween
+- Halloween Makeup and Hair
+- Hardware
+- Headaches
+- Health & Safety
+- Heart Health
+- Heating, Cooling, & Air Quality
+- Here for Every Beauty
+- History Books
+- Hobby & Collectibles
+- Holiday Decor
+- Home Health Care
+- Home Safety
+- Horses
+- Hot Tubs & Saunas
+- House, Home & Gardening Books
+- Household Essentials by Brand
+- Incontinence
+- Instrument Accessories
+- Iridescent Party Supplies
+- Janitorial & Sanitation Supplies
+- Jojo Siwa Party Supplies
+- Juniors
+- Keto Diet
+- Kids Bikes & Riding Toys
+- Kids Clothing
+- Kids Jewelry & Watches
+- Kids Rooms
+- Kitchen & Dining
+- Kosher Foods
+- Language Arts & Disciplines Books
+- Last Minute Gifts
+- Laundry
+- Laxatives
+- Learning Toys
+- Light Bulbs
+- Lip Care
+- Literature & Fiction Books
+- Makeup
+- Mardi Gras Party Supplies
+- Massage
+- Maternity Clothing
+- Meal Solutions, Grains & Pasta
+- Medical & Dental
+- Medicine Cabinet
+- Medicine Cabinet Must Haves
+- Men
+- Mens Clothing
+- Mens Essentials
+- Mens Personal Care
+- Mothers Day
+- Motion Sickness & Nausea
+- Motorcycle
+- New Arrivals
+- New Year New You
+- Nexxus
+- Nickelodeon Characters
+- Nursery & Decor
+- Oils and Fluids
+- Oral Care
+- Organic Foods
+- Outdoor Lighting
+- Outdoor Play
+- Outdoor Power Equipment
+- Outdoor Sports
+- Pain Relievers
+- Paint
+- Paper
+- Paper & Plastic
+- Party Supplies
+- Patio & Outdoor Decor
+- Patio Furniture
+- Personalized Gifts
+- Pest Control
+- Pet Stain & Odor Remover
+- Plant Based Nutrition
+- Portable Audio
+- Premium Bath & Body
+- Premium Beauty
+- Premium Beauty Tech & Skin Devices
+- Premium Brands
+- Premium Facial Skincare
+- Premium Fragrance
+- Premium Hair Care
+- Premium Hair Care & Hair Tools
+- Premium Hair Tools & Accessories
+- Premium Makeup
+- Premium Mens Grooming
+- Pretend Play
+- Probiotics
+- Protein & Fitness
+- Psychology & Social Science Books
+- Quit Smoking
+- RV Parts & Accessories
+- Recreation
+- Remote Control & Play Vehicles
+- Reptiles
+- Restock & Save On Hair Care
+- Restock Beauty Essentials
+- Restock Health Essentials
+- Restock Wellness Essentials
+- Restock on Baby Essentials
+- Retro and Arcade Gaming Consoles, Accessories & Games
+- Safety Equipment and Gear
+- Scrapbooking
+- Seasonal Clothing Shops
+- Seasonal Grocery
+- Self-Care & Pampering
+- Sewing
+- Sexual Wellness
+- Sexual Wellness Top Brands
+- Shaving
+- Shoe Care & Repair
+- Shoes
+- Shop Musical Instruments By Brand
+- Shop Toys by Age
+- Shop Toys by Brand
+- Shop Toys by Price
+- Shop all Collectibles
+- Shop by Skin Concern and Type
+- Skin Care
+- Sleep & Snoring Aids
+- Sleepwear Shop
+- Smart Home
+- Snacks, Cookies & Chips
+- Soups
+- Sports
+- Sports Fan Shop
+- Sports Medicine & Injury Recovery Solution
+- Sports Party Supplies
+- Storage & Organization
+- Strollers
+- Stuffed Animals & Plush Toys
+- Sun Care
+- Super Bowl LII Starts Here
+- Superfoods & Cleanses
+- Surveillance Equipment
+- Swim Shop
+- TV & Video
+- Teens Rooms
+- The 80s Shop
+- Tires
+- Toddlers Room
+- Tools
+- Toys Character Shop
+- Travel Size Beauty
+- Travel Size Toiletries & Kits
+- Trending Sellers
+- Unicorn Shop
+- Uniquely J
+- Valentines Day Party Supplies
+- Video Game Titles
+- Vinyl Records
+- Vitamins & Supplements
+- WOW Items
+- Walmart Exclusive Toys
+- Watch Accessories
+- Watches
+- Water Purification
+- Wedding Shop
+- Weight Management
+- Wellness
+- Wilton Baking Supplies
+- Womens Clothing
+- Womens Jewelry & Watches
+- Womens Plus
+- iPad & Tablets
