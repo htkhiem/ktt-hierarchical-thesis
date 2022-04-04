@@ -6,7 +6,7 @@ DistilBERT + Adapted HMCN-F
 API
 ---
 
-.. autoclass:: models.db_ahmcnf.DB_AHMCN_F
+.. autoclass:: models.db_ahmcnf.db_ahmcnf.DB_AHMCN_F
    :members:
    :special-members:
 

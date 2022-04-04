@@ -6,7 +6,7 @@ Tf-idf + Hierarchy SGD
 API
 ---
 
-.. autoclass:: models.tfidf_hsgd.Tfidf_HSGD
+.. autoclass:: models.tfidf_hsgd.tfidf_hsgd.Tfidf_HSGD
    :members:
    :special-members:
 

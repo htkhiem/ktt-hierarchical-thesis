@@ -6,7 +6,7 @@ DistilBERT + Linear
 API
 ---
 
-.. autoclass:: models.db_bhcn.DB_LINEAR
+.. autoclass:: models.db_linear.db_linear.DB_Linear
    :members:
    :special-members:
 
