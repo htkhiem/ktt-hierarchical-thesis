@@ -12,8 +12,8 @@ import logging
 import json
 import torch
 
-from models.model_list import PYTORCH_MODEL_LIST
-from models.model_list import SKLEARN_MODEL_LIST
+from models import PYTORCH_MODEL_LIST
+from models import SKLEARN_MODEL_LIST
 
 from utils import cli
 
@@ -229,15 +229,15 @@ def main(
     # Train models and log test set performance
     if 'db_bhcn' in model_lst:
         config = init_config('db_bhcn', 'DB-BHCN')
-        db_bhcn = __import__(
-            'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
+        DB_BHCN = __import__(
+            'models', globals(), locals(), [], 0).DB_BHCN
         for dataset_name in dataset_lst:
             (
                 train_loader, val_loader, test_loader, hierarchy, config
             ) = init_dataset(
                 dataset_name, model_pytorch.get_loaders, config
             )
-            model = db_bhcn.DB_BHCN(hierarchy, config).to(device)
+            model = DB_BHCN(hierarchy, config).to(device)
             train_and_test(
                 config,
                 model,
@@ -253,15 +253,15 @@ def main(
 
     if 'db_bhcn_awx' in model_lst:
         config = init_config('db_bhcn_awx', 'DB-BHCN+AWX')
-        db_bhcn = __import__(
-            'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
+        DB_BHCN_AWX = __import__(
+            'models', globals(), locals(), [], 0).DB_BHCN_AWX
         for dataset_name in dataset_lst:
             (
                 train_loader, val_loader, test_loader, hierarchy, config
             ) = init_dataset(
                 dataset_name, model_pytorch.get_loaders, config
             )
-            model = db_bhcn.DB_BHCN(hierarchy, config, awx=True).to(device)
+            model = DB_BHCN_AWX(hierarchy, config).to(device)
             train_and_test(
                 config,
                 model,
@@ -277,15 +277,15 @@ def main(
 
     if 'db_ahmcnf' in model_lst:
         config = init_config('db_ahmcnf', 'DistilBERT + Adapted HMCN-F')
-        db_ahmcnf = __import__(
-            'models', globals(), locals(), ['db_ahmcnf'], 0).db_ahmcnf
+        DB_AHMCN_F = __import__(
+            'models', globals(), locals(), [], 0).DB_AHMCN_F
         for dataset_name in dataset_lst:
             (
                 train_loader, val_loader, test_loader, hierarchy, config
             ) = init_dataset(
                 dataset_name, model_pytorch.get_loaders, config
             )
-            model = db_ahmcnf.DB_AHMCN_F(hierarchy, config).to(device)
+            model = DB_AHMCN_F(hierarchy, config).to(device)
             train_and_test(
                 config,
                 model,
@@ -300,15 +300,15 @@ def main(
 
     if 'db_achmcnn' in model_lst:
         config = init_config('db_achmcnn', 'DistilBERT + Adapted C-HMCNN')
-        db_achmcnn = __import__(
-            'models', globals(), locals(), ['db_achmcnn'], 0).db_achmcnn
+        DB_AC_HMCNN = __import__(
+            'models', globals(), locals(), [], 0).DB_AC_HMCNN
         for dataset_name in dataset_lst:
             (
                 train_loader, val_loader, test_loader, hierarchy, config
             ) = init_dataset(
                 dataset_name, model_pytorch.get_loaders, config
             )
-            model = db_achmcnn.DB_AC_HMCNN(hierarchy, config).to(device)
+            model = DB_AC_HMCNN(hierarchy, config).to(device)
             train_and_test(
                 config,
                 model,
@@ -323,22 +323,24 @@ def main(
 
     if 'db_linear' in model_lst:
         config = init_config('db_linear', 'DistilBERT+Linear')
-        db_linear = __import__(
-            'models', globals(), locals(), ['db_linear'], 0).db_linear
+        DB_Linear = __import__(
+            'models', globals(), locals(), [], 0).DB_Linear
+        db_linear_metrics = __import__(
+            'models', globals(), locals(), [], 0).get_linear_metrics
         for dataset_name in dataset_lst:
             (
                 train_loader, val_loader, test_loader, hierarchy, config
             ) = init_dataset(
                 dataset_name, model_pytorch.get_loaders, config
             )
-            model = db_linear.DB_Linear(hierarchy, config).to(device)
+            model = DB_Linear(hierarchy, config).to(device)
             train_and_test(
                 config,
                 model,
                 train_loader,
                 val_loader,
                 test_loader,
-                metrics_func=db_linear.get_metrics,
+                metrics_func=db_linear_metrics,
                 dry_run=dry_run,
                 verbose=verbose,
                 dvc=dvc
@@ -346,15 +348,15 @@ def main(
 
     if 'tfidf_hsgd' in model_lst:
         config = init_config('tfidf_hsgd', 'Tf-idf + Hierarchical SGD')
-        tfidf_hsgd = __import__(
-            'models', globals(), locals(), ['tfidf_hsgd'], 0).tfidf_hsgd
+        Tfidf_HSGD = __import__(
+            'models', globals(), locals(), [], 0).Tfidf_HSGD
         for dataset_name in dataset_lst:
             (
                 train_loader, val_loader, test_loader, hierarchy, config
             ) = init_dataset(
                 dataset_name, model_sklearn.get_loaders, config
             )
-            model = tfidf_hsgd.Tfidf_HSGD(config)
+            model = Tfidf_HSGD(config)
             train_and_test(
                 config,
                 model,
@@ -369,15 +371,15 @@ def main(
 
     if 'tfidf_lsgd' in model_lst:
         config = init_config('tfidf_lsgd', 'Tf-idf + Leaf SGD')
-        tfidf_lsgd = __import__(
-            'models', globals(), locals(), ['tfidf_lsgd'], 0).tfidf_lsgd
+        Tfidf_LSGD = __import__(
+            'models', globals(), locals(), [], 0).Tfidf_LSGD
         for dataset_name in dataset_lst:
             (
                 train_loader, val_loader, test_loader, hierarchy, config
             ) = init_dataset(
                 dataset_name, model_sklearn.get_loaders, config
             )
-            model = tfidf_lsgd.Tfidf_LSGD(config)
+            model = Tfidf_LSGD(config)
             train_and_test(
                 config,
                 model,
