@@ -513,6 +513,7 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
             the DistilBERT encoder will be directly packaged into a BentoML
             model and the entire model will be saved in your local BentoML
             store. The classifier is always exported as ONNX.
+
         """
         self.eval()
         export_trained(self.encoder, dataset_name, 'db_achmcnn', bento=bento)

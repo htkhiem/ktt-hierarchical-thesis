@@ -1,8 +1,10 @@
 service:
-  reference_path: './reference.parquet'
+  reference_path: './_references.parquet'
   min_reference_size: 30
   use_reference: true
   moving_reference: false
   window_size: 30
   calculation_period_sec: 10
-  monitors: ['prob_classification_performance']
+  monitors:
+    - cat_target_drift
+    - data_drift

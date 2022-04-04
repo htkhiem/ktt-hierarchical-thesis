@@ -196,9 +196,9 @@ class PerLevelHierarchy:
             'parent_of': parent_of
         }
         if hasattr(self, 'M'):
-            d['M'] = self.M
+            d['M'] = self.M.int().tolist()
         if hasattr(self, 'R'):
-            d['R'] = self.R
+            d['R'] = self.R.int().tolist()
         return d
 
     def to_json(self, path=None):

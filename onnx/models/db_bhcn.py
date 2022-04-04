@@ -769,7 +769,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
         """
         self.eval()
 
-        all_targets = np.empty((0, self.classifier.depth), dtype=bool)
+        all_targets = np.empty((0, self.classifier.depth), dtype=int)
         all_outputs = [np.empty(
             (0, self.classifier.level_sizes[level]),
             dtype=float
@@ -803,8 +803,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
         """
         self.eval()
         all_pooled_features = np.empty((0, POOLED_FEATURE_SIZE))
-        all_targets = np.empty((0, 1), dtype=bool)
-        all_outputs = np.empty((0, self.classifier.levels[-1]), dtype=float)
+        all_targets = np.empty((0), dtype=int)
+        all_outputs = np.empty((0, self.classifier.hierarchy.levels[-1]), dtype=float)
 
         with torch.no_grad():
             for batch_idx, data in enumerate(tqdm(loader)):
@@ -815,21 +815,21 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 leaf_outputs, pooled_features = self.\
                     forward_bhcn_with_features(ids, mask)
                 all_pooled_features = np.concatenate(
-                    [all_pooled_features, pooled_features]
+                    [all_pooled_features, pooled_features.cpu()]
                 )
                 # Only store leaves
                 all_targets = np.concatenate([all_targets, targets[:, -1]])
-                all_outputs = np.concatenate([all_outputs, leaf_outputs])
+                all_outputs = np.concatenate([all_outputs, leaf_outputs.cpu()])
 
         cols = {
             'targets': all_targets
         }
-        leaf_start = self.classifier.hierarchy['level_offsets'][-2]
+        leaf_start = self.classifier.hierarchy.level_offsets[-2]
         for col_idx in range(all_pooled_features.shape[1]):
             cols[str(col_idx)] = all_pooled_features[:, col_idx]
         for col_idx in range(all_outputs.shape[1]):
             cols[
-                self.classifier.hierarchy['classes'][leaf_start + col_idx]
+                self.classifier.hierarchy.classes[leaf_start + col_idx]
             ] = all_outputs[:, col_idx]
         return pd.DataFrame(cols)
 
@@ -1002,7 +1002,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
         """
         self.eval()
 
-        all_targets = np.empty((0, self.classifier.depth), dtype=bool)
+        all_targets = np.empty((0, self.classifier.depth), dtype=int)
         all_outputs = [np.empty(
             (0, self.classifier.level_sizes[level]),
             dtype=float
@@ -1045,8 +1045,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
         """
         self.eval()
         all_pooled_features = np.empty((0, POOLED_FEATURE_SIZE))
-        all_targets = np.empty((0, 1), dtype=bool)
-        all_outputs = np.empty((0, self.classifier.levels[-1]), dtype=float)
+        all_targets = np.empty((0), dtype=int)
+        all_outputs = np.empty((0, self.classifier.hierarchy.levels[-1]), dtype=float)
 
         with torch.no_grad():
             for batch_idx, data in enumerate(tqdm(loader)):
@@ -1057,21 +1057,21 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 awx_outputs, pooled_features = self.\
                     forward_bhcn_awx_with_features(ids, mask)
                 all_pooled_features = np.concatenate(
-                    [all_pooled_features, pooled_features]
+                    [all_pooled_features, pooled_features.cpu()]
                 )
                 # Only store leaves
                 all_targets = np.concatenate([all_targets, targets[:, -1]])
-                all_outputs = np.concatenate([all_outputs, awx_outputs])
+                all_outputs = np.concatenate([all_outputs, awx_outputs.cpu()])
 
         cols = {
             'targets': all_targets
         }
-        leaf_start = self.classifier.hierarchy['level_offsets'][-2]
+        leaf_start = self.classifier.hierarchy.level_offsets[-2]
         for col_idx in range(all_pooled_features.shape[1]):
             cols[str(col_idx)] = all_pooled_features[:, col_idx]
         for col_idx in range(all_outputs.shape[1]):
             cols[
-                self.classifier.hierarchy['classes'][leaf_start + col_idx]
+                self.classifier.hierarchy.classes[leaf_start + col_idx]
             ] = all_outputs[:, col_idx]
         return pd.DataFrame(cols)
 
@@ -1181,8 +1181,31 @@ class DB_BHCN(model.Model, torch.nn.Module):
             return self.test_bhcn_awx(loader)
         return self.test_bhcn(loader)
 
-    def export(self, dataset_name, loader, bento=False):
-        """Export model to ONNX/Bento."""
+    def export(
+            self, dataset_name, bento=False, reference_set=None
+    ):
+        """Export model to ONNX/Bento.
+
+        The classifier head (DB-BHCN[+AWX]) is always exported as ONNX (which
+        is then loaded into BentoML as an `onnxruntime` runner). The DistilBERT
+        encoder is either exported as ONNX or straight to BentoML.
+
+        Parameters
+        ----------
+        dataset_name: str
+            Name of the dataset this instance was trained on. Use the folder
+            name of the intermediate version in the datasets folder.
+
+        bento: bool
+            Whether to export this model as a BentoML model or not. If true,
+            the DistilBERT encoder will be directly packaged into a BentoML
+            model and the entire model will be saved in your local BentoML
+            store. The classifier is always exported as ONNX.
+        reference_set: pandas.DataFrame
+            An optional reference dataset compatible with Evidently's
+            schema. It will be serialised into JSON and packed as part of this
+            model's metadata. Only applicable when Bento exporting is selected.
+        """
         self.eval()
 
         export_trained(
@@ -1228,17 +1251,23 @@ class DB_BHCN(model.Model, torch.nn.Module):
             }
         )
 
-        hierarchy_json = self.classifier.hierarchy.to_json(
+        self.classifier.hierarchy.to_json(
             "output/{}/hierarchy.json".format(name)
         )
 
         # Optionally save to BentoML model store. Pack hierarchical metadata
         # along with model for convenience.
         if bento:
+            metadata = {
+                'hierarchy': self.classifier.hierarchy.to_dict()
+            }
+            if reference_set is not None:
+                df_dict = reference_set.to_dict()
+                metadata['reference'] = df_dict
             bentoml.onnx.save(
                 'classifier_' + name,
                 path,
-                metadata=hierarchy_json
+                metadata=metadata
             )
 
     def gen_reference_set(self, loader):

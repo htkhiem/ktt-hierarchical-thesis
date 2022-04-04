@@ -9,7 +9,7 @@ from textwrap import dedent
 import json
 import glob
 import torch
-
+import pandas as pd
 
 from models.model_list import PYTORCH_MODEL_LIST
 from models.model_list import SKLEARN_MODEL_LIST
@@ -20,20 +20,59 @@ from utils import cli
 MODEL_LIST = PYTORCH_MODEL_LIST + SKLEARN_MODEL_LIST
 
 
-def get_path(model_name, dataset_name, best=True, time=None):
+def get_path(
+        model_name, dataset_name, best=False, time=None, reference_set=False
+):
     """
     Grabs latest checkpoint in the automatic folder structure.
 
-    If best is True, get paths for 'best' weights instead of last-epoch.
-    If time is specified, get that iteration specifically.
-    If not, get the latest.
+    Parameters
+    ----------
+    best: bool
+        If true, get paths for 'best' weights instead of last-epoch.
+    time: str
+        An ISO datetime string (no microseconds). If time is specified, get
+        that iteration specifically. If not, use the last-run session.
+    reference_set: bool
+        If true, return the name of the reference dataset of that
+        training session instead of the checkpoint. best` is not
+        applicable in this case (as the reference set is only generated)
+        for the last epoch).
+
+    Returns
+    -------
+    path: str
+        Either the path to the corresponding model checkpoint, or to the reference
+        dataset.
     """
+    if reference_set:
+        if best:
+            click.echo(
+                '{}WARNING:{} get_path(best=True) ignored as it has '
+                'been requested to return the path '
+                'to the reference set instead.'.format(cli.RED, cli.PLAIN)
+            )
+        set_names = sorted(glob.glob(
+            'weights/{}/{}/last_{}_reference.parquet'.format(
+                model_name,
+                dataset_name,
+                time if time is not None else '*'
+            )
+        ))
+        if len(set_names) < 1:
+            click.echo(
+                '{}WARNING:{} No matching reference dataset found.'.format(
+                    cli.RED, cli.PLAIN)
+            )
+            return None
+        print('Using reference dataset at', set_names[-1])
+        return set_names[-1]
     weight_names = sorted(glob.glob(
         'weights/{}/{}/{}_{}.pt'.format(
             model_name,
             dataset_name,
             'best' if best else 'last',
-            str(time) if time is not None else '*'
+            time if time is not None else '*'
         )
     ))
     return weight_names[-1]
@@ -106,9 +145,11 @@ def main(
             db_bhcn = __import__(
                 'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
             model = db_bhcn.DB_BHCN.from_checkpoint(
-                get_path('db_bhcn', dataset_name, best, time)
+                get_path('db_bhcn', dataset_name, best=best, time=time),
             ).to(device)
-            model.export(dataset_name, bento)
+            reference_set = pd.read_parquet(get_path(
+                'db_bhcn', dataset_name, time=time, reference_set=True))
+            model.export(dataset_name, bento, reference_set)
 
         if 'db_bhcn_awx' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
@@ -116,9 +157,11 @@ def main(
             db_bhcn = __import__(
                 'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
             model = db_bhcn.DB_BHCN.from_checkpoint(
-                get_path('db_bhcn_awx', dataset_name, best, time)
+                get_path('db_bhcn_awx', dataset_name, best, time),
             ).to(device)
-            model.export(dataset_name, bento)
+            reference_set = pd.read_parquet(get_path(
+                'db_bhcn_awx', dataset_name, time=time, reference_set=True))
+            model.export(dataset_name, bento, reference_set)
 
         if 'db_ahmcnf' in model_lst:
             click.echo('{}Exporting {}...{}'.format(

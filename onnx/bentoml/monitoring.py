@@ -20,7 +20,8 @@ from evidently import model_monitoring
 from evidently.model_monitoring import DataDriftMonitor,\
     RegressionPerformanceMonitor,\
     ClassificationPerformanceMonitor,\
-    ProbClassificationPerformanceMonitor
+    ProbClassificationPerformanceMonitor,\
+    CatTargetDriftMonitor
 
 
 app = Flask(__name__)
@@ -42,6 +43,7 @@ class MonitoringServiceOptions:
 
 monitor_mapping = {
     "data_drift": DataDriftMonitor,
+    "cat_target_drift": CatTargetDriftMonitor,
     "regression_performance": RegressionPerformanceMonitor,
     "classification_performance": ClassificationPerformanceMonitor,
     "prob_classification_performance": ProbClassificationPerformanceMonitor,
@@ -89,7 +91,7 @@ class MonitoringService:
     def iterate(self, new_rows: pd.DataFrame):
         rows_count = new_rows.shape[0]
 
-        self.current = self.current.append(new_rows, ignore_index=True)
+        self.current = pd.concat([self.current, new_rows], ignore_index=True)
         self.new_rows += rows_count
         current_size = self.current.shape[0]
 
@@ -131,44 +133,37 @@ def configure_service():
     """Initialise Evidently."""
     global SERVICE
     config_file_name = "_evidently.yaml"
-    # try to find a config file, it should be generated via a data preparation
-    # script
     if not os.path.exists(config_file_name):
-        exit("Cannot find config file for the metrics service.")
+        exit("Cannot find config file for the monitoring service.")
 
     with open(config_file_name, "rb") as config_file:
         config = yaml.safe_load(config_file)
 
-    options = MonitoringServiceOptions(**config)
+    options = MonitoringServiceOptions(**config['service'])
 
     reference_data = pd.read_parquet(config['service']['reference_path'])
     SERVICE = MonitoringService(
         reference_data,
         options=options,
-        column_mapping=ColumnMapping({
-            'target': 'target',
-            'prediction': config['prediction'],  # leaves
-            'numerical_features': [str(i) for i in range(768)]
-        })
+        column_mapping=ColumnMapping(
+            # leaf-only and categorical
+            prediction='targets',
+            # 768 features pooled with kernel size/stride 32 makes for 24
+            numerical_features=[str(i) for i in range(24)]
+        )
     )
 
 
 @app.route("/iterate", methods=["POST"])
 def iterate():
     """Add a newly received request to the comparison set."""
-    # logger.info('Test')
-    # item = flask.request.json
-    # if SERVICE is None:
-    #    return 500, "Internal Server Error: service not found"
-
-    # SERVICE.iterate(new_rows=pd.DataFrame.from_dict(item))
-
-
+    logger.info('Test')
+    item = flask.request.json
+    if SERVICE is None:
+        return 500, "Internal Server Error: service not found"
+    SERVICE.iterate(new_rows=pd.DataFrame.from_dict(item))
     return "ok"
 
-configure_service()
 
-
-# if __name__ == "__main__":
-    # pass
-    # app.run()
+if __name__ == "__main__":
+    app.run()
