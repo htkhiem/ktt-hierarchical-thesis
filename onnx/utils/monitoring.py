@@ -1,4 +1,4 @@
-"""Monitoring service adapted from Evidently's Grafana example."""
+"""General monitoring service adapted from Evidently's Grafana example."""
 import os
 import hashlib
 import dataclasses

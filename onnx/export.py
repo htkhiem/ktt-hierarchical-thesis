@@ -4,6 +4,8 @@ Model export controller.
 This script controls the exporting of models, either directly to ONNX,
 or to a BentoML ModelStorage.
 """
+import os
+import shutil
 import click
 from textwrap import dedent
 import json
@@ -11,8 +13,8 @@ import glob
 import torch
 import pandas as pd
 
-from models.model_list import PYTORCH_MODEL_LIST
-from models.model_list import SKLEARN_MODEL_LIST
+from models import PYTORCH_MODEL_LIST
+from models import SKLEARN_MODEL_LIST
 
 from utils import cli
 
@@ -107,6 +109,13 @@ def get_path(
     help='Add exported models to the local BentoML model store.'
 )
 @click.option(
+    '--monitoring/--no-monitoring', is_flag=True, default=True,
+    show_default=True,
+    help=dedent("""Enable/disable Evidently model performance monitoring. This
+    will be skipped if the chosen BentoML was not bundled with a reference
+    dataset.""")
+)
+@click.option(
     '-v', '--verbose', is_flag=True, default=False,
     help='Print more information to the console (for debugging purposes).'
 )
@@ -124,6 +133,7 @@ def main(
         best,
         bento,
         verbose,
+        monitoring,
         cpu
 ):
     """Dispatch export operations."""
@@ -147,9 +157,13 @@ def main(
             model = DB_BHCN.from_checkpoint(
                 get_path('db_bhcn', dataset_name, best=best, time=time),
             ).to(device)
-            reference_set = pd.read_parquet(get_path(
-                'db_bhcn', dataset_name, time=time, reference_set=True))
-            model.export(dataset_name, bento, reference_set)
+            if monitoring:
+                reference_set_path = get_path(
+                    'db_bhcn', dataset_name, time=time, reference_set=True)
+                if reference_set_path is not None:
+                    model.export(dataset_name, bento, reference_set_path)
+                else:
+                    model.export(dataset_name, bento)
 
         if 'db_bhcn_awx' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
@@ -159,9 +173,11 @@ def main(
             model = DB_BHCN_AWX.from_checkpoint(
                 get_path('db_bhcn_awx', dataset_name, best, time),
             ).to(device)
-            reference_set = pd.read_parquet(get_path(
-                'db_bhcn_awx', dataset_name, time=time, reference_set=True))
-            model.export(dataset_name, bento, reference_set)
+            if monitoring:
+                reference_set = pd.read_parquet(get_path(
+                    'db_bhcn_awx', dataset_name, time=time, reference_set=True))
+                model.export(dataset_name, bento, True)
+            model.export(dataset_name, bento)
 
         if 'db_ahmcnf' in model_lst:
             click.echo('{}Exporting {}...{}'.format(

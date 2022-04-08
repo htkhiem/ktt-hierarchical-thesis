@@ -1,12 +1,13 @@
 """Implementation of the DB-BHCN model."""
 import os
+import shutil
+import yaml
 
 import pandas as pd
 
 import torch
 import numpy as np
 from tqdm import tqdm
-import bentoml
 
 from models import model, model_pytorch
 from utils.hierarchy import PerLevelHierarchy
@@ -615,13 +616,15 @@ class DB_BHCN(model.Model, torch.nn.Module):
         return pd.DataFrame(cols)
 
     def export(
-            self, dataset_name, bento=False, reference_set=None
+            self, dataset_name, bento=False, reference_set_path=None
     ):
         """Export model to ONNX/Bento.
 
-        The classifier head (DB-BHCN) is always exported as ONNX (which
-        is then loaded into BentoML as an `onnxruntime` runner). The DistilBERT
-        encoder is either exported as ONNX or straight to BentoML.
+        If ONNX is selected (i.e. bento=False), then both the DistilBERT
+        encoder (with tokeniser) and classifier head are exported separately
+        as two ONNX models. If BentoML is selected instead, they will be
+        serialised using BentoML's default serialisation facilities, and
+        a complete BentoService will be built.
 
         Parameters
         ----------
@@ -629,64 +632,57 @@ class DB_BHCN(model.Model, torch.nn.Module):
             Name of the dataset this instance was trained on. Use the folder
             name of the intermediate version in the datasets folder.
         bento: bool
-            Whether to export this model as a BentoML model or not. If true,
-            the DistilBERT encoder will be directly packaged into a BentoML
-            model and the entire model will be saved in your local BentoML
-            store. The classifier is always exported as ONNX.
-        reference_set: pandas.DataFrame
-            An optional reference dataset compatible with Evidently's
-            schema. It will be serialised into JSON and packed as part of this
-            model's metadata. Only applicable when Bento exporting is selected.
+            Whether to export this model as a BentoML service or not.
+        reference_set_path: str
+            Path to an optional reference dataset compatible with Evidently's
+            schema. It will be copied to the built service's folder. Only
+            applicable when Bento exporting is selected.
             If not passed, the generated BentoService will not be configured to
             work with Evidently.
         """
         self.eval()
-        export_trained(
-            self.encoder,
-            dataset_name,
-            'db_bhcn',
-        )
         # Create dummy input for tracing
         batch_size = 1  # Dummy batch size. When exported, it will be dynamic
         x = torch.randn(batch_size, 768, requires_grad=True).to(
             self.device
         )
-        name = '{}_{}'.format(
-            'db_bhcn',
-            dataset_name
-        )
-        path = 'output/{}/classifier/'.format(name)
+        if not bento:
+            export_trained(
+                self.encoder,
+                dataset_name,
+                'db_bhcn',
+            )
+            name = '{}_{}'.format(
+                'db_bhcn',
+                dataset_name
+            )
+            path = 'output/{}/classifier/'.format(name)
+            if not os.path.exists(path):
+                os.makedirs(path)
 
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        path += 'classifier.onnx'
-
-        # Clear previous versions
-        if os.path.exists(path):
-            os.remove(path)
-
-        # Export into transformers model .bin format
-        torch.onnx.export(
-            self.classifier,
-            x,
-            path,
-            export_params=True,
-            opset_version=11,
-            do_constant_folding=True,
-            input_names=['input'],
-            output_names=['output'],
-            dynamic_axes={
-                'input': {0: 'batch_size'},
-                'output': {0: 'batch_size'}
-            }
-        )
-
-        self.classifier.hierarchy.to_json(
-            "output/{}/hierarchy.json".format(name)
-        )
-
-        if bento:
+            path += 'classifier.onnx'
+            # Clear previous versions
+            if os.path.exists(path):
+                os.remove(path)
+            # Export into transformers model .bin format
+            torch.onnx.export(
+                self.classifier,
+                x,
+                path,
+                export_params=True,
+                opset_version=11,
+                do_constant_folding=True,
+                input_names=['input'],
+                output_names=['output'],
+                dynamic_axes={
+                    'input': {0: 'batch_size'},
+                    'output': {0: 'batch_size'}
+                }
+            )
+            self.classifier.hierarchy.to_json(
+                "output/{}/hierarchy.json".format(name)
+            )
+        else:
             svc = svc_lts.DB_BHCN()
             # Pack tokeniser along with encoder
             encoder = {
@@ -697,10 +693,37 @@ class DB_BHCN(model.Model, torch.nn.Module):
             svc.pack('classifier', torch.jit.trace(self.classifier, x))
             svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
             svc.pack('config', {
-                'monitoring_enabled': reference_set is not None
+                'monitoring_enabled': reference_set_path is not None
             })
-            saved_path = svc.save()
-            print('BentoService saved to', saved_path)
+            build_path = 'build/db_bhcn_' + dataset_name.lower()
+            if not os.path.exists(build_path):
+                os.makedirs(build_path)
+            svc.save_to_dir(build_path)
+            if reference_set_path is not None:
+                # Copy reference set to built service for usage with
+                # monitoring app
+                shutil.copy(
+                    reference_set_path,
+                    build_path + '/references.parquet'
+                )
+                # Generate monitoring app configuration
+                with open(
+                        'models/db_bhcn/bentoml/evidently.template.yaml',
+                        'r'
+                ) as evidently_template:
+                    config = yaml.safe_load(evidently_template)
+                    config['prediction'] = self.classifier.hierarchy.classes[
+                        self.classifier.hierarchy.level_offsets[-2]:
+                        self.classifier.hierarchy.level_offsets[-1]
+                    ]
+                with open(build_path + '/evidently.yaml', 'w')\
+                     as evidently_config_file:
+                    yaml.dump(config, evidently_config_file)
+                # Copy monitoring app itself
+                shutil.copy(
+                    'utils/monitoring.py',
+                    build_path + '/monitoring.py'
+                )
 
     def to(self, device=None):
         """
