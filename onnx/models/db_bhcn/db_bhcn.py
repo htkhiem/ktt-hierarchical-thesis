@@ -10,8 +10,8 @@ import bentoml
 
 from models import model, model_pytorch
 from utils.hierarchy import PerLevelHierarchy
-from utils.distilbert import get_pretrained, export_trained
-
+from utils.distilbert import get_pretrained, get_tokenizer, export_trained
+from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 24
@@ -628,7 +628,6 @@ class DB_BHCN(model.Model, torch.nn.Module):
         dataset_name: str
             Name of the dataset this instance was trained on. Use the folder
             name of the intermediate version in the datasets folder.
-
         bento: bool
             Whether to export this model as a BentoML model or not. If true,
             the DistilBERT encoder will be directly packaged into a BentoML
@@ -638,16 +637,15 @@ class DB_BHCN(model.Model, torch.nn.Module):
             An optional reference dataset compatible with Evidently's
             schema. It will be serialised into JSON and packed as part of this
             model's metadata. Only applicable when Bento exporting is selected.
+            If not passed, the generated BentoService will not be configured to
+            work with Evidently.
         """
         self.eval()
-
         export_trained(
             self.encoder,
             dataset_name,
             'db_bhcn',
-            bento=bento
         )
-
         # Create dummy input for tracing
         batch_size = 1  # Dummy batch size. When exported, it will be dynamic
         x = torch.randn(batch_size, 768, requires_grad=True).to(
@@ -688,20 +686,21 @@ class DB_BHCN(model.Model, torch.nn.Module):
             "output/{}/hierarchy.json".format(name)
         )
 
-        # Optionally save to BentoML model store. Pack hierarchical metadata
-        # along with model for convenience.
         if bento:
-            metadata = {
-                'hierarchy': self.classifier.hierarchy.to_dict()
+            svc = svc_lts.DB_BHCN()
+            # Pack tokeniser along with encoder
+            encoder = {
+                'tokenizer': get_tokenizer(),
+                'model': self.encoder
             }
-            if reference_set is not None:
-                df_dict = reference_set.to_dict()
-                metadata['reference'] = df_dict
-            bentoml.onnx.save(
-                'classifier_' + name,
-                path,
-                metadata=metadata
-            )
+            svc.pack('encoder', encoder)
+            svc.pack('classifier', torch.jit.trace(self.classifier, x))
+            svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
+            svc.pack('config', {
+                'monitoring_enabled': reference_set is not None
+            })
+            saved_path = svc.save()
+            print('BentoService saved to', saved_path)
 
     def to(self, device=None):
         """
