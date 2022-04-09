@@ -14,7 +14,7 @@ def main(dataset_name):
 
     Pass to it the name of an intermediate dataset to use strings from there.
     """
-    path = '../../datasets/{}/test.parquet'.format(dataset_name)
+    path = '../datasets/{}/test.parquet'.format(dataset_name)
 
     test_set = pd.read_parquet(path)
 

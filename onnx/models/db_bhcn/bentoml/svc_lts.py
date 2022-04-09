@@ -1,4 +1,5 @@
 """Service file for DB-BHCN + Walmart_30k."""
+import os
 import requests
 from typing import List
 import json
@@ -12,6 +13,9 @@ from bentoml.frameworks.transformers import TransformersModelArtifact
 from bentoml.frameworks.pytorch import PytorchModelArtifact
 from bentoml.service.artifacts.common import JSONArtifact
 from bentoml.types import JsonSerializable
+
+EVIDENTLY_HOST = os.environ.get('EVIDENTLY_HOST', 'localhost')
+EVIDENTLY_PORT = os.environ.get('EVIDENTLY_PORT', 6000)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REFERENCE_SET_FEATURE_POOL = 32
@@ -120,7 +124,7 @@ class DB_BHCN(bentoml.BentoService):
                 POOLED_FEATURE_SIZE+1:
             ] = scores[:, self.level_offsets[-2]:]
             requests.post(
-                "http://localhost:6000/iterate",
+                "http://{}:{}/iterate".format(EVIDENTLY_HOST, EVIDENTLY_PORT),
                 data=json.dumps({'data': new_rows.tolist()}),
                 headers={"content-type": "application/json"},
             )

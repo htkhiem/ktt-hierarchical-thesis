@@ -12,7 +12,7 @@ from tqdm import tqdm
 from models import model, model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.distilbert import get_pretrained, get_tokenizer, export_trained
-from utils.monitoring import monitoring_utils
+from utils.build import init_folder_structure
 from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 32
@@ -684,6 +684,28 @@ class DB_BHCN(model.Model, torch.nn.Module):
                 "output/{}/hierarchy.json".format(name)
             )
         else:
+            build_path = 'build/db_bhcn_' + dataset_name.lower()
+            build_path_inference = ''
+            if reference_set_path is not None:
+                with open(
+                        'models/db_bhcn/bentoml/evidently.template.yaml',
+                        'r'
+                ) as evidently_template:
+                    config = yaml.safe_load(evidently_template)
+                    config['prediction'] = self.classifier.hierarchy.classes[
+                        self.classifier.hierarchy.level_offsets[-2]:
+                        self.classifier.hierarchy.level_offsets[-1]
+                    ]
+                build_path_inference = init_folder_structure(
+                    build_path,
+                    {
+                        'reference_set_path': reference_set_path,
+                        'grafana_dashboard_path': 'models/db_bhcn/bentoml/dashboard.json',
+                        'evidently_config': config
+                    }
+                )
+            else:
+                build_path_inference = init_folder_structure(build_path)
             svc = svc_lts.DB_BHCN()
             # Pack tokeniser along with encoder
             encoder = {
@@ -696,36 +718,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
             svc.pack('config', {
                 'monitoring_enabled': reference_set_path is not None
             })
-            build_path = 'build/db_bhcn_' + dataset_name.lower()
-            build_path_inference = build_path + '/inference'
-            build_path_monitoring = build_path + '/monitoring'
-            if not os.path.exists(build_path_inference):
-                os.makedirs(build_path_inference)
-            if not os.path.exists(build_path_monitoring):
-                os.makedirs(build_path_monitoring)
             svc.save_to_dir(build_path_inference)
-            if reference_set_path is not None:
-                # Copy reference set to built service for usage with
-                # monitoring app
-                shutil.copy(
-                    reference_set_path,
-                    build_path_monitoring + '/references.parquet'
-                )
-                # Generate monitoring app configuration
-                with open(
-                        'models/db_bhcn/bentoml/evidently.template.yaml',
-                        'r'
-                ) as evidently_template:
-                    config = yaml.safe_load(evidently_template)
-                    config['prediction'] = self.classifier.hierarchy.classes[
-                        self.classifier.hierarchy.level_offsets[-2]:
-                        self.classifier.hierarchy.level_offsets[-1]
-                    ]
-                with open(build_path_monitoring + '/evidently.yaml', 'w')\
-                     as evidently_config_file:
-                    yaml.dump(config, evidently_config_file)
-                # Copy monitoring app itself and the Docker-related files
-                monitoring_utils.copy_monitoring_app(build_path_monitoring)
 
     def to(self, device=None):
         """
