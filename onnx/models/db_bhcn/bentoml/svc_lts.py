@@ -17,14 +17,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
-
-@bentoml.env(infer_pip_packages=True)
+@bentoml.env(
+    requirements_txt_file='models/db_bhcn/bentoml/requirements.txt',
+    docker_base_image='bentoml/model-server:0.13.1-py36-gpu'
+)
 @bentoml.artifacts([
     TransformersModelArtifact('encoder'),
     PytorchModelArtifact('classifier'),
     JSONArtifact('hierarchy'),
     JSONArtifact('config'),
-
 ])
 class DB_BHCN(bentoml.BentoService):
     """Real-time inference service for DB-BHCN."""
@@ -119,7 +120,7 @@ class DB_BHCN(bentoml.BentoService):
                 POOLED_FEATURE_SIZE+1:
             ] = scores[:, self.level_offsets[-2]:]
             requests.post(
-                "http://localhost:5000/iterate",
+                "http://localhost:6000/iterate",
                 data=json.dumps({'data': new_rows.tolist()}),
                 headers={"content-type": "application/json"},
             )

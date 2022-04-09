@@ -1,0 +1,6 @@
+flask == 2.0.3
+prometheus_client == 0.14.0
+werkzeug == 2.0.3
+pandas == 1.1.5
+evidently == 0.1.47.dev1
+pyarrow == 6.0.1
