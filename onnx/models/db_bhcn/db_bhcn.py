@@ -15,7 +15,7 @@ from utils.distilbert import get_pretrained, get_tokenizer, export_trained
 from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 32
-POOLED_FEATURE_SIZE = 24
+POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
 
 class BHCN(torch.nn.Module):

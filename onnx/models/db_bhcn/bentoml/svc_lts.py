@@ -1,9 +1,9 @@
 """Service file for DB-BHCN + Walmart_30k."""
 import requests
 from typing import List
+import json
 
 import numpy as np
-import pandas as pd
 import torch
 
 import bentoml
@@ -14,6 +14,9 @@ from bentoml.service.artifacts.common import JSONArtifact
 from bentoml.types import JsonSerializable
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+REFERENCE_SET_FEATURE_POOL = 32
+POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
+
 
 @bentoml.env(infer_pip_packages=True)
 @bentoml.artifacts([
@@ -42,6 +45,8 @@ class DB_BHCN(bentoml.BentoService):
         self.monitoring_enabled = self.artifacts.config['monitoring_enabled']
         # We use PyTorch-based Transformers
         self.encoder.to(device)
+        # Identical pool layer as in the test script.
+        self.pool = torch.nn.AvgPool1d(REFERENCE_SET_FEATURE_POOL)
 
         self._initialised = True
 
@@ -72,6 +77,7 @@ class DB_BHCN(bentoml.BentoService):
             tokenised['input_ids'].to(device),
             tokenised['attention_mask'].to(device)
         )[0][:, 0, :]
+        encoder_cls_pooled = self.pool(encoder_cls)
         # Classify using our classifier head
         scores = self.classifier(encoder_cls).cpu().detach().numpy()
         # Segmented argmax, as usual
@@ -87,25 +93,34 @@ class DB_BHCN(bentoml.BentoService):
             for level in range(len(self.level_sizes))
         ], dtype=int)
 
-        predicted_names = np.array(['\n'.join([self.classes[level] for level in row]) for row in pred_codes.swapaxes(1, 0)])
+        predicted_names = np.array([
+            [self.classes[level] for level in row]
+            for row in pred_codes.swapaxes(1, 0)
+        ])
 
         if self.monitoring_enabled:
-            new_rows = {
-                'targets': predicted_names[:, -1].tolist()
-            }
-            # Shape as generated is (microbatch, feature/class), but we need to
-            # iterate over features/classes to generate each column of the
-            # appending set. To do that, we transpose the matrices. This does
-            # not copy any data and is thus performant.
-            for col_idx, embs in enumerate(encoder_cls.swapaxes(1, 0)):
-                new_rows[str(col_idx)] = embs.astype(np.float64)
-            for col_idx, scores in enumerate(scores.swapaxes(1, 0)):
-                new_rows[self.classes[col_idx]] = scores.astype(np.float64)
-
-            new_row_df = pd.DataFrame(new_rows)
+            """
+            Create a 2D list contains the following content:
+            [:, 0]: leaf target names (left as zeroes)
+            [:, 1:25]: pooled features,
+            [:, 25:]: leaf classification scores.
+            The first axis is the microbatch axis.
+            """
+            new_rows = np.zeros(
+                (len(texts), 1 + POOLED_FEATURE_SIZE + self.level_sizes[-1]),
+                dtype=np.float64
+            )
+            new_rows[
+                :,
+                1:POOLED_FEATURE_SIZE+1
+            ] = encoder_cls_pooled.cpu().detach().numpy()
+            new_rows[
+                :,
+                POOLED_FEATURE_SIZE+1:
+            ] = scores[:, self.level_offsets[-2]:]
             requests.post(
                 "http://localhost:5000/iterate",
-                data=new_row_df.to_json(),
+                data=json.dumps({'data': new_rows.tolist()}),
                 headers={"content-type": "application/json"},
             )
-        return predicted_names
+        return ['\n'.join(row) for row in predicted_names]

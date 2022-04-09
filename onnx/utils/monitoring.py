@@ -24,6 +24,10 @@ from evidently.model_monitoring import DataDriftMonitor,\
     CatTargetDriftMonitor
 
 
+REFERENCE_SET_FEATURE_POOL = 32
+POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
+
+
 app = Flask(__name__)
 logger = create_logger(app)
 # Add prometheus wsgi middleware to route /metrics requests
@@ -87,16 +91,28 @@ class MonitoringService:
             "",
             labelnames=["hash"]
         )
+        self.column_names = list(self.reference)
 
-    def iterate(self, new_rows: pd.DataFrame):
-        rows_count = new_rows.shape[0]
+    def iterate(self, new_rows: List):
+        """Add new content to the current data set.
 
-        self.current = pd.concat([self.current, new_rows], ignore_index=True)
+        Said 2D list contains the following content:
+            [:, 0]: leaf target names (left as zeroes)
+            [:, 1:25]: pooled features,
+            [:, 25:]: leaf classification scores.
+        """
+        rows_count = len(new_rows)
+
+        self.current = self.current.append(
+            pd.DataFrame(new_rows, columns=self.column_names),
+            ignore_index=True
+        )
         self.new_rows += rows_count
         current_size = self.current.shape[0]
 
         if self.new_rows < self.options.window_size < current_size:
-            self.current.drop(index=list(range(0, current_size - self.options.window_size)), inplace=True)
+            self.current.drop(index=list(range(
+                0, current_size - self.options.window_size)), inplace=True)
             self.current.reset_index(drop=True, inplace=True)
 
         if current_size < self.options.window_size:
@@ -132,7 +148,7 @@ SERVICE: Optional[MonitoringService] = None
 def configure_service():
     """Initialise Evidently."""
     global SERVICE
-    config_file_name = "_evidently.yaml"
+    config_file_name = "evidently.yaml"
     if not os.path.exists(config_file_name):
         exit("Cannot find config file for the monitoring service.")
 
@@ -156,12 +172,20 @@ def configure_service():
 
 @app.route("/iterate", methods=["POST"])
 def iterate():
-    """Add a newly received request to the comparison set."""
-    logger.info('Test')
+    """Add a newly received request to the comparison set.
+
+    Requests might be microbatched, so we must be able to receive
+    multiple rows at once.
+    New rows are received in JSON form containing a single
+    2D list:
+    {
+        'data': [[]] # microbatched features list
+    }
+    """
     item = flask.request.json
     if SERVICE is None:
         return 500, "Internal Server Error: service not found"
-    SERVICE.iterate(new_rows=pd.DataFrame.from_dict(item))
+    SERVICE.iterate(new_rows=item['data'])
     return "ok"
 
 
