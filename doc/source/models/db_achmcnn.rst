@@ -6,7 +6,7 @@ DistilBERT + Adapted C-HMCNN
 API
 ---
 
-.. autoclass:: models.db_achmcnn.db_achmcnn.DB_AC_HMCNN
+.. autoclass:: models.DB_AC_HMCNN
    :members:
    :special-members:
 

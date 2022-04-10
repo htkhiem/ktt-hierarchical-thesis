@@ -6,7 +6,7 @@ DB-BHCN and DB-BHCN+AWX
 API
 ---
 
-.. autoclass:: models.db_bhcn.db_bhcn.DB_BHCN
+.. autoclass:: models.DB_BHCN
    :members:
    :special-members:
 

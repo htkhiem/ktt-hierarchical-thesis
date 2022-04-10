@@ -571,6 +571,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
 
         Due to the data drift tests' computational demands, we only record
         average-pooled features.
+
         Parameters
         ----------
         loader: torch.utils.data.DataLoader

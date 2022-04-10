@@ -6,7 +6,7 @@ Tf-idf + Leaf SGD
 API
 ---
 
-.. autoclass:: models.tfidf_lsgd.tfidf_lsgd.Tfidf_LSGD
+.. autoclass:: models.Tfidf_LSGD
    :members:
    :special-members:
 
