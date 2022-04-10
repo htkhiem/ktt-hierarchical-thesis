@@ -7,4 +7,4 @@ ENV FLASK_ENV=production
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 COPY . .
-CMD ["flask", "run", "-p", "6000"]
+CMD ["flask", "run", "-p", "5001"]

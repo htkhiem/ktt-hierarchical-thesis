@@ -688,8 +688,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
             build_path_inference = ''
             if reference_set_path is not None:
                 with open(
-                        'models/db_bhcn/bentoml/evidently.template.yaml',
-                        'r'
+                        'models/db_bhcn/bentoml/evidently.yaml', 'r'
                 ) as evidently_template:
                     config = yaml.safe_load(evidently_template)
                     config['prediction'] = self.classifier.hierarchy.classes[
@@ -700,7 +699,8 @@ class DB_BHCN(model.Model, torch.nn.Module):
                     build_path,
                     {
                         'reference_set_path': reference_set_path,
-                        'grafana_dashboard_path': 'models/db_bhcn/bentoml/dashboard.json',
+                        'grafana_dashboard_path':
+                            'models/db_bhcn/bentoml/dashboard.json',
                         'evidently_config': config
                     }
                 )

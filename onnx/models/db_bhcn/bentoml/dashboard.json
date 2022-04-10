@@ -127,7 +127,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "evidently:cat_target_drift:drift{instance=\"localhost:5000\"}",
+          "expr": "evidently:cat_target_drift:drift{instance=\"monitoring:5001\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -187,7 +187,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(BENTOML_db_bhcn_request_duration_seconds_bucket{endpoint=\"/predict\",http_response_code=\"200\",instance=\"localhost:8000\"}[$__range])",
+          "expr": "rate(BENTOML_DB_BHCN_request_duration_seconds_bucket{endpoint=\"/predict\",http_response_code=\"200\",instance=\"inference:5000\"}[$__range])",
           "format": "heatmap",
           "instant": true,
           "interval": "",
@@ -253,7 +253,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "evidently:data_drift:share_drifted_features{instance=\"localhost:5000\"}",
+          "expr": "evidently:data_drift:share_drifted_features{}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -293,7 +293,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "evidently:data_drift:p_value{instance=\"localhost:5000\", feature=~'.*0'}",
+          "expr": "evidently:data_drift:p_value{}",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{feature}}",
@@ -368,7 +368,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
-          "expr": "evidently:data_drift:n_drifted_features{instance=\"localhost:5000\"}",
+          "expr": "evidently:data_drift:n_drifted_features",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -386,13 +386,13 @@
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "BentoML DB-BHCN",
   "uid": "ptCPByynk",
-  "version": 1,
+  "version": 5,
   "weekStart": ""
 }

@@ -65,7 +65,7 @@ services:
       context: ./monitoring
       dockerfile: ./Dockerfile
     ports:
-      - "6000:6000"
+      - "5001:5001"
     networks:
       - ktt-inference
     restart: on-failure

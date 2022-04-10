@@ -15,7 +15,7 @@ from bentoml.service.artifacts.common import JSONArtifact
 from bentoml.types import JsonSerializable
 
 EVIDENTLY_HOST = os.environ.get('EVIDENTLY_HOST', 'localhost')
-EVIDENTLY_PORT = os.environ.get('EVIDENTLY_PORT', 6000)
+EVIDENTLY_PORT = os.environ.get('EVIDENTLY_PORT', 5001)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REFERENCE_SET_FEATURE_POOL = 32
