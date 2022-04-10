@@ -41,17 +41,18 @@ To input this flatfile into the system, we invoke the *flatfile adapter*:
 
 .. code-block:: bash
 
-   cd onnx/adapters
-   python adapter_flat.py -p '../datasets/Walmart_30k.parquet' -t Walmart -v -N title -C category -d 2
+   cd adapters
+   python adapter_flat.py -v -t title -c category -d 2 --dvc ../datasets/Walmart_30k.parquet Walmart
 
-An explanation of what these arguments do:
+An explanation of what these options and arguments do:
 
-    * ``-p`` specifies the path to the flatfile. It is a required argument.
-    * ``-t`` specifies the name of the resulting internal dataset. It is also required.
     * ``-v`` is the verbose argument. With this, the adapter prints more information about its process, which helps with understanding what it does.
-    * ``-N`` specifies the column to use as the model's input. As we have previously discussed, we are using the ``title`` column. If left unspecified, ``title`` is also the default column name KTT uses. Of course, if you don't specify it and the flatfile does not have a ``title`` column, or it has one but the column is something else entirely and not what we need, expect some errors or poor performance.
-    * ``-C`` likewise specifies the column name to use as classes (labels). It defaults to ``classes`` if left unspecified. Here, we want to use the ``category`` column, so of course we must specify it.
+    * ``-t`` specifies the column to use as the model's input. As we have previously discussed, we are using the ``title`` column. If left unspecified, ``title`` is also the default column name KTT uses. Of course, if you don't specify it and the flatfile does not have a ``title`` column, or it has one but the column is something else entirely and not what we need, expect some errors or poor performance.
+    * ``-c`` likewise specifies the column name to use as classes (labels). It defaults to ``classes`` if left unspecified. Here, we want to use the ``category`` column, so of course we must specify it.
     * ``-d`` is the hierarchical depth to search to. By default, the adapter runs for two levels. This must not exceed the *minimum* depth of the dataset, i.e. the length of the shortest list in the label column.
+    * ``--dvc`` tells the adapter to also add the resulting intermediate dataset to the Data Version Control system. With this, you can later add a remote of your choosing, push the dataset there and safely delete the local copy to save disk space. Training scripts will automatically pull them from said remote when needed.
+    * The first argument is the path to the flatfile. `Walmart_30k.parquet` is bundled in `datasets`.
+    * The second argument is the name of the resulting intermediate dataset.
 
 After running the above commands, a new folder (``datasets/Walmart``) will be created, containing three Parquet files and a JSON file named ``hierarchy.json``.
 
@@ -71,69 +72,50 @@ Training a model
 
 Having generated a compatible model and the necessary metadata, we can now train a model on it. To keep everything lightweight for a quickstart guide, we will use a small CPU-based model called Tfidf + Hierarchical SGD (internal identifier ``tfidf_hsgd``). This model is capable of fully hierarchical classification and trains very quickly, albeit with limited accuracy for small datasets.
 
-From ``./onnx``, run the following command to train it:
+From ``./``, run the following command to train it:
 
 .. code-block:: bash
 
-    python train.py -d Walmart -m tfidf_hsgd
+    python train.py -m tfidf_hsgd Walmart
     
 An explanation, again:
 
-    * ``-d`` specifies the (internal) dataset name to train on. We have previously named our dataset ``Walmart`` (to differentiate it from the flatfile, which was named ``Walmart_30k``, so we'll use that name here.
     * ``-m`` specifies which model to train. Here we use the internal identifier of the above model.
+    * The one and only argument specifies the (internal) dataset name to train on. We have previously named our dataset ``Walmart`` (to differentiate it from the flatfile, which was named ``Walmart_30k``, so we'll use that name here.
 
 .. note::
     
-    Both the ``-d`` and the ``-m`` arguments accept comma-separated lists of models and datasets. In other words, you can tell the training script to train on multiple datasets at once, train multiple models at once, or train multiple models, each on multiple datasets!
+    Both the dataset-name argument and the ``-m`` option accept comma-separated lists of models and datasets. In other words, you can tell the training script to train on multiple datasets at once, train multiple models at once, or train multiple models, each on multiple datasets!
     
-Once the command finishes, a ``tfidf_hsgd`` instance will have been trained on ``Walmart`` and saved in the ``onnx/weights/tfidf_hsgd_Walmart`` directory.
+Once the command finishes, a ``tfidf_hsgd`` instance will have been trained on ``Walmart`` and saved in the ``weights/tfidf_hsgd/Walmart`` directory.
 
 Exporting the trained model
 ---------------------------
 
-With a trained model under our belt, we can now proceed to exporting it. Our goal is to have a minimal inference server set up by the end of this guide, so we will take advantage of the preset BentoML-powered inference system in KTT. Every bundled model in KTT has been prepared for usage by BentoML through special build scripts and service files.
+With a trained model under our belt, we can export it into some sort of API server. Our goal is to have a minimal inference server set up by the end of this guide, so we will take advantage of the preset BentoML-powered inference system in KTT. Every bundled model in KTT has been prepared for usage by BentoML through special build scripts and service files.
 
-Run the following command from `./onnx` to export the newly trained model:
+Run the following command from from ``.\`` to export the newly trained model:
 
 .. code-block:: bash
 
-    python export.py -d 'Walmart' -m 'tfidf_hsgd' -b
+    python export.py -m 'tfidf_hsgd' -b Walmart
     
-This command will then look for the latest saved instance of ``tfidf_hsgd`` trained on the ``Walmart`` dataset - note how the ``-d`` and ``-m`` arguments are once again present in this command. The additional ``-b`` argument tells the script to also save the model to the local BentoML model store.
+This command will then look for the latest saved instance of ``tfidf_hsgd`` trained on the ``Walmart`` dataset - note how the ``-m`` option once again present in this command and the argument is the dataset name. The additional ``-b`` argument tells the script to generate a BentoService and copy the necessary supporting data along. The resulting service will be located in the ``build`` folder.
 
 .. warning::
 
     Unlike the other six models, ``tfidf_hsgd`` does not support exporting to other formats than BentoML. As such, the ``-b`` flag MUST always be specified when exporting this model.
-    
-Cooking up a Bento
+
+Serving up a Bento
 ------------------
 
-It's Bento(ML) time! KTT's BentoML inference pipelines relies on packaged models known as Bentos. These are the model graph themselves, plus the code needed to feed data in and extract data out of the model (i.e. a REST-to-model-to-REST routine) and a version-frozen list of all dependencies.
+It's Bento(ML) time! KTT's BentoML inference pipelines relies on packaged systems known as BentoServices. These are the model graph themselves, plus the code needed to feed data in and extract data out of the model (i.e. a REST-to-model-to-REST routine), a lot of supporting files for peripheral subsystems such as a live performance monitoring dashboard (optional), and a version-frozen list of all dependencies.
 
-As above, each and every bundled model in the system has their own Bento pipeline implemented. As such, in order to export ``tfidf_hsgd``, simply navigate to the corresponding folder and run the build script:
-
-.. code-block:: bash
-
-    cd onnx/bentoml/tfidf-hsgd
-    python build_service.py -c tfidf_hsgd_walmart:latest
-
-The ``-c`` argument specifies the *BentoML model identifier* for the classifier within the local model store. Since ``tfidf_hsgd`` encodes incoming text strings by itself, there is no encoder to specify. The identifier itself is simply the internal model identifier plus the dataset name, separated by an underscore. However, there are two things to note with the above identifier:
-
-1. The identifier is entirely **lowecase**, including the dataset name part.
-2. We add the ``:latest`` suffix to indicate to BentoML that we want to take the latest version of this model-dataset combination available within its local model store - in other words, the model we have exported just now.
-
-After running the above script, a new BentoService will be created and stored in the local BentoML service store.
-
-.. note::
-    What's the difference between a BentoML model and a BentoML service, you might ask? A model is just that - the computation graph of the encoding or classification model itself. A service also packs in a script needed to correctly feed the string input from the REST request in, extract the output and finally process it into a string response. It also contains a list of dependencies needed to run the model. However, it does NOT contain the dependencies themselves. 
-
-At this stage, we already have a runnable inference service! You can try running it as follows:
+As above, each and every bundled model in the system has their own Bento pipeline implemented. As such, in order to serve our trained model as a REST API, run the following command:
 
 .. code-block:: bash
 
-    bentoml serve tfidf_hsgd:latest --production
-
-Note how this time we do not add the dataset name - the identifier of the BentoService only contains the model name and a versioning string afterwards, which we can automatically fill in using the ``:latest`` suffix (as we simply want to run the one we have just exported).
+    bentoml serve build/tfidf_hsgd_Walmart/inference
 
 The model will be served as a REST API at ``localhost:5000`` with the ``/predict`` endpoint. You can use the supplied ``test.py`` test script in ``onnx/bentoml`` to send a single request to it and check the results.
 
@@ -142,16 +124,23 @@ The model will be served as a REST API at ``localhost:5000`` with the ``/predict
     cd onnx/bentoml
     python test.py
 
+Or, if you prefer to send requests to it yourself, simply POST in the following format:
+
+    - Content-Type: ``application/json``
+    - Data: a JSON string with a single field ``text`` containing the textual input to be classified. For example: ``"{ \"text\": \"Classify this string\" }"``.
+
 Shipping Bentos in a container
 ------------------------------
 
-Having a BentoService online should be enough if you only plan on running it directly on the computer that trained it, or another that you are sure has had all dependencies correctly installed. However, this is hard to maintain, especially as libraries may change over time, causing breakages. Furthermore, downloading all dependencies over and over again is not a small task, and certain libraries may even become no longer available on the cloud for you to download (in extreme cases that is). As such, it is preferrable that we find a way to keep an offline backup of such dependencies, frozen to the exact version used to train and export the model. This is where Dockerisation comes in.
+Having a BentoService online should be enough if you only plan on running it directly on the computer that trained it, or another that you are sure has had all dependencies correctly installed. However, this is hard to maintain, especially as libraries may change over time, causing breakages. Furthermore, downloading all dependencies over and over again is not a small task, and certain libraries may even become no longer available on the cloud for you to download (in extreme cases that is). Furthermore, KTT provides additional monitoring capabilities for its live inference systems that would be much, much more easily run as a single ``docker-compose`` network instead of separate manually-started processes (although the monitoring part isn't within the scopes of this Quickstart guide).
 
-First, ensure that you have Docker correctly installed (and its daemon running) on your local system and that your usee account has the necessary privileges. Then, exporting a BentoService to Docker is a one-command affair:
+As such, it is preferrable that we find a way to keep an offline backup of such dependencies, frozen to the exact version used to train and export the model. This is where Dockerisation comes in.
+
+First, ensure that you have Docker correctly installed (and its daemon running) on your local system and that your usee account has the necessary privileges. Then, Dockerising a BentoService is a one-command affair:
 
 .. code-block:: bash
     
-    bentoml containerize tfidf_hsgd:latest
+    docker image build ./build/tfidf_hsgd_Walmart_005
     
 This might take a while as Docker builds a Debian-based system with our model. Once it's done, check the list of images on your system and note down the Image ID of the newly-built Bento container.
 
@@ -159,7 +148,7 @@ This might take a while as Docker builds a Debian-based system with our model. O
 
     ❯ docker images
     REPOSITORY             TAG                                IMAGE ID       CREATED       SIZE
-    tfidf_hsgd             pvajnnvj5wovngbi                   fbbf4a810b58   ...           ...
+    tfidf_hsgd_Walmart_005 ................                   fbbf4a810b58   ...           ...
     
 Here the Image ID is ``fbbf4a810b58``. We can now fire the image up:
 
@@ -168,5 +157,9 @@ Here the Image ID is ``fbbf4a810b58``. We can now fire the image up:
     docker run -p 5000:5000 fbbf4a810b58
     
 The ``-p 5000:5000`` argument forwards the host's port 5000 to the container's corresponding port. This allows requests from the outside to be directed to the container, and the container's response to be in turn directed back to the outside. You can test this using the same test script we have mentioned above.
+
+.. note::
+
+   The Dockerisation process is a bit different for BentoServices built with monitoring capabilities enabled. Since they use multiple Docker containers, KTT will also generate a ``docker-compose.yaml`` file for them. Simply navigate to the built service's folder (where the ``docker-compose.yaml`` file is) and hit ``docker-compose up``.
 
 If all goes well, congratulations! You now have a fully self-contained Docker image of your newly-trained hierarchical classification model.

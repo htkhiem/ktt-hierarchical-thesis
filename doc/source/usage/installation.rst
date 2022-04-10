@@ -23,7 +23,7 @@ Setting up dependencies
 .. code-block:: bash
 	
     cd ktt
-    conda env create -n ktt -f onnx/environment.yaml
+    conda env create -n ktt -f environment.yaml
     
 This will install all dependencies using ``conda install``, or ``pip install`` (with the ``pip`` tool local to the environment).
 
@@ -33,5 +33,4 @@ For subsequent usage of the system, simply activate the environment beforehand i
 	
     conda activate ktt
     
-**The manual way:** Should you prefer to install everything by yourself, please see the list of packages in the ``README.md`` file at the root level. They have already been written as commands, but the package names should be obvious.
-   
+**The manual way:** Should you prefer to install everything by yourself, please see the list of packages in the `environment.yaml` file.
