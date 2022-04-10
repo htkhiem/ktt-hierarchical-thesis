@@ -1,25 +1,36 @@
+KTT Hierarchical Classification System
+--------------------------------------
+
+KTT Hierarchical Classification System (KTT for short) is a training and inference framework specifically designed for hierarchial multilabel text classification (HMTC) workloads. It is preloaded with seven classification models and a builtin GPU-powered inference pipeline based on the BentoML model inference framework.
+
 # Dependencies
-Just recreate the Anaconda environment using the supplied `environment.yaml` file in `./onnx`. Alternatively, run the following commands:
+We highly recommend using an Anaconda distribution (such as Miniconda) to install all dependencies at the correct version. Simply use the supplied `environment.yaml` file to create an environment for KTT:
 
-``` sh
-conda install pytorch cudatoolkit=11.3 -c pytorch
-conda install scikit-learn pandas dask onnx pathspec tomli nltk mako sphinx sphinx_rtd_theme
-
-# For deployment
-# IMPORTANT: Make sure to install nvidia-pyindex first.
-# NVIDIA's pip listing is served separately.
-pip install nvidia-pyindex
-pip install onnxruntime-gpu
-pip install nvidia-tensorrt
-conda install -c nvidia cudnn cuda-cudart libcufft libcurand libcublas
-conda install -c huggingface transformers 
-
-pip install sklearn_hierarchical_classification pyarrow
-pip install bentoml --pre
+```bash
+conda env create -n ktt -f ./environment.yaml
+conda activate ktt
 ```
 
+This is a complete and minimal environment with just the dependencies needed to run KTT to its full capabilities. For building documentation, please refer to that section.
+
 # Documentation
-Documentation regarding the production training and inference system is located in `onnx/doc`. We use Sphinx with the RTD theme. Dependencies for these are already included in the prior listing.
+Documentation regarding the production training and inference system is located in `onnx/doc`. We use Sphinx with the RTD theme.
+
+## Additional dependencies
+Building documentation requires you to install additional dependencies not covered by our `environment.yaml`:
+
+- `sphinx`
+- `sphinx-click`
+- `sphinxcontrib-bibtex`
+- `sphinx-rtd-theme`
+
+Ensure you are in KTT's conda environment (as doc-building still needs to import KTT's Python modules and thus requires all the runtime dependencies, too) and install these via `pip` as follows:
+
+```bash
+# Assuming said environment was named 'ktt'
+conda activate ktt
+pip install sphinx sphinx-click sphinxcontrib-bibtex sphinx-rtd-theme
+```
 
 ## Building
 ```
