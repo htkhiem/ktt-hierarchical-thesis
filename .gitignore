@@ -11,6 +11,7 @@ cleaning/raw/*
 
 onnx/build/*
 onnx/doc/build/*
+onnx/benchmark/*.json
 onnx/output/*
 onnx/tmp/*
 onnx/weights/*
