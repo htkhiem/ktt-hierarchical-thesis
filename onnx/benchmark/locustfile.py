@@ -28,5 +28,5 @@ class KttUser(HttpUser):
         self.client.post(
             "/predict",
             headers={"content-type": "application/json"},
-            data=random.sample(TEXT, k=1)[0]
+            data=json.dumps({'text': random.sample(TEXT, k=1)[0]})
         )

@@ -4,6 +4,8 @@ Model export controller.
 This script controls the exporting of models, either directly to ONNX,
 or to a BentoML ModelStorage.
 """
+import os
+import shutil
 import click
 from textwrap import dedent
 import json
@@ -11,8 +13,8 @@ import glob
 import torch
 import pandas as pd
 
-from models.model_list import PYTORCH_MODEL_LIST
-from models.model_list import SKLEARN_MODEL_LIST
+from models import PYTORCH_MODEL_LIST
+from models import SKLEARN_MODEL_LIST
 
 from utils import cli
 
@@ -107,6 +109,13 @@ def get_path(
     help='Add exported models to the local BentoML model store.'
 )
 @click.option(
+    '--monitoring/--no-monitoring', is_flag=True, default=True,
+    show_default=True,
+    help=dedent("""Enable/disable Evidently model performance monitoring. This
+    will be skipped if the chosen BentoML was not bundled with a reference
+    dataset.""")
+)
+@click.option(
     '-v', '--verbose', is_flag=True, default=False,
     help='Print more information to the console (for debugging purposes).'
 )
@@ -124,6 +133,7 @@ def main(
         best,
         bento,
         verbose,
+        monitoring,
         cpu
 ):
     """Dispatch export operations."""
@@ -142,33 +152,39 @@ def main(
         if 'db_bhcn' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
                 cli.BOLD, 'DB-BHCN', cli.PLAIN))
-            db_bhcn = __import__(
-                'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
-            model = db_bhcn.DB_BHCN.from_checkpoint(
+            DB_BHCN = __import__(
+                'models', globals(), locals(), [], 0).DB_BHCN
+            model = DB_BHCN.from_checkpoint(
                 get_path('db_bhcn', dataset_name, best=best, time=time),
             ).to(device)
-            reference_set = pd.read_parquet(get_path(
-                'db_bhcn', dataset_name, time=time, reference_set=True))
-            model.export(dataset_name, bento, reference_set)
+            if monitoring:
+                reference_set_path = get_path(
+                    'db_bhcn', dataset_name, time=time, reference_set=True)
+                if reference_set_path is not None:
+                    model.export(dataset_name, bento, reference_set_path)
+                else:
+                    model.export(dataset_name, bento)
 
         if 'db_bhcn_awx' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
                 cli.BOLD, 'DB-BHCN+AWX', cli.PLAIN))
-            db_bhcn = __import__(
-                'models', globals(), locals(), ['db_bhcn'], 0).db_bhcn
-            model = db_bhcn.DB_BHCN.from_checkpoint(
+            DB_BHCN_AWX = __import__(
+                'models', globals(), locals(), [], 0).DB_BHCN_AWX
+            model = DB_BHCN_AWX.from_checkpoint(
                 get_path('db_bhcn_awx', dataset_name, best, time),
             ).to(device)
-            reference_set = pd.read_parquet(get_path(
-                'db_bhcn_awx', dataset_name, time=time, reference_set=True))
-            model.export(dataset_name, bento, reference_set)
+            if monitoring:
+                reference_set = pd.read_parquet(get_path(
+                    'db_bhcn_awx', dataset_name, time=time, reference_set=True))
+                model.export(dataset_name, bento, True)
+            model.export(dataset_name, bento)
 
         if 'db_ahmcnf' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
                 cli.BOLD, 'DistilBERT+Adapted HMCN-F', cli.PLAIN))
-            db_ahmcnf = __import__(
-                'models', globals(), locals(), ['db_ahmcnf'], 0).db_ahmcnf
-            model = db_ahmcnf.DB_AHMCN_F.from_checkpoint(
+            DB_AHMCN_F = __import__(
+                'models', globals(), locals(), [], 0).DB_AHMCN_F
+            model = DB_AHMCN_F.from_checkpoint(
                 get_path('db_ahmcnf', dataset_name, best, time)
             ).to(device)
             model.export(dataset_name, bento)
@@ -176,9 +192,9 @@ def main(
         if 'db_achmcnn' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
                 cli.BOLD, 'DistilBERT+Adapted C-HMCNN', cli.PLAIN))
-            db_achmcnn = __import__(
-                'models', globals(), locals(), ['db_achmcnn'], 0).db_achmcnn
-            model = db_achmcnn.DB_AC_HMCNN.from_checkpoint(
+            DB_AC_HMCNN = __import__(
+                'models', globals(), locals(), [], 0).DB_AC_HMCNN
+            model = DB_AC_HMCNN.from_checkpoint(
                 get_path('db_achmcnn', dataset_name, best, time)
             ).to(device)
             model.export(dataset_name, bento)
@@ -186,9 +202,9 @@ def main(
         if 'db_linear' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
                 cli.BOLD, 'DistilBERT+Linear', cli.PLAIN))
-            db_linear = __import__(
-                'models', globals(), locals(), ['db_linear'], 0).db_linear
-            model = db_linear.DB_Linear.from_checkpoint(
+            DB_Linear = __import__(
+                'models', globals(), locals(), [], 0).DB_Linear
+            model = DB_Linear.from_checkpoint(
                 get_path('db_linear', dataset_name, best, time)
             ).to(device)
             model.export(dataset_name, bento)
@@ -196,9 +212,9 @@ def main(
         if 'tfidf_hsgd' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
                 cli.BOLD, 'Tf-idf + Hierarchical SGD', cli.PLAIN))
-            tfidf_hsgd = __import__(
-                'models', globals(), locals(), ['tfidf_hsgd'], 0).tfidf_hsgd
-            model = tfidf_hsgd.Tfidf_HSGD.from_checkpoint(
+            Tfidf_HSGD = __import__(
+                'models', globals(), locals(), [], 0).Tfidf_HSGD
+            model = Tfidf_HSGD.from_checkpoint(
                 get_path('tfidf_hsgd', dataset_name, best, time)
             )
             model.export(dataset_name, bento)
@@ -206,9 +222,9 @@ def main(
         if 'tfidf_lsgd' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
                 cli.BOLD, 'Tf-idf + Leaf SGD', cli.PLAIN))
-            tfidf_lsgd = __import__(
-                'models', globals(), locals(), ['tfidf_lsgd'], 0).tfidf_lsgd
-            model = tfidf_lsgd.Tfidf_LSGD.from_checkpoint(
+            Tfidf_LSGD = __import__(
+                'models', globals(), locals(), [], 0).Tfidf_LSGD
+            model = Tfidf_LSGD.from_checkpoint(
                 get_path('tfidf_lsgd', dataset_name, best, time)
             )
             model.export(dataset_name, bento)

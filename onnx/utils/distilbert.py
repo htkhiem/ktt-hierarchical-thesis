@@ -59,7 +59,7 @@ def export_trained(
         # Export into transformers model .bin format
         tmp_path = 'tmp/distilbert_' + name
         model.save_pretrained(tmp_path)
-        tokenizer.save_pretrained(tmp_path)
+        get_tokenizer().save_pretrained(tmp_path)
         # Run PyTorch ONNX exporter on said model file
         onnx_path = 'output/{}/encoder'.format(name)
         os.system(

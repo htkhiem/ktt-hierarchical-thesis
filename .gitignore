@@ -9,6 +9,7 @@ checkpoint.ipynb
 
 cleaning/raw/*
 
+onnx/build/*
 onnx/doc/build/*
 onnx/output/*
 onnx/tmp/*
