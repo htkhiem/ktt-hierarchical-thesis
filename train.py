@@ -12,13 +12,9 @@ import logging
 import json
 import torch
 
-from models import PYTORCH_MODEL_LIST
-from models import SKLEARN_MODEL_LIST
+from models import PYTORCH_MODEL_LIST, SKLEARN_MODEL_LIST, MODEL_LIST
 
 from utils import cli
-
-# Don't touch this
-MODEL_LIST = PYTORCH_MODEL_LIST + SKLEARN_MODEL_LIST
 
 
 def train_and_test(
@@ -108,13 +104,21 @@ def train_and_test(
 @click.option(
     '-m', '--models', default='', show_default=False, help=dedent("""
     Pass a comma-separated list of model names to run. Available models:
+
     db_bhcn\t\t(DistilBERT Branching Hierarchical Classifier)
+
     db_bhcn_awx\t\t(DistilBERT Branching Hierarchical Classifier + Adjacency Wrapping matriX)
+
     db_ahmcnf\t\t(Adapted HMCN-F model running on DistilBERT encodings)
+
     db_achmcnn\t\t(Adapted C-HMCNN model running on DistilBERT encodings)
+
     db_linear\t\t(DistilBERT+Linear layer)
+
     tfidf_hsgd\t\t(Internal-node SGD classifier hierarchy using tf-idf encodings)
+
     tfidf_lsgd\t\t(Leaf node SGD classifier hierarchy using tf-idf encodings)
+
     By default, all models are run.
     """)
 )
