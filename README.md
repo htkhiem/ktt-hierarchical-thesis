@@ -28,13 +28,13 @@ Ensure you are in KTT's conda environment (as doc-building still needs to import
 
 ```bash
 # Assuming said environment was named 'ktt'
-conda activate ktt
+conda activate ktt-lts
 pip install sphinx sphinx-click sphinxcontrib-bibtex sphinx-rtd-theme
 ```
 
 ## Building
 ```
-cd onnx/doc
+cd doc
 make html
 ```
 

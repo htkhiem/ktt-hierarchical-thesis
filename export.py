@@ -208,6 +208,13 @@ def main(
                 get_path('db_linear', dataset_name, best, time)
             ).to(device)
             model.export(dataset_name, bento)
+            if monitoring:
+                reference_set_path = get_path(
+                    'db_linear', dataset_name, time=time, reference_set=True)
+                if reference_set_path is not None:
+                    model.export(dataset_name, bento, reference_set_path)
+                else:
+                    model.export(dataset_name, bento)
 
         if 'tfidf_hsgd' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
