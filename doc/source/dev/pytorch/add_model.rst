@@ -99,7 +99,23 @@ In ``testmodel.py``, import the necessary libraries and define a concrete subcla
 
 		def __init__(
 		    self,
-		    hierarchy,
+		    hierarchy,      .. code-block:: python
+
+        if 'model_name' in model_lst:
+            click.echo('{}Exporting {}...{}'.format(
+                cli.BOLD, 'Pretty display name', cli.PLAIN))
+            ModelClass = __import__(
+                'models', globals(), locals(), [], 0).ModelClass
+            model = ModelClass.from_checkpoint(
+                get_path('model_name', dataset_name, best=best, time=time),
+            ).to(device)
+            if monitoring:
+                reference_set_path = get_path(
+                    'model_name', dataset_name, time=time, reference_set=True)
+                if reference_set_path is not None:
+                    model.export(dataset_name, bento, reference_set_path)
+                else:
+                    model.export(dataset_name, bento)
 		    config  # The config dict mentioned above here
 		):
 		    pass
@@ -613,7 +629,7 @@ Next, we need to implement the actual service class. It will be a subclass of ``
 		JSONArtifact('config'),
 	])
 	# The actual class
-	class DB_BHCN(bentoml.BentoService):
+	class TestModel(bentoml.BentoService):
 		"""Real-time inference service for DB-BHCN."""
 
 		_initialised = False
@@ -810,13 +826,13 @@ We will now use the above facilities to export our new model as a self-contained
 
         else:
         		# Export as BentoML service
-            build_path = 'build/db_bhcn_' + dataset_name.lower()
+            build_path = 'build/testmodel_' + dataset_name.lower()
             build_path_inference = ''
             if reference_set_path is not None:
             		# If a path to a reference dataset is available, export the
             		# model as a service with monitoring capabilities.
                 with open(
-                        'models/db_bhcn/bentoml/evidently.yaml', 'r'
+                        'models/testmodel/bentoml/evidently.yaml', 'r'
                 ) as evidently_template:
                     config = yaml.safe_load(evidently_template)
                     config['prediction'] = self.classifier.hierarchy.classes[
@@ -829,7 +845,7 @@ We will now use the above facilities to export our new model as a self-contained
                     {
                         'reference_set_path': reference_set_path,
                         'grafana_dashboard_path':
-                            'models/db_bhcn/bentoml/dashboard.json',
+                            'models/testmodel/bentoml/dashboard.json',
                         'evidently_config': config
                     }
                 )
@@ -837,7 +853,7 @@ We will now use the above facilities to export our new model as a self-contained
             		# Init folder structure for a minimum system (no monitoring)
                 build_path_inference = init_folder_structure(build_path)
             # Initialise a BentoService instance - we'll come to this soon
-            svc = svc_lts.DB_Linear()
+            svc = svc_lts.TestModel()
             # Pack tokeniser along with encoder. Here we use KTT's DistilBERT
             # facilities.
             encoder = {
@@ -848,14 +864,67 @@ We will now use the above facilities to export our new model as a self-contained
             svc.pack('classifier', torch.jit.trace(self.classifier, x))
             svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
             svc.pack('config', {
-                'monitoring_enabled': reference_set_path is not None
+                'monitoring_enabled': reference_setr_path is not None
             })
             # Export the BentoService to the correct path.
             svc.save_to_dir(build_path_inference)
 
+Registering, testing & conclusion
+---------------------------------
 
-Registering the model with the training/exporting scripts
----------------------------------------------------------
+With every part of your model implemented, now is the time to add it to the model list and implement some runner code to get the training and exporting script to use it smoothly. For this, you can refer to :ref:`model-register`.
+
+Adding the model to the training script is quite simple. You can follow implementations for bundled models and adapt them to your own. Below is a sample implementation:
+
+.. code-block:: python
+
+	if 'testmodel' in model_lst:
+	# If your model has hyperparameters in ./hyperparameters.json:
+	# config = init_config('testmodel', 'Test Model')
+	TestModel = __import__('models', globals(), locals(), [], 0).TestModel
+	for dataset_name in dataset_lst:
+		(
+			train_loader, val_loader, test_loader, hierarchy, config
+		) = init_dataset(
+			dataset_name, model_pytorch.get_loaders, config
+		)
+		model = TestModel(hierarchy, config).to(device)
+		train_and_test(
+			config,
+			model,
+			train_loader,
+			val_loader,
+			test_loader,
+			metrics_func=model_pytorch.get_metrics,
+			dry_run=dry_run,
+			verbose=verbose,
+			gen_reference=reference,
+			dvc=dvc
+		)
+
+Similarly for the export script:
+
+.. code-block:: python
+
+	if 'testmodel' in model_lst:
+		click.echo('{}Exporting {}...{}'.format(
+		    cli.BOLD, 'Test model', cli.PLAIN))
+		ModelClass = __import__(
+		    'models', globals(), locals(), [], 0).TestModel
+		model = TestModel.from_checkpoint(
+		    get_path('testmodel', dataset_name, best=best, time=time),
+		).to(device)
+		if monitoring:
+		    reference_set_path = get_path(
+		        'testmodel', dataset_name, time=time, reference_set=True)
+		    if reference_set_path is not None:
+		        model.export(dataset_name, bento, reference_set_path)
+		    else:
+		        model.export(dataset_name, bento)
+
+Be sure to test out every option for your model before deploying to a production environment. Testing instructions can be found at :ref:`test-run`. Afterwards, design a Grafana dashboard and add it to the provisioning system to have your service automatically initialise Grafana right from the get-go.
+
+After this, your model is pretty much complete. If you did it correctly, it should be an integral and uniform part of your own KTT fork and can be used just like any existing (bundled) model.
 
 
 

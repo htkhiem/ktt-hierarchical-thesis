@@ -259,8 +259,10 @@ You can either directly tune your model by modifying this file, or implement aut
 
 Models without tunable hyperparameters can skip this step.
 
-Adding your model to the training and exporting scripts
--------------------------------------------------------
+.. _model-register:
+
+Registering your model with the rest of the system
+--------------------------------------------------
 
 Now that you have fully implemented your model, it is time to inform the training and exporting scripts of its existence and also on how to run it.
 
@@ -337,6 +339,8 @@ Edit ``./export.py`` at the following places:
                     model.export(dataset_name, bento)
 
     - Optionally modify the Click documentation for the ``-m`` option to add your model's identifier and display name.
+
+.. _test-run:
 
 Test-run your model
 -------------------
