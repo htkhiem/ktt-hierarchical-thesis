@@ -1,4 +1,3 @@
-"""This file defines functions specific to PyTorch/DistilBERT models."""
 import os
 
 import torch
@@ -62,11 +61,36 @@ def get_loaders(
         config,
         verbose=False
 ):
-    """
-    Create loaders from the specified Parquet dataset.
+    """Create loaders from the specified Parquet dataset.
 
-    name: Dataset folder name in ../datasets.
-    This function only works with datasets generated from adapters.
+    Parameters
+    ----------
+    name: str
+        Name of the intermediate dataset. In other words, it is the name of
+        the dataset's folder in `../datasets`. This function only works with
+        datasets generated from adapters.
+    config: dict
+        A dictionary of configuration parameters for the loading process.
+        The following parameters must be provided:
+
+        - ``device``: ``'cuda'`` or ``'cpu'``
+        - ``train_minibatch_size``: Size of a minibatch while training.
+        - ``val_test_minibatch_size``: Size of a minibatch in the validation and test phase.
+
+    verbose: bool
+        If true, print more information about the importing process, such as
+        all detected classes and hierarchy information.
+
+    Returns
+    -------
+    train_loader: torch.utils.DataLoader
+    val_loader: torch.utils.DataLoader
+    test_loader: torch.utils.DataLoader
+    hierarchy: PerLevelHierarchy
+
+    See also
+    --------
+    utils.hierarchy.PerLevelHierarchy : the hierarchy class PyTorch models use.
     """
     train_path = 'datasets/{}/train.parquet'.format(name)
     val_path = 'datasets/{}/val.parquet'.format(name)
@@ -138,17 +162,29 @@ def get_loaders(
 
 
 def get_hierarchical_one_hot(labels, level_sizes):
-    """
-    Binarise local-space labels to global-space one-hot vectors.
+    """Binarise local-space labels to global-space one-hot vectors.
 
-    Example input:
-    - Labels: [[3, 5], [2, 0]], where axis 0 is minibatch and axis 1 is
-      hierarchical depth.
-    - Level sizes: [4, 6]
+    This function is useful for models that use loss functions such as BCE.
 
-    Corresponding output:
-    [[0,0,0,1, 0,0,0,0,0,1], [0,0,1,0, 1,0,0,0,0,0]], where axis 0 is
-    minibatch and axis 1 is global label space.
+    Parameters
+    ----------
+    labels: torch.Tensor or numpy.ndarray of shape (minibatch, depth)
+        The local integer indices of true labels. For example,
+        `[[0], [0]]` means the first label of each hierarchical level.
+    level_sizes: list-like object of shape (depth)
+        A list of level sizes. A level's size is the number of unique labels in
+        that level.
+
+    Returns
+    -------
+    binarised_labels: torch.LongTensor of shape `(minibatch, sum(level_sizes))`
+        Per-level one-hot-encoded labels. Level encodings are concatenated
+        to create a global binary label vector from the first level to the leaf.
+
+    Examples
+    --------
+    >>> get_hierarchical_one_hot([[3, 5], [2, 0]], [4, 6])
+    Tensor([[0,0,0,1, 0,0,0,0,0,1], [0,0,1,0, 1,0,0,0,0,0]])
     """
     return torch.cat(
         [
@@ -165,14 +201,112 @@ def get_hierarchical_one_hot(labels, level_sizes):
 
 
 def get_metrics(test_output, display=None, compute_auprc=False):
-    """
-    Compute metrics for general PyTorch-based hierarchial models.
+    """Compute metrics for general PyTorch-based hierarchial models.
 
-    local_outputs: list of Torch tensors, each represeting scores for a
-    hierarchical level.
-    targets: list of category codes, ordered in hierarchical order (top to
-    bottom). This can be taken straight from the 'codes' column.
+    The following metrics are computed:
+
+    - Leaf accuracy (accuracy at the leaf level)
+    - Leaf precision (precision at the leaf level)
+    - Global accuracy (averaged accuracy over all levels)
+    - Global precision (averaged precision over all levels)
+    - (optionally) AU(PRC) (at the leaf level)
+
+    Parameters
+    ----------
+    test_output: dict
+        A dict containing the following keys:
+
+        - ``outputs``: [torch.Tensor]
+            List of Torch tensors, each represeting scores for a hierarchical level.
+            A Tensor at index ``i`` of this list contains classification scores for
+            each class in level ``i`` of the hierarchy and thus has shape
+            (minibatch, level_sizes[i]).
+        - ``targets``: torch.LongTensor of shape (minibatch, depth)
+            List of integer label indices, ordered in hierarchical order (top to
+            bottom). This can be taken straight from the 'codes' column of loaded
+            Datasets.
+
+    display: string
+        Optional display mode, given as string. There are three options:
+
+        - ``log``: Write metrics to the default log output.
+        - ``print``: Print metrics to the screen.
+        - ``both``: Do both of the above.
+
+    compute_auprc: bool
+        Whether to compute the AU(PRC) metric at the leaf level. If true, the
+        returned array has an additional metric at the end, making it 5 elements
+        long.
+
+    Returns
+    -------
+    metrics: np.ndarray of shape (4) or (5)
+        The list of metrics computed in the order listed above.
+
     """
+    if test_output['targets'].ndim > 1:
+        if test_output['targets'].shape[1] > 1:
+            return get_leaf_metrics(test_output, display, compute_auprc)
+        raise RuntimeError('Invalid array dimensionality: hierarchical models must return at least two levels.')
+    return get_hierarchical_metrics(test_output, display, compute_auprc)
+
+
+def get_leaf_metrics(test_output, display=None, compute_auprc=False):
+    local_outputs = test_output['outputs']
+    targets = test_output['targets']
+    leaf_size = local_outputs.shape[1]
+
+    def generate_one_hot(idx):
+        b = np.zeros(leaf_size, dtype=bool)
+        b[idx] = 1
+        return b
+
+    # Get predicted class indices at each level
+    level_codes = np.argmax(local_outputs, axis=1)
+
+    accuracy = metrics.accuracy_score(targets, level_codes)
+    precision = metrics.precision_score(
+        targets, level_codes, average='weighted', zero_division=0)
+
+    if display == 'log' or display == 'both':
+        logging.info('Leaf level:')
+        logging.info("Accuracy: {}".format(accuracy))
+        logging.info("Precision: {}".format(precision))
+
+    if display == 'print' or display == 'both':
+        print('Leaf level:')
+        print("Accuracy: {}".format(accuracy))
+        print("Precision: {}".format(precision))
+
+    if compute_auprc:
+        binarised_targets = np.array([
+            generate_one_hot(idx) for idx in targets
+        ])
+        rectified_outputs = np.concatenate(
+            [local_outputs, np.ones((1, leaf_size))],
+            axis=0)
+        rectified_targets = np.concatenate(
+            [binarised_targets, np.ones((1, leaf_size), dtype=bool)],
+            axis=0
+        )
+
+        auprc_score = metrics.average_precision_score(
+            rectified_targets,
+            rectified_outputs
+        )
+        if display == 'log':
+            logging.info('Rectified leaf-level AU(PRC) score: {}'.format(
+                auprc_score
+            ))
+        elif display == 'print':
+            print('Rectified leaf-level AU(PRC) score: {}'.format(auprc_score))
+
+        return np.array([accuracy, precision, None, None, auprc_score])
+    return np.array([accuracy, precision, None, None])
+
+
+
+def get_hierarchical_metrics(test_output, display=None, compute_auprc=False):
     local_outputs = test_output['outputs']
     targets = test_output['targets']
     leaf_size = local_outputs[-1].shape[1]

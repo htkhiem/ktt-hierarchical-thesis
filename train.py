@@ -329,8 +329,6 @@ def main(
         config = init_config('db_linear', 'DistilBERT+Linear')
         DB_Linear = __import__(
             'models', globals(), locals(), [], 0).DB_Linear
-        db_linear_metrics = __import__(
-            'models', globals(), locals(), [], 0).get_linear_metrics
         for dataset_name in dataset_lst:
             (
                 train_loader, val_loader, test_loader, hierarchy, config
@@ -344,7 +342,7 @@ def main(
                 train_loader,
                 val_loader,
                 test_loader,
-                metrics_func=db_linear_metrics,
+                metrics_func=model_pytorch.get_metrics,
                 dry_run=dry_run,
                 verbose=verbose,
                 dvc=dvc

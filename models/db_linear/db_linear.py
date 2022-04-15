@@ -303,18 +303,18 @@ class DB_Linear(model.Model, torch.nn.Module):
                         val_outputs, output.cpu().detach().numpy()
                     ])
 
-                    val_metrics = np.concatenate([
-                        val_metrics,
-                        np.expand_dims(
-                            get_metrics(
-                                {
-                                    'outputs': val_outputs,
-                                    'targets': val_targets
-                                },
-                                display=None),
-                            axis=1
-                        )
-                    ], axis=1)
+                val_metrics = np.concatenate([
+                    val_metrics,
+                    np.expand_dims(
+                        get_metrics(
+                            {
+                                'outputs': val_outputs,
+                                'targets': val_targets
+                            },
+                            display=None),
+                        axis=1
+                    )
+                ], axis=1)
 
                 if path is not None and best_path is not None:
                     optim = optimizer.state_dict()
@@ -543,61 +543,6 @@ class DB_Linear(model.Model, torch.nn.Module):
         if device is not None:
             self.device = device
         return self
-
-
-def get_metrics(test_output, display=None, compute_auprc=False):
-    """Compute metrics for leaf-only models like this one."""
-    local_outputs = test_output['outputs']
-    targets = test_output['targets']
-    leaf_size = local_outputs.shape[1]
-
-    def generate_one_hot(idx):
-        b = np.zeros(leaf_size, dtype=bool)
-        b[idx] = 1
-        return b
-
-    # Get predicted class indices at each level
-    level_codes = np.argmax(local_outputs, axis=1)
-
-    accuracy = metrics.accuracy_score(targets, level_codes)
-    precision = metrics.precision_score(
-        targets, level_codes, average='weighted', zero_division=0)
-
-    if display == 'log' or display == 'both':
-        logging.info('Leaf level:')
-        logging.info("Accuracy: {}".format(accuracy))
-        logging.info("Precision: {}".format(precision))
-
-    if display == 'print' or display == 'both':
-        print('Leaf level:')
-        print("Accuracy: {}".format(accuracy))
-        print("Precision: {}".format(precision))
-
-    if compute_auprc:
-        binarised_targets = np.array([
-            generate_one_hot(idx) for idx in targets
-        ])
-        rectified_outputs = np.concatenate(
-            [local_outputs, np.ones((1, leaf_size))],
-            axis=0)
-        rectified_targets = np.concatenate(
-            [binarised_targets, np.ones((1, leaf_size), dtype=bool)],
-            axis=0
-        )
-
-        auprc_score = metrics.average_precision_score(
-            rectified_targets,
-            rectified_outputs
-        )
-        if display == 'log':
-            logging.info('Rectified leaf-level AU(PRC) score: {}'.format(
-                auprc_score
-            ))
-        elif display == 'print':
-            print('Rectified leaf-level AU(PRC) score: {}'.format(auprc_score))
-
-        return np.array([accuracy, precision, None, None, auprc_score])
-    return np.array([accuracy, precision, None, None])
 
 
 if __name__ == "__main__":

@@ -26,6 +26,8 @@ Checkpoint schema
 * ``classifier_state_dict``: Weights of the classifier.
 * ``optimizer_state_dict``: Saved state of the optimiser that was used to train the model for that checkpoint.
 
+.. _db-linear-theory:
+
 Theory 
 ------
 This is our deep-learning equivalent to Tfidf_LSGD, in which the vectorisation is done by DistilBERT and the leaf-level classification by a single linear layer. An example computation graph for the classifier is given below.

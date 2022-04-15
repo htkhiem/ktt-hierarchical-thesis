@@ -46,6 +46,8 @@ An explanation of what each file and folder is:
 
 With that out of the way, we will now deep-dive into how to implement each part of a model:
 
+.. _model-class:
+
 The model itself
 ----------------
 
@@ -146,6 +148,8 @@ or this, if it was built without support for monitoring:
 
 To keep things nice and tidy, we recommend that you create a subfolder within your model folder to store BentoML-specific files just like the example general folder structure at :ref:`model-struct`.
 
+.. _service-spec:
+
 The service implementation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -205,6 +209,7 @@ A simple explanation of these fields:
 The second configuration file is the Grafana dashboard layout (``dashboard.json``). We however do not recommend you create this file by hand. Instead, you can wait until you can boot up your service and log into the Grafana instance so you can create it interactively.
 More on that later in :ref:`grafana-design`.
 
+.. _reference-set:
 
 The reference dataset
 ^^^^^^^^^^^^^^^^^^^^^
@@ -218,6 +223,8 @@ To generate the reference dataset, you must implement an additional method, call
 The exact reference set schema depends on your choice of Evidently reports and also your model's design. DB-BHCN for example generates a reference dataset containings firstly a ``targets`` column (ground truths, using textual class names), 24 average-pooled feature columns (from the 768 features produced by its DistilBERT encoder) named ``0`` to ``23`` (in string form), and classification score columns, one for each leaf-level class, with the column names being the string names of the classes themselves.
 
 The resulting reference set must be in Parquet format (``.parquet``) named similarly to the **last checkpoint**, with ``_reference`` added. For example, if the last checkpoint is named ``last_2022-04-01T12:34:56.pt``, then the reference dataset must be named ``last_2022-04-01T12:34:56_reference.parquet``.
+
+.. _model-export-general:
 
 The ``export`` method
 ^^^^^^^^^^^^^^^^^^^^^

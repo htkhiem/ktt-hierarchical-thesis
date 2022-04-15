@@ -722,8 +722,7 @@ class DB_BHCN(model.Model, torch.nn.Module):
             svc.save_to_dir(build_path_inference)
 
     def to(self, device=None):
-        """
-        Move this module to specified device.
+        """Move this module to specified device.
 
         This overloads the default PT module's to() method to additionally
         set its internal device variable and moves its submodules.
