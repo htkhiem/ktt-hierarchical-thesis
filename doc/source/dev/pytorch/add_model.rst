@@ -889,7 +889,7 @@ We will now use the above facilities to export our new model as a self-contained
                 svc.pack('classifier', torch.jit.trace(self.classifier, x))
                 svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
                 svc.pack('config', {
-                    'monitoring_enabled': reference_setr_path is not None
+                    'monitoring_enabled': reference_set_path is not None
                 })
                 # Export the BentoService to the correct path.
                 svc.save_to_dir(build_path_inference)
