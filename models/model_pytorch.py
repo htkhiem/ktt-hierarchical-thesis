@@ -246,9 +246,9 @@ def get_metrics(test_output, display=None, compute_auprc=False):
     """
     if test_output['targets'].ndim > 1:
         if test_output['targets'].shape[1] > 1:
-            return get_leaf_metrics(test_output, display, compute_auprc)
+            return get_hierarchical_metrics(test_output, display, compute_auprc)
         raise RuntimeError('Invalid array dimensionality: hierarchical models must return at least two levels.')
-    return get_hierarchical_metrics(test_output, display, compute_auprc)
+    return get_leaf_metrics(test_output, display, compute_auprc)
 
 
 def get_leaf_metrics(test_output, display=None, compute_auprc=False):

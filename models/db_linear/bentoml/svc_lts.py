@@ -45,7 +45,6 @@ class DB_Linear(bentoml.BentoService):
         hierarchy = self.artifacts.hierarchy
         self.level_sizes = hierarchy['level_sizes']
         self.level_offsets = hierarchy['level_offsets']
-        self.leaf_offsets = hiearchy['level_offsets'][-2]
         self.classes = hierarchy['classes']
         # Load service configuration JSON
         self.monitoring_enabled = self.artifacts.config['monitoring_enabled']
@@ -89,17 +88,21 @@ class DB_Linear(bentoml.BentoService):
         # Segmented argmax, as usual
         pred_codes = np.array([
             np.argmax(
-                scores
-                ,
+                scores[
+                    :,
+                    self.level_offsets[level]:
+                    self.level_offsets[level + 1]
+                ],
                 axis=1
-            ) + self.leaf_offsets
+            ) + self.level_offsets[level]
+            for level in range(len(self.level_sizes))
         ], dtype=int)
 
         predicted_names = np.array([
             [self.classes[level] for level in row]
             for row in pred_codes.swapaxes(1, 0)
         ])
-
+        
         if self.monitoring_enabled:
             """
             Create a 2D list contains the following content:
