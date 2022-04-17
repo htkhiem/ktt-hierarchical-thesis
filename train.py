@@ -322,6 +322,7 @@ def main(
                 metrics_func=model_pytorch.get_metrics,
                 dry_run=dry_run,
                 verbose=verbose,
+                gen_reference=reference,
                 dvc=dvc
             )
 
@@ -345,6 +346,7 @@ def main(
                 metrics_func=model_pytorch.get_metrics,
                 dry_run=dry_run,
                 verbose=verbose,
+                gen_reference=reference,
                 dvc=dvc
             )
 

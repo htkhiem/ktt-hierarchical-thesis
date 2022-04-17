@@ -19,31 +19,6 @@ REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
 
-class DropoutLinear(torch.nn.Module):
-    """A dropout layer plus a linear layer."""
-
-    def __init__(
-        self,
-        input_dim,
-        hierarchy,
-        config
-    ):
-        """Construct module."""
-        super(DropoutLinear, self).__init__()
-        self.device = config['device']
-
-        # Dropout
-        self.dropout = torch.nn.Dropout(p=config['dropout'])
-        self.linear = torch.nn.Linear(input_dim, hierarchy.levels[-1])
-
-        # For exporting
-        self.hierarchy = hierarchy
-
-    def forward(self, x):
-        """Forward-propagate input to generate classification."""
-        return self.linear(self.dropout(x))
-
-
 class DB_Linear(model.Model, torch.nn.Module):
     """Wrapper class combining DistilBERT with the above module."""
 
@@ -73,7 +48,7 @@ class DB_Linear(model.Model, torch.nn.Module):
         self.output_size = hierarchy.levels[-1]
         self.config = config
         self.device = 'cpu'
-        self.pool = torch.nn.AvgPool1d(32)
+        self.pool = torch.nn.AvgPool1d(REFERENCE_SET_FEATURE_POOL)
 
     @classmethod
     def from_checkpoint(cls, path):
@@ -97,8 +72,8 @@ class DB_Linear(model.Model, torch.nn.Module):
         """
         if not os.path.exists(path):
             if not os.path.exists(path + '.dvc'):
-                raise OSError('Checkpoin not present and cannot be retrieved')
-        os.system('dvc checkot {}.dvc'.format(path))
+                raise OSError('Checkpoint not present and cannot be retrieved')
+        os.system('dvc checkout {}.dvc'.format(path))
         checkpoint = torch.load(path)
         hierarchy = PerLevelHierarchy.from_dict(checkpoint['hierarchy'])
         instance = cls(hierarchy, checkpoint['config'])
@@ -379,10 +354,7 @@ class DB_Linear(model.Model, torch.nn.Module):
             encoder_outputs
         )
             
-        return local_outputs[
-            :, self.classifier.level_offsets[-2]:
-        ],
-        self.pool(encoder_outputs)
+        return local_outputs, self.pool(encoder_outputs)
 
     def gen_reference_set(self, loader):
         self.eval()

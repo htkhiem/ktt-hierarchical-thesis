@@ -200,6 +200,7 @@ There are a few design details that might need further elaboration, all of which
             # Back these up for checkpointing and exporting
             self.config = config
             self.hierarchy = hierarchy
+            self.output_size = hierarchy.levels[-1]
 
             # We'll talk about this later
             self.pool = torch.nn.AvgPool1d(32)
@@ -515,10 +516,7 @@ This is also where we use the average-pool layer instantiated way back in the ``
                 encoder_outputs
             )
             # Remember to pool features here before returning!
-            return local_outputs[
-                :, self.classifier.level_offsets[-2]:
-            ],
-            self.pool(encoder_outputs)
+            return local_outputs, self.pool(encoder_outputs)
 
 ``generate_reference_dataset``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -529,12 +527,14 @@ Our goal is to create a Pandas dataframe with the columns detailed in :ref:`refe
 
 As you can see, this method is very similar to the ``test`` method above, just that it calls the ``forward_with_features()`` method we have just implemented instead of the typical ``forward()`` method.
 
+Note how ``all_pooled_features`` only has 24 features as opposed to 768 (which is 768 divided by the pooling kernel size of 32 as specified above).
+
 .. code-block:: python
     :dedent: 0
 
         def gen_reference_set(self, loader):
             self.eval()
-            all_pooled_features = np.empty((0, POOLED_FEATURE_SIZE))
+            all_pooled_features = np.empty((0, 24))
             all_targets = np.empty((0), dtype=int)
             all_outputs = np.empty(
                 (0, self.classifier.hierarchy.levels[-1]), dtype=float)

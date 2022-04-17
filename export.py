@@ -207,7 +207,6 @@ def main(
             model = DB_Linear.from_checkpoint(
                 get_path('db_linear', dataset_name, best, time)
             ).to(device)
-            model.export(dataset_name, bento)
             if monitoring:
                 reference_set_path = get_path(
                     'db_linear', dataset_name, time=time, reference_set=True)
