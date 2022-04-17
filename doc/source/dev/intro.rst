@@ -165,6 +165,8 @@ The ``svc_lts.py`` file contains the definition of the BentoService for this mod
 
 With the service implemented, we can move on to implementing logic for automatically generating the *reference dataset*. A reference dataset is any dataset that is representative of the data the model instance was trained on. Bundled models simply use the test subset as the reference dataset. However, due to requirements from Evidently (the model metrics framework used by KTT), the reference dataset instead needs to contain numerical features (for the ``feature_drift`` report), with each feature being given one column. In addition to that, it may also require the raw classification scores (the numerical results the model outputs) if you choose to specify ``categorical_target_drift`` reports as part of the metrics to compute and track - again, each class gets its own scores column.
 
+.. _bentoml-config:
+
 The service configuration files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
