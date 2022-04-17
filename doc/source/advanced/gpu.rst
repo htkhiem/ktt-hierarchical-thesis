@@ -54,7 +54,7 @@ Docker containers can simply be deployed to a server without needing to care abo
 Without monitoring capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Services built without monitoring capabilities are Dockerised into single Docker images. They can be run directly from the terminal using your typical ``docker run``command.
+Services built without monitoring capabilities are Dockerised into single Docker images. They can be run directly from the terminal using your typical ``docker run`` command.
 Due to a recent ``systemd`` architectural redesign, we need a workaround to grant hardware access to the container.
 
 Instead of starting the Docker container as usual, please add ``--gpu all`` and specific ``--device`` options as follows:

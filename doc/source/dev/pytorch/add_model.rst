@@ -16,7 +16,7 @@ To keep everything simple and focus on the system integration aspects only, we w
 PyTorch model module structure
 ------------------------------
 
-Each PyTorch model module ('module for short') in KTT is a self-contained collection of implemented source code, metadata and configuration files. A module defines its own training, checkpointing and exporting procedures. It might also optionally implement a  BentoML service and configuration files for live inference using the integrated BentoML-powered inference system and monitoring using Prometheus/Grafana. The general folder tree of a PyTorch model is as detailed in :ref:`model-struct`.
+Each PyTorch model module ('module' for short) in KTT is a self-contained collection of implemented source code, metadata and configuration files. A module defines its own training, checkpointing and exporting procedures. It might also optionally implement a  BentoML service and configuration files for live inference using the integrated BentoML-powered inference system and monitoring using Prometheus/Grafana. The general folder tree of a PyTorch model is as detailed in :ref:`model-struct`.
 
 The source implementation itself must subclass the abstract ``Model`` class (see :ref:`model-class`), like in any other framework. PyTorch models with additional submodules (bundled example: DB-BHCN and its AWX submodule, or DistilBERT+Adapted C-HMCNN with its ``MCM`` submodule) must implement a ``to(self, device)`` method similar to PyTorch's namesake method to recursively transfer the entire instance to the specified device.
 
@@ -99,23 +99,7 @@ In ``testmodel.py``, import the necessary libraries and define a concrete subcla
 
 		def __init__(
 		    self,
-		    hierarchy,      .. code-block:: python
-
-        if 'model_name' in model_lst:
-            click.echo('{}Exporting {}...{}'.format(
-                cli.BOLD, 'Pretty display name', cli.PLAIN))
-            ModelClass = __import__(
-                'models', globals(), locals(), [], 0).ModelClass
-            model = ModelClass.from_checkpoint(
-                get_path('model_name', dataset_name, best=best, time=time),
-            ).to(device)
-            if monitoring:
-                reference_set_path = get_path(
-                    'model_name', dataset_name, time=time, reference_set=True)
-                if reference_set_path is not None:
-                    model.export(dataset_name, bento, reference_set_path)
-                else:
-                    model.export(dataset_name, bento)
+		    hierarchy,
 		    config  # The config dict mentioned above here
 		):
 		    pass
@@ -126,7 +110,7 @@ In ``testmodel.py``, import the necessary libraries and define a concrete subcla
 
 		def forward(self, ids, mask):
 		    pass
-		    
+
 		def forward_with_features(self, ids, mask):
 			pass
 
@@ -167,7 +151,7 @@ In ``testmodel.py``, import the necessary libraries and define a concrete subcla
 	if __name__ == "__main__":
 		pass
 		
-You might notice that there are more methods that what is there in the ``Model`` abstract class. Some of them are PyTorch-specific, while others are for reference dataset generation. Since we do not force every model to be able to export to our BentoML-based inference system with full monitoring capabilities, these methods are not defined in the abstract class. However, they will be covered in this guide for the sake of completeness.
+You might notice that there are more methods than what is there in the ``Model`` abstract class. Some of them are PyTorch-specific, while others are for reference dataset generation. Since we do not force every model to be able to export to our BentoML-based inference system with full monitoring capabilities, these methods are not defined in the abstract class. However, they will be covered in this guide for the sake of completeness.
 		
 Now we will go through the process of implementing each method.
 
