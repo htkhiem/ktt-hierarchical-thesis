@@ -1,8 +1,8 @@
 """Implementation of the DB-BHCN+AWX model."""
 import os
-
+import shutil
+import yaml
 import pandas as pd
-
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -10,9 +10,11 @@ import bentoml
 
 from models import model, model_pytorch
 from utils.hierarchy import PerLevelHierarchy
-from utils.distilbert import get_pretrained, export_trained
-
-
+from utils.distilbert import get_pretrained, get_tokenizer, export_trained
+from utils.build import init_folder_structure
+from .bentoml import svc_lts
+from sklearn import metrics
+import logging
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 24
 
@@ -214,6 +216,8 @@ class DB_BHCN_AWX(model.Model, torch.nn.Module):
         )
         self.config = config
         self.device = 'cpu'  # default
+        self.pool = torch.nn.AvgPool1d(REFERENCE_SET_FEATURE_POOL)
+
 
     @classmethod
     def from_checkpoint(cls, path):
@@ -696,7 +700,7 @@ class DB_BHCN_AWX(model.Model, torch.nn.Module):
         return pd.DataFrame(cols)
 
     def export(
-            self, dataset_name, bento=False, reference_set=None
+            self, dataset_name, bento=False, reference_set_path=None
     ):
         """Export model to ONNX/Bento.
 
@@ -720,69 +724,112 @@ class DB_BHCN_AWX(model.Model, torch.nn.Module):
             schema. It will be serialised into JSON and packed as part of this
             model's metadata. Only applicable when Bento exporting is selected.
         """
-        self.eval()
 
-        export_trained(
-            self.encoder,
-            dataset_name,
-            'db_bhcn_awx',
-            bento=bento
-        )
+        self.eval()
 
         # Create dummy input for tracing
         batch_size = 1  # Dummy batch size. When exported, it will be dynamic
         x = torch.randn(batch_size, 768, requires_grad=True).to(
             self.device
         )
-        name = '{}_{}'.format(
-            'db_bhcn_awx',
-            dataset_name
-        )
-        path = 'output/{}/classifier/'.format(name)
-
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        path += 'classifier.onnx'
-
-        # Clear previous versions
-        if os.path.exists(path):
-            os.remove(path)
-
-        # Export into transformers model .bin format
-        torch.onnx.export(
-            self.classifier,
-            x,
-            path,
-            export_params=True,
-            opset_version=11,
-            do_constant_folding=True,
-            input_names=['input'],
-            output_names=['output'],
-            dynamic_axes={
-                'input': {0: 'batch_size'},
-                'output': {0: 'batch_size'}
-            }
-        )
-
-        self.classifier.hierarchy.to_json(
-            "output/{}/hierarchy.json".format(name)
-        )
-
-        # Optionally save to BentoML model store. Pack hierarchical metadata
-        # along with model for convenience.
-        if bento:
-            metadata = {
-                'hierarchy': self.classifier.hierarchy.to_dict()
-            }
-            if reference_set is not None:
-                df_dict = reference_set.to_dict()
-                metadata['reference'] = df_dict
-            bentoml.onnx.save(
-                'classifier_' + name,
-                path,
-                metadata=metadata
+        print('1')
+        if not bento:
+            print('2')
+                # Export to ONNX graphs.
+                # KTT provides utilities for exporting trained DistilBERT instances.
+            export_trained(
+                self.encoder,
+                dataset_name,
+                'db_bhcn_awx',
             )
+            print('3')
+            # Prepare names and paths
+            name = '{}_{}'.format(
+                'db_bhcn_awx',
+                dataset_name
+            )
+            print('before path')
+            path = 'output/{}/classifier/'.format(name)
+            print('after path')
+            if not os.path.exists(path):
+                os.makedirs(path)
+            path += 'classifier.onnx'
+            # Clear previous versions
+            print('print after after')
+            if os.path.exists(path):
+                os.remove(path)
+            # Export into transformers model .bin format
+            # Since our model is minibatched, we have to make the first axis
+            # dynamic. In production, batch sizes can vary depending on load
+            # (or stay at 1 if no microbatching is available).
+            torch.onnx.export(
+                self.classifier,
+                x,
+                path,
+                export_params=True,
+                opset_version=11,
+                do_constant_folding=True,
+                input_names=['input'],
+                output_names=['output'],
+                dynamic_axes={
+                    'input': {0: 'batch_size'},
+                    'output': {0: 'batch_size'}
+                }
+            )
+            # Additionally export hierarchical metadata to the same folder.
+            self.classifier.hierarchy.to_json(
+                "output/{}/hierarchy.json".format(name)
+            )
+        else:
+            print('5')
+            # Export as BentoML service
+            build_path = 'build/db_bhcn_awx_' + dataset_name.lower()
+            build_path_inference = ''
+            if reference_set_path is not None:
+                    # If a path to a reference dataset is available, export the
+                    # model as a service with monitoring capabilities.
+                with open(
+                        'models/db_bhcn_awx/bentoml/evidently.yaml', 'r'
+                ) as evidently_template:
+                    print('6')
+                    config = yaml.safe_load(evidently_template)
+                    config['prediction'] = self.classifier.hierarchy.classes[
+                        self.classifier.hierarchy.level_offsets[-2]:
+                        self.classifier.hierarchy.level_offsets[-1]
+                    ]
+                # Init folder structure, Evidently YAML and so on.
+                print('7')
+                build_path_inference = init_folder_structure(
+                    build_path,
+                    {
+                        'reference_set_path': reference_set_path,
+                        'grafana_dashboard_path':
+                            'models/db_bhcn_awx/bentoml/dashboard.json',
+                        'evidently_config': config
+                    }
+                )
+                print('8')
+            else:
+                    # Init folder structure for a minimum system (no monitoring)
+                build_path_inference = init_folder_structure(build_path)
+            # Initialise a BentoService instance - we'll come to this soon
+            svc = svc_lts.DB_BHCN_AWX()
+            # Pack tokeniser along with encoder. Here we use KTT's DistilBERT
+            # facilities.
+            encoder = {
+                'tokenizer': get_tokenizer(),
+                'model': self.encoder
+            }
+            svc.pack('encoder', encoder)
+            svc.pack('classifier', torch.jit.trace(self.classifier, x))
+            svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
+            svc.pack('config', {
+                'monitoring_enabled': reference_set_path is not None
+            })
+            # Export the BentoService to the correct path.
+            svc.save_to_dir(build_path_inference)
+
+
 
     def to(self, device=None):
         """
