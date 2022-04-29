@@ -53,5 +53,17 @@
         "dropout": 0.25,
         "train_minibatch_size": 32,
         "val_test_minibatch_size": 64
+    },
+    "tfidf_lsgd": {
+        "model_name": "tfidf_lsgd",
+        "loss": "modified_huber",
+        "max_iter": 1000,
+        "min_df": 50
+    }
+    "tfidf_hsgd": {
+        "model_name": "tfidf_hsgd",
+        "loss": "modified_huber",
+        "max_iter": 1000,
+        "min_df": 50
     }
 }

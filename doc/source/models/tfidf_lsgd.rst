@@ -10,6 +10,8 @@ API
    :members:
    :special-members:
 
+.. _tfidf-lsgd-theory:
+
 Theory
 ------
 
