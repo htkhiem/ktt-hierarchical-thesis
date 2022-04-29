@@ -394,6 +394,28 @@ class DB_Linear(model.Model, torch.nn.Module):
     def export(
             self, dataset_name, bento=False, reference_set_path=None
     ):
+        """Export model to ONNX/Bento.
+
+        If ONNX is selected (i.e. bento=False), then both the DistilBERT
+        encoder (with tokeniser) and classifier head are exported separately
+        as two ONNX models. If BentoML is selected instead, they will be
+        serialised using BentoML's default serialisation facilities, and
+        a complete BentoService will be built.
+
+        Parameters
+        ----------
+        dataset_name: str
+            Name of the dataset this instance was trained on. Use the folder
+            name of the intermediate version in the datasets folder.
+        bento: bool
+            Whether to export this model as a BentoML service or not.
+        reference_set_path: str
+            Path to an optional reference dataset compatible with Evidently's
+            schema. It will be copied to the built service's folder. Only
+            applicable when Bento exporting is selected.
+            If not passed, the generated BentoService will not be configured to
+            work with Evidently.
+        """
         self.eval()
         # Create dummy input for tracing
         batch_size = 1  # Dummy batch size. When exported, it will be dynamic
