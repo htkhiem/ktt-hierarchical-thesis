@@ -225,6 +225,8 @@ def get_metrics(test_output, display=None, compute_auprc=False):
             List of integer label indices, ordered in hierarchical order (top to
             bottom). This can be taken straight from the 'codes' column of loaded
             Datasets.
+        - ``targets_b``: torch.LongTensor of shape (minibatch, len(hierarchy.classes))
+            List of binarised target vectors in global space.
 
     display: string
         Optional display mode, given as string. There are three options:

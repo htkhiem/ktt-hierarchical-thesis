@@ -25,6 +25,18 @@ def make_hierarchy(hierarchy_dict):
     """Construct a special hierarchy data structure.
 
     This structure is for sklearn_hierarchical_classification only.
+
+    Parameters
+    ----------
+
+    hierarchy_dict: dict
+        The hierarchy dictionary as read from the JSON metadata created
+        by data adaptres.
+
+    Returns
+    -------
+    hierarchy: dict
+        A special hierarchy dictionary for sklearn_hierarchical_classification.
     """
     classes = hierarchy_dict['classes']
     levels = hierarchy_dict['level_sizes']
@@ -76,6 +88,26 @@ def get_loaders(
 
     Scikit-learn models simply read directly from lists. There is no
     special DataLoader object like for PyTorch.
+
+    Parameters
+    ----------
+    name: str
+        Name of the intermediate dataset, for path construction.
+    config: dict
+        Unused for sklearn, but kept for signature compatibility.
+    verbose: bool
+        If true, print more detailed information about the loading process.
+
+    Returns
+    -------
+    train_loader: (pandas.Series, pandas.Series)
+        A tuple of inputs and label series, respectively.
+    val_loader: None
+        Currently, we do not support validation sets for sklearn.
+    test_loader: (pandas.Series, pandas.Series)
+        A tuple of inputs and label series, respectively.
+    hierarchy: dict
+        A special hierarchy dictionary for sklearn_hierarchical_classification.
     """
     train_path = 'datasets/{}/train.parquet'.format(name)
     test_path = 'datasets/{}/test.parquet'.format(name)
@@ -116,7 +148,48 @@ def get_loaders(
 
 
 def get_metrics(test_output, display='log', compute_auprc=True):
-    """Specialised metrics function for scikit-learn model."""
+    """Compute leaf-level metrics for Scikit-learn models.
+
+    The following metrics are computed:
+
+    - Leaf accuracy (accuracy at the leaf level)
+    - Leaf precision (precision at the leaf level)
+    - (optionally) AU(PRC) (at the leaf level)
+
+    Parameters
+    ----------
+    test_output: dict
+        A dict containing the following keys:
+
+        - ``predictions``: numpy.ndarray of size (len(test_set), 1)
+            Names of labels classified by the model.
+        - ``targets``: numpy.ndarray of size (len(test_set), 1)
+            Names of ground-truth labels.
+        - ``scores``: Numerical scores for each label, which can be acquired
+            using sklearn models' predict_proba().
+        - ``targets_b``: torch.LongTensor of shape (minibatch, len(hierarchy.classes))
+            List of binarised target vectors in global space.
+
+    display: string
+        Optional display mode, given as string. There are three options:
+
+        - ``log``: Write metrics to the default log output.
+        - ``print``: Print metrics to the screen.
+        - ``both``: Do both of the above.
+
+    compute_auprc: bool
+        Whether to compute the AU(PRC) metric at the leaf level. If true, the
+        returned array has an additional metric at the end, making it 5 elements
+        long.
+
+    Returns
+    -------
+    metrics: np.ndarray of shape (4) or (5)
+        The list of metrics computed in the order listed above. Note that since
+        we do not compute path-average metrics for sklearn models, the third and
+        fourth items are None.
+
+    """
     leaf_accuracy = metrics.accuracy_score(
         test_output['targets'],
         test_output['predictions']

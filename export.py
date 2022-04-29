@@ -174,10 +174,12 @@ def main(
                 get_path('db_bhcn_awx', dataset_name, best, time),
             ).to(device)
             if monitoring:
-                reference_set = pd.read_parquet(get_path(
-                    'db_bhcn_awx', dataset_name, time=time, reference_set=True))
-                model.export(dataset_name, bento, True)
-            model.export(dataset_name, bento)
+                reference_set_path = get_path(
+                    'db_bhcn_awx', dataset_name, time=time, reference_set=True)
+                if reference_set_path is not None:
+                    model.export(dataset_name, bento, reference_set_path)
+                else:
+                    model.export(dataset_name, bento)
 
         if 'db_ahmcnf' in model_lst:
             click.echo('{}Exporting {}...{}'.format(
