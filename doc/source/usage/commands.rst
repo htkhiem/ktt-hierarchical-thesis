@@ -15,8 +15,12 @@ Individual components in our system are controlled via command-line arguments. T
 Adapters
 --------
 
+.. _adapter-sql:
+
 .. click:: adapters.adapter_flat:main
    :prog: python3 adapter_flat.py
+
+.. _adapter-flat:
 
 .. click:: adapters.adapter_sql:main
    :prog: python3 adapter_sql.py
