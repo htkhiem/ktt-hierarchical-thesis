@@ -144,6 +144,7 @@ Constructing an sklearn model in KTT is quite simple compared to PyTorch. One is
 
 .. code-block:: python
     :dedent: 0
+
         def __init__(self, config=None, verbose=False):
             # The SGD classifier
             clf = linear_model.SGDClassifier(
@@ -299,114 +300,6 @@ Our goal is to create a Pandas dataframe with the columns detailed in :ref:`refe
             }
             for col_idx in range(pooled_features[1]):
                 cols[str(col_idx)] = pooled_"""Service file for Tfidf-LeafSGD."""
-import os
-import requests
-from typing import List
-import json
-
-import numpy as np
-
-import bentoml
-from bentoml.adapters import JsonInput
-from bentoml.frameworks.sklearn import SklearnModelArtifact
-from bentoml.service.artifacts.common import JSONArtifact
-from bentoml.types import JsonSerializable
-
-from nltk.corpus import stopwords
-from nltk.stem.snowball import SnowballStemmer
-from nltk.tokenize import word_tokenize
-
-nltk.download('punkt')
-nltk.download('stopwords')
-# These can't be put inside the class since they don't have _unload(), which
-# prevents joblib from correctly parallelising the class if included.
-STOP_WORDS = set(stopwords.words('english'))
-
-EVIDENTLY_HOST = os.environ.get('EVIDENTLY_HOST', 'localhost')
-EVIDENTLY_PORT = os.environ.get('EVIDENTLY_PORT', 5001)
-
-REFERENCE_SET_FEATURE_POOL = 64
-
-@bentoml.env(
-    requirements_txt_file='models/db_bhcn/bentoml/requirements.txt',
-    docker_base_image='bentoml/model-server:0.13.1-py36-gpu'
-)
-@bentoml.artifacts([
-    SklearnModelArtifact('model'),
-    JSONArtifact('config'),
-])
-class DB_BHCN(bentoml.BentoService):
-    """Real-time inference service for DB-BHCN."""
-
-    _initialised = False
-
-    def init_fields(self):
-        """Initialise the necessary fields. This is not a constructor."""
-        self.model = self.artifacts.model
-        # Load service configuration JSON
-        self.monitoring_enabled = self.artifacts.config['monitoring_enabled']
-        self.pooled_feature_size = self.model.n_features_in_ // REFERENCE_SET_FEATURE_POOL
-
-        self._initialised = True
-
-    @bentoml.api(
-        input=JsonInput(),
-        batch=True,
-        mb_max_batch_size=64,
-        mb_max_latency=2000,
-    )
-    def predict(self, parsed_json_list: List[JsonSerializable]):
-        """Classify text to the trained hierarchy."""
-        if not self._initialised:
-            self.init_fields()
-        tokenized = [word_tokenize(j['text']) for j in parsed_json_list]
-        stemmed = [
-            ' '.join([stemmer.stem(word) if word not in STOP_WORDS else word for word in lst])
-            for lst in tokenized
-        ]
-        tfidf_encoding = model.steps[0].transform(stemmed)
-        scores = model.steps[1].steppredict_proba(tfidf_encoding)
-        predictions = [model.classes_[i] for i in np.argmax(scores, axis=1)]
-
-        if self.monitoring_enabled:
-            """
-            Create a 2D list contains the following content:
-            [:, 0]: leaf target names (left as zeroes)
-            [:, 1:n]: pooled features,
-            [:, n:]: leaf classification scores,
-            where n is the number of pooled features.
-            The first axis is the microbatch axis.
-            """
-            new_rows = np.zeros(
-                (len(texts), 1 + self.pooled_feature_size + len(self.pipeline.classes_)),
-                dtype=np.float64
-            )
-            new_rows[
-                :,
-                1:self.pooled_feature_size+1
-            ] = np.array([
-                np.average(
-                    tfidf_encoding[
-                        :,
-                        i*REFERENCE_SET_FEATURE_POOL:
-                        min((i+1)*REFERENCE_SET_FEATURE_POOL, len(scores))
-                    ]
-                )
-                for i in range(0, pooled_feature_size)
-            ])
-            new_rows[
-                :,
-                self.pooled_feature_size+1:
-            ] = scores
-            requests.post(
-                "http://{}:{}/iterate".format(EVIDENTLY_HOST, EVIDENTLY_PORT),
-                data=json.dumps({'data': new_rows.tolist()}),
-                headers={"content-type": "application/json"},
-            )
-        return predictionsfeatures[:, col_idx]
-            for col_idx in range(scores.shape[1]):
-                cols[self.pipeline.classes_[col_idx]] = scores[:, col_idx]
-            return pd.DataFrame(cols)
 
 As you can see, this method is very similar to the ``test`` method above - in fact, it calls ``test`` to get most the necessary data. It additionally pools and stores features since we shouldn't be tracking a ton of separate columns at once - too much overhead for too little gain in insight.
 
@@ -480,7 +373,8 @@ Next, we need to implement the service class. It will be a subclass of ``bentoml
 		    
 Lastly, we implement the actual predict() API handler as a method in that class, wrapped by a ``@bentoml.api`` decorator that defines the input type (for informing the outer BentoML web server) and microbatching specification.
 
-..code-block:: python
+.. code-block:: python
+	:dedent: 0
 
 		@bentoml.api(
 		    input=JsonInput(),
