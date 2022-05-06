@@ -1,6 +1,5 @@
 """Implementation of the DistilBERT+Linear model."""
 import os
-import yaml
 import pandas as pd
 import torch
 import numpy as np

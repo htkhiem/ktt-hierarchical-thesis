@@ -93,7 +93,7 @@ If your model directly takes in raw text from the datasets, simply skip this met
 Exporting
 ---------
 
-This part gives detail on how to implement the ``export`` method and the BentoService.
+This part gives detail on how to implement the two ``export_...`` methods and the BentoService.
 
 KTT models should be able to export themselves into 2 formats:
 
@@ -105,12 +105,10 @@ Your model should support both formats, but at the minimum, it should support on
 ONNX
 ~~~~
 
-Exporting to ONNX should be a simple process as it does not involve the rest of the system that much. Simply use the ONNX converter tool appropriate for your framework (for example, ``skl2onnx`` for ``sklearn`` and ``torch.onnx`` for PyTorch).
+Exporting to ONNX should be a simple process as it does not involve the rest of the system that much. In ``export_onnx``, simply use the ONNX converter tool appropriate for your framework (for example, ``skl2onnx`` for ``sklearn`` and ``torch.onnx`` for PyTorch). Once you have the ONNX graphs, write them to the paths passed to this function. If your model should be exported as one ONNX graph, export to the ``clasifier_path`` and leave ``encoder_path`` blank.
 
-By default, exported ONNX models should be saved at ``./outputs/<model name>_<dataset_name>/``. For example, a model named ``abc`` trained against a dataset named ``data001`` should export its ``.onnx`` graphs to ``./outputs/abc_data001``.
-
-BentoML
-~~~~~~~
+``export_bento_resources``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Exporting into a BentoML service is more involved, and also gives you more decisions to make. There are two main approaches regarding the format that you can export your model core into for your BentoService implementation to later use.
 
@@ -120,7 +118,7 @@ Exporting into a BentoML service is more involved, and also gives you more decis
 .. tip::
    KTT internally uses BentoML 0.13.1 (the LTS branch). You can find specific instructions for your framework in `their documentation <https://docs.bentoml.org/en/0.13-lts/frameworks.html>`_.
 
-The implementation for BentoML exporting is split into three parts: the ``svc_lts.py`` source file, the reference dataset's generation plus configuration files (optional), and the ``export`` method. The expected result after running the export script with this model would be a new BentoService in the ``./build`` folder with the following structure:
+The implementation for BentoML exporting is split into three parts: the ``svc_lts.py`` source file, the reference dataset's generation plus configuration files (optional), and the ``export_bento_resources`` method. The expected result after running the export script with this model would be a new BentoService in the ``./build`` folder with the following structure:
 
 .. code-block::
 
@@ -242,29 +240,19 @@ The resulting reference set must be in Parquet format (``.parquet``) named simil
 
 .. _model-export-general:
 
-The ``export`` method
-^^^^^^^^^^^^^^^^^^^^^
+The ``export_bento_resources`` method
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In the ``export`` method, if ``bento=True``, you should do the following:
+In this method, you should do the following:
 
-    1. If ``reference_set_path`` is passed, it means the user at the export script has enabled monitoring and there is a reference dataset available (monitoring is not possible without one, so if there isn't one, the export script will simply pass ``None``). Load in the ``evidently.yaml`` template file and write a list of scores column names to the ``prediction`` field. If you chose to follow the default reference dataset schema above, that would be a list of all leaf class names. Then, construct a ``dict`` (we'll call it ``config``) with the following contents:
+    1. Create a configuration dictionary (let's just call it ``config``). Write a list of scores column names to the ``prediction`` key. This is necessary to inform the to-be-bundled Evidently service of which columns to track in the reference dataset and the new data coming in from production. If you chose to follow the default reference dataset schema above, that would be a list of all leaf class names. 
 
-       - ``reference_set_path``: path to the reference dataset.
-       - ``grafana_dashboard_path``: path to the ``dashboard.json`` file. **Note:** since the export script is run from ``./``, specify the relative path from there, not from the model source file.
-       - ``evidently_config``: the ``dict`` containing the template config file's contents, with the above ``prediction`` field.
-
-    2. Initialise the service folder structure by calling ``utils.build.init_folder_structure(path, config)``, passing it the path to the built service and the above ``config`` dict object. It is recommended to use ``./build/<model_name>_<dataset_name>`` for the build path. This utility function will also return a path for you to save your BentoService to.
-
-       .. autoclass:: utils.build.init_folder_structure
-
-     If there is no reference dataset or monitoring is not enabled (i.e. ``reference_set_path is None``), simply pass only the path and leave the config parameter blank.
-
-    3. Initialise a BentoService instance (as in importing the above ``svc_lts.py`` file as a module and constructing the BentoService-based class within). Pack all necessary resources into its artifacts.
+    2. Initialise a BentoService instance (as in importing the above ``svc_lts.py`` file as a module and constructing the BentoService-based class within). Pack all necessary resources into its artifacts.
 
        - PyTorch modules should be JIT-traced using ``torch.jit.trace`` before packing into a ``PytorchArtifact``.
        - Configuration files or metadata should be packed as strings.
 
-    4. Save the BentoService to the path returned by ``utils.build.init_folder_structure(path)``.
+    3. Return that configuration dictionary and the BentoService instance.
 
 Specifying your hyperparameters (optional)
 ------------------------------------------
@@ -286,7 +274,7 @@ The model lists
 ~~~~~~~~~~~~~~~
 
 Edit ``./models/__init__.py`` and add your model to it. There are three places to do so:
-    1. First, import your model class (the one subclassing ``Model``). This allows the training and exporting code to shorten the import path to just ``from models import YourModelClass`` instead of ``from models.your_model.your_model import YourModelClass``. Refer to how the bundled models are imported to import your own.
+    1. First, import your model class (the one subclassing ``Model``, ``PyTorchModel`` or ``SklearnModel``). This allows the training and exporting code to shorten the import path to just ``from models import YourModelClass`` instead of ``from models.your_model.your_model import YourModelClass``. Refer to how the bundled models are imported to import your own.
     2. Then, add your model identifier (the model folder name) to the appropriate ``MODEL_LIST``. Currently, there is the ``PYTORCH_MODEL_LIST`` and ``SKLEARN_MODEL_LIST``.
 
         .. note::
@@ -294,67 +282,6 @@ Edit ``./models/__init__.py`` and add your model to it. There are three places t
             TODO: Add instructions for implementing a model outside of these frameworks.
 
     3. Lastly, add your model class name (not the folder name) to ``__all__``. If your model needs to expose special functions that are not available.
-
-The training script
-~~~~~~~~~~~~~~~~~~~
-
-Edit ``./train.py`` at the following places:
-
-    - Implement code to load and train your model depending on whether its identifier was in ``model_lst``. Existing code should act as a guideline. A general frame for a PyTorch model would look something like this:
-
-      .. code-block:: python
-
-         if 'model_name' in model_lst:
-             # If your model has hyperparameters in ./hyperparameters.json:
-             # config = init_config('model_name', 'Pretty display name')
-             ModelClass = __import__('models', globals(), locals(), [], 0).ModelClass
-             for dataset_name in dataset_lst:
-                (
-                    train_loader, val_loader, test_loader, hierarchy, config
-                ) = init_dataset(
-                    dataset_name, model_pytorch.get_loaders, config
-                )
-                model = ModelClass(hierarchy, config).to(device)
-                train_and_test(
-                    config,
-                    model,
-                    train_loader,
-                    val_loader,
-                    test_loader,
-                    metrics_func=model_pytorch.get_metrics,
-                    dry_run=dry_run,
-                    verbose=verbose,
-                    gen_reference=reference,
-                    dvc=dvc
-                )
-    - Optionally modify the Click documentation for the ``-m`` option to add your model's identifier and display name.
-
-The exporting script
-~~~~~~~~~~~~~~~~~~~~
-
-Edit ``./export.py`` at the following places:
-
-    - Implement code to load and export your model depending on whether its identifier was in ``model_lst``. Existing code should act as a guideline. A general frame for a PyTorch model would look something like this:
-
-      .. code-block:: python
-
-        if 'model_name' in model_lst:
-            click.echo('{}Exporting {}...{}'.format(
-                cli.BOLD, 'Pretty display name', cli.PLAIN))
-            ModelClass = __import__(
-                'models', globals(), locals(), [], 0).ModelClass
-            model = ModelClass.from_checkpoint(
-                get_path('model_name', dataset_name, best=best, time=time),
-            ).to(device)
-            if monitoring:
-                reference_set_path = get_path(
-                    'model_name', dataset_name, time=time, reference_set=True)
-                if reference_set_path is not None:
-                    model.export(dataset_name, bento, reference_set_path)
-                else:
-                    model.export(dataset_name, bento)
-
-    - Optionally modify the Click documentation for the ``-m`` option to add your model's identifier and display name.
 
 .. _test-run:
 

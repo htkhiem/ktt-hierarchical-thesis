@@ -129,8 +129,11 @@ In ``testmodel.py``, import the necessary libraries and define a concrete subcla
         def generate_reference_set(self, loader):
             pass
 
-        def export(self, dataset_name, bento=False):
-            pass
+		def export_onnx(self, classifier_path, encoder_path):
+			pass
+			
+		def export_bento_resources(self, svc_config={}):
+			pass
 
     if __name__ == "__main__":
         pass
@@ -521,165 +524,41 @@ For more information regarding naming and path specifications, please see :ref:`
 .. code-block:: python
     :dedent: 0
 
-        def export(
-                self, dataset_name, bento=False, reference_set_path=None
-        ):
-            self.eval()
-            # Create dummy input for tracing
-            batch_size = 1  # Dummy batch size. When exported, it will be dynamic
-            x = torch.randn(batch_size, 768, requires_grad=True).to(
-                self.device
-            )
-            if not bento:
-                    # Export to ONNX graphs.
-                    # KTT provides utilities for exporting trained DistilBERT instances.
-                export_trained(
-                    self.encoder,
-                    dataset_name,
-                    'testmodel',
-                )
-                # Prepare names and paths
-                name = '{}_{}'.format(
-                    'testmodel',
-                    dataset_name
-                )
-                path = 'output/{}/classifier/'.format(name)
-                if not os.path.exists(path):
-                    os.makedirs(path)
-                path += 'classifier.onnx'
-                # Clear previous versions
-                if os.path.exists(path):
-                    os.remove(path)
-                # Export into transformers model .bin format
-                # Since our model is minibatched, we have to make the first axis
-                # dynamic. In production, batch sizes can vary depending on load
-                # (or stay at 1 if no microbatching is available).
-                torch.onnx.export(
-                    self.classifier,
-                    x,
-                    path,
-                    export_params=True,
-                    opset_version=11,
-                    do_constant_folding=True,
-                    input_names=['input'],
-                    output_names=['output'],
-                    dynamic_axes={
-                        'input': {0: 'batch_size'},
-                        'output': {0: 'batch_size'}
-                    }
-                )
-                # Additionally export hierarchical metadata to the same folder.
-                self.classifier.hierarchy.to_json(
-                    "output/{}/hierarchy.json".format(name)
-                )
+		def export_onnx(self, classifier_path, encoder_path=None):
+		    initial_type = [('str_input', StringTensorType([None, 1]))]
+		    onx = to_onnx(
+		        self.pipeline, initial_types=initial_type, target_opset=11
+		    )
+		    # Export
+		    with open(classifier_path + 'classifier.onnx', "wb") as f:
+		        f.write(onx.SerializeToString())
 
-Exporting as a BentoService is more involved. We need to implement it to support an optional monitoring extension powered by the Evidently library. This will be run as a standalone server accepting new data from production to compare with the above reference dataset to compute feature and target drift. To ease this process, KTT has already implemented said standalone server to be customisable (meaning new models can simply write a configuration file to tailor it to their needs and capabilities), as well as a utility function for generating the resulting service folders and configuration files:
-
-.. autoclass:: utils.build.init_folder_structure
-    :noindex:
+Exporting as a BentoService is a bit more involved. We will implement it to support an optional monitoring extension powered by the Evidently library. This will be run as a standalone server accepting new data from production to compare with the above reference dataset to compute feature and target drift. To ease this process, KTT has already implemented said standalone server to be customisable (meaning new models can simply write a configuration file to tailor it to their needs and capabilities), as well as automating the file and folder logic for you. All you need to do is to produce two specific pieces of data: a configuration dictionary that lists out the features and classes this model has been trained on, and a fully packed BentoService instance.
 
 We will now use the above facilities to export our new model as a self-contained, standalone classification service.
 
 .. code-block:: python
     :dedent: 0
 
-            else:
-                # Export as BentoML service
-                build_path = 'build/testmodel_' + dataset_name.lower()
-                build_path_inference = ''
-                if reference_set_path is not None:
-                        # If a path to a reference dataset is available, export the
-                        # model as a service with monitoring capabilities.
-                    with open(
-                            'models/testmodel/bentoml/evidently.yaml', 'r'
-                    ) as evidently_template:
-                        config = yaml.safe_load(evidently_template)
-                        config['prediction'] = self.classifier.hierarchy.classes[
-                            self.classifier.hierarchy.level_offsets[-2]:
-                            self.classifier.hierarchy.level_offsets[-1]
-                        ]
-                    # Init folder structure, Evidently YAML and so on.
-                    build_path_inference = init_folder_structure(
-                        build_path,
-                        {
-                            'reference_set_path': reference_set_path,
-                            'grafana_dashboard_path':
-                                'models/testmodel/bentoml/dashboard.json',
-                            'evidently_config': config
-                        }
-                    )
-                else:
-                        # Init folder structure for a minimum system (no monitoring)
-                    build_path_inference = init_folder_structure(build_path)
-                # Initialise a BentoService instance - we'll come to this soon
-                svc = svc_lts.TestModel()
-                # Pack tokeniser along with encoder. Here we use KTT's DistilBERT
-                # facilities.
-                encoder = {
-                    'tokenizer': get_tokenizer(),
-                    'model': self.encoder
-                }
-                svc.pack('encoder', encoder)
-                svc.pack('classifier', torch.jit.trace(self.classifier, x))
-                svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
-                svc.pack('config', {
-                    'monitoring_enabled': reference_set_path is not None
-                })
-                # Export the BentoService to the correct path.
-                svc.save_to_dir(build_path_inference)
+		def export_bento_resources(self, svc_config={}):
+		    # Config for monitoring service
+		    config = {
+		        'prediction': self.classifier.hierarchy.classes[
+		            self.classifier.hierarchy.level_offsets[-2]:
+		            self.classifier.hierarchy.level_offsets[-1]
+		        ]
+		    }
+		    svc = svc_lts.Tfidf_LSGD()
+		    svc.pack('model', self.pipeline)
+		    svc.pack('config', svc_config)
+
+		    return config, svc
+
 
 Registering, testing & conclusion
 ---------------------------------
 
 With every part of your model implemented, now is the time to add it to the model list and implement some runner code to get the training and exporting script to use it smoothly. For this, you can refer to :ref:`model-register`.
-
-Adding the model to the training script is quite simple. You can follow implementations for bundled models and adapt them to your own. Below is a sample implementation:
-
-.. code-block:: python
-
-    if 'testmodel' in model_lst:
-    # If your model has hyperparameters in ./hyperparameters.json:
-    # config = init_config('testmodel', 'Test Model')
-    TestModel = __import__('models', globals(), locals(), [], 0).TestModel
-    for dataset_name in dataset_lst:
-        (
-            train_loader, val_loader, test_loader, hierarchy, config
-        ) = init_dataset(
-            dataset_name, model_pytorch.get_loaders, config
-        )
-        model = TestModel(hierarchy, config).to(device)
-        train_and_test(
-            config,
-            model,
-            train_loader,
-            val_loader,
-            test_loader,
-            metrics_func=model_pytorch.get_metrics,
-            dry_run=dry_run,
-            verbose=verbose,
-            gen_reference=reference,
-            dvc=dvc
-        )
-
-Similarly for the export script:
-
-.. code-block:: python
-
-    if 'testmodel' in model_lst:
-        click.echo('{}Exporting {}...{}'.format(
-            cli.BOLD, 'Test model', cli.PLAIN))
-        ModelClass = __import__(
-            'models', globals(), locals(), [], 0).TestModel
-        model = TestModel.from_checkpoint(
-            get_path('testmodel', dataset_name, best=best, time=time),
-        ).to(device)
-        if monitoring:
-            reference_set_path = get_path(
-                'testmodel', dataset_name, time=time, reference_set=True)
-            if reference_set_path is not None:
-                model.export(dataset_name, bento, reference_set_path)
-            else:
-                model.export(dataset_name, bento)
 
 Be sure to test out every option for your model before deploying to a production environment. Testing instructions can be found at :ref:`test-run`. Afterwards, design a Grafana dashboard and add it to the provisioning system to have your service automatically initialise Grafana right from the get-go.
 

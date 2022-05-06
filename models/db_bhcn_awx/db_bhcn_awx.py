@@ -1,9 +1,6 @@
 """Implementation of the DB-BHCN+AWX model."""
 import os
-import yaml
-
 import pandas as pd
-
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -12,7 +9,6 @@ from models import model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.encoders.distilbert import get_pretrained, get_tokenizer, \
     export_trained, DistilBertPreprocessor
-from utils.build import init_folder_structure
 from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 32
