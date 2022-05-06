@@ -10,7 +10,6 @@ from models import model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.encoders.distilbert import get_pretrained, get_tokenizer, \
     export_trained, DistilBertPreprocessor
-from utils.build import init_folder_structure
 from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 32
@@ -352,14 +351,53 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
         }
 
     def forward_with_features(self, ids, mask):
+        """Forward-propagate input to generate classification.
+
+        This version additionally returns pooled features from DistilBERT
+        for generating the reference set. By default, a kernel size and
+        stride of 32 is used, which means there are 24 features pooled from
+        the original 768 features.
+
+        Parameters
+        ----------
+        ids : torch.LongTensor of shape (batch_size, num_choices)
+             Indices of input sequence tokens in the vocabulary.
+        mask : torch.FloatTensor of shape (batch_size, num_choices), optional
+            Mask to avoid performing attention on padding token indices. Mask
+            values are 0 for real tokens and 1 for masked tokens such as pads.
+
+        Returns
+        -------
+        leaf_outputs : torch.FloatTensor of size (batch_size, leaf_class_count)
+            Scores for the leaf layer. Only the leaf layer is returned
+            to as Evidently doesn't seem to play well with multilabel tasks.
+        pooled_features: torch.FloatTensor of shape(batch_size, 24)
+        """
         encoder_outputs = self.encoder(ids, mask)[0][:, 0, :]
         local_outputs = self.classifier(
             encoder_outputs
         )
-            
         return local_outputs, self.pool(encoder_outputs)
 
     def gen_reference_set(self, loader):
+        """Generate an Evidently-compatible reference dataset.
+
+        Due to the data drift tests' computational demands, we only record
+        average-pooled features.
+
+        Parameters
+        ----------
+        loader: torch.utils.data.DataLoader
+            A DataLoader wrapping around a dataset to become the reference
+            dataset (ideally the test set).
+
+        Returns
+        -------
+        reference_set: pandas.DataFrame
+            An Evidently-compatible dataset. Numerical feature column names are
+            simple stringified numbers from 0 to 23 (for the default kernel/
+            stride of 32), while targets are leaf classes' string names.
+        """
         self.eval()
         all_pooled_features = np.empty((0, POOLED_FEATURE_SIZE))
         all_targets = np.empty((0), dtype=int)
@@ -393,125 +431,82 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
             ] = all_outputs[:, col_idx]
         return pd.DataFrame(cols)
 
-
-    def export(
-            self, dataset_name, bento=False, reference_set_path=None
-    ):
-        """Export model to ONNX/Bento.
-
-        If ONNX is selected (i.e. bento=False), then both the DistilBERT
-        encoder (with tokeniser) and classifier head are exported separately
-        as two ONNX models. If BentoML is selected instead, they will be
-        serialised using BentoML's default serialisation facilities, and
-        a complete BentoService will be built.
+    def export_onnx(self, classifier_path, encoder_path=None):
+        """Export this model as two ONNX graphs.
 
         Parameters
         ----------
-        dataset_name: str
-            Name of the dataset this instance was trained on. Use the folder
-            name of the intermediate version in the datasets folder.
-        bento: bool
-            Whether to export this model as a BentoML service or not.
-        reference_set_path: str
-            Path to an optional reference dataset compatible with Evidently's
-            schema. It will be copied to the built service's folder. Only
-            applicable when Bento exporting is selected.
-            If not passed, the generated BentoService will not be configured to
-            work with Evidently.
+        classifier_path: str
+            Where to write the classifier head to.
+        encoder_path: None
+            Where to write the encoder (DistilBERT) to.
         """
         self.eval()
-        # Create dummy input for tracing
-        batch_size = 1  # Dummy batch size. When exported, it will be dynamic
-        x = torch.randn(batch_size, 768, requires_grad=True).to(
+        if encoder_path is None:
+            raise RuntimeError('This model requires an encoder path')
+        export_trained(
+            self.encoder,
+            encoder_path
+        )
+        x = torch.randn(1, 768, requires_grad=True).to(
             self.device
         )
-        if not bento:
-                # Export to ONNX graphs.
-                # KTT provides utilities for exporting trained DistilBERT instances.
-            export_trained(
-                self.encoder,
-                dataset_name,
-                'db_linear',
-            )
-            # Prepare names and paths
-            name = '{}_{}'.format(
-                'db_linear',
-                dataset_name
-            )
-            path = 'output/{}/classifier/'.format(name)
-            if not os.path.exists(path):
-                os.makedirs(path)
-            path += 'classifier.onnx'
-            # Clear previous versions
-            if os.path.exists(path):
-                os.remove(path)
-            # Export into transformers model .bin format
-            # Since our model is minibatched, we have to make the first axis
-            # dynamic. In production, batch sizes can vary depending on load
-            # (or stay at 1 if no microbatching is available).
-            torch.onnx.export(
-                self.classifier,
-                x,
-                path,
-                export_params=True,
-                opset_version=11,
-                do_constant_folding=True,
-                input_names=['input'],
-                output_names=['output'],
-                dynamic_axes={
-                    'input': {0: 'batch_size'},
-                    'output': {0: 'batch_size'}
-                }
-            )
-            # Additionally export hierarchical metadata to the same folder.
-            self.hierarchy.to_json(
-                "output/{}/hierarchy.json".format(name)
-            )
-        else:
-            # Export as BentoML service
-            build_path = 'build/db_linear_' + dataset_name.lower()
-            build_path_inference = ''
-            if reference_set_path is not None:
-                    # If a path to a reference dataset is available, export the
-                    # model as a service with monitoring capabilities.
-                with open(
-                        'models/db_linear/bentoml/evidently.yaml', 'r'
-                ) as evidently_template:
-                    config = yaml.safe_load(evidently_template)
-                    config['prediction'] = self.hierarchy.classes[
-                        self.hierarchy.level_offsets[-2]:
-                        self.hierarchy.level_offsets[-1]
-                    ]
-                # Init folder structure, Evidently YAML and so on.
-                build_path_inference = init_folder_structure(
-                    build_path,
-                    {
-                        'reference_set_path': reference_set_path,
-                        'grafana_dashboard_path':
-                            'models/db_linear/bentoml/dashboard.json',
-                        'evidently_config': config
-                    }
-                )
-            else:
-                    # Init folder structure for a minimum system (no monitoring)
-                build_path_inference = init_folder_structure(build_path)
-            # Initialise a BentoService instance - we'll come to this soon
-            svc = svc_lts.DB_Linear()
-            # Pack tokeniser along with encoder. Here we use KTT's DistilBERT
-            # facilities.
-            encoder = {
-                'tokenizer': get_tokenizer(),
-                'model': self.encoder
+        # Export into transformers model .bin format
+        torch.onnx.export(
+            self.classifier,
+            x,
+            classifier_path + 'classifier.onnx',
+            export_params=True,
+            opset_version=11,
+            do_constant_folding=True,
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'}
             }
-            svc.pack('encoder', encoder)
-            svc.pack('classifier', torch.jit.trace(self.classifier, x))
-            svc.pack('hierarchy', self.hierarchy.to_dict())
-            svc.pack('config', {
-                'monitoring_enabled': reference_set_path is not None
-            })
-            # Export the BentoService to the correct path.
-            svc.save_to_dir(build_path_inference)
+        )
+        self.classifier.hierarchy.to_json(
+            "{}/hierarchy.json".format(classifier_path)
+        )
 
+    def export_bento_resources(self, svc_config={}):
+        """Export the necessary resources to build a BentoML service of this \
+        model.
+
+        Parameters
+        ----------
+        svc_config: dict
+            Additional configuration to pack into the BentoService.
+
+        Returns
+        -------
+        config: dict
+            Evidently configuration data specific to this instance.
+        svc: BentoService subclass
+            A fully packed BentoService.
+        """
+        self.eval()
+        # Sample input
+        x = torch.randn(1, 768, requires_grad=True).to(self.device)
+        # Config for monitoring service
+        config = {
+            'prediction': self.classifier.hierarchy.classes[
+                self.classifier.hierarchy.level_offsets[-2]:
+                self.classifier.hierarchy.level_offsets[-1]
+            ]
+        }
+        svc = svc_lts.DB_Linear()
+        # Pack tokeniser along with encoder
+        encoder = {
+            'tokenizer': get_tokenizer(),
+            'model': self.encoder
+        }
+        svc.pack('encoder', encoder)
+        svc.pack('classifier', torch.jit.trace(self.classifier, x))
+        svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
+        svc.pack('config', svc_config)
+        return config, svc
 
     def to(self, device=None):
         """

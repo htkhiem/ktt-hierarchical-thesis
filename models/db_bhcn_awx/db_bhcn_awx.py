@@ -703,135 +703,82 @@ class DB_BHCN_AWX(model_pytorch.PyTorchModel, torch.nn.Module):
             ] = all_outputs[:, col_idx]
         return pd.DataFrame(cols)
 
-    def export(
-            self, dataset_name, bento=False, reference_set_path=None
-    ):
-        """Export model to ONNX/Bento.
-
-        The classifier head (DB-BHCN+AWX) is always exported as ONNX (which
-        is then loaded into BentoML as an `onnxruntime` runner). The DistilBERT
-        encoder is either exported as ONNX or straight to BentoML.
+    def export_onnx(self, classifier_path, encoder_path=None):
+        """Export this model as two ONNX graphs.
 
         Parameters
         ----------
-        dataset_name: str
-            Name of the dataset this instance was trained on. Use the folder
-            name of the intermediate version in the datasets folder.
-
-        bento: bool
-            Whether to export this model as a BentoML model or not. If true,
-            the DistilBERT encoder will be directly packaged into a BentoML
-            model and the entire model will be saved in your local BentoML
-            store. The classifier is always exported as ONNX.
-        reference_set: pandas.DataFrame
-            An optional reference dataset compatible with Evidently's
-            schema. It will be serialised into JSON and packed as part of this
-            model's metadata. Only applicable when Bento exporting is selected.
+        classifier_path: str
+            Where to write the classifier head to.
+        encoder_path: None
+            Where to write the encoder (DistilBERT) to.
         """
-
         self.eval()
-
-        # Create dummy input for tracing
-        batch_size = 1  # Dummy batch size. When exported, it will be dynamic
-        x = torch.randn(batch_size, 768, requires_grad=True).to(
+        if encoder_path is None:
+            raise RuntimeError('This model requires an encoder path')
+        export_trained(
+            self.encoder,
+            encoder_path
+        )
+        x = torch.randn(1, 768, requires_grad=True).to(
             self.device
         )
-        print('1')
-        if not bento:
-            print('2')
-                # Export to ONNX graphs.
-                # KTT provides utilities for exporting trained DistilBERT instances.
-            export_trained(
-                self.encoder,
-                dataset_name,
-                'db_bhcn_awx',
-            )
-            print('3')
-            # Prepare names and paths
-            name = '{}_{}'.format(
-                'db_bhcn_awx',
-                dataset_name
-            )
-            print('before path')
-            path = 'output/{}/classifier/'.format(name)
-            print('after path')
-            if not os.path.exists(path):
-                os.makedirs(path)
-            path += 'classifier.onnx'
-            # Clear previous versions
-            print('print after after')
-            if os.path.exists(path):
-                os.remove(path)
-            # Export into transformers model .bin format
-            # Since our model is minibatched, we have to make the first axis
-            # dynamic. In production, batch sizes can vary depending on load
-            # (or stay at 1 if no microbatching is available).
-            torch.onnx.export(
-                self.classifier,
-                x,
-                path,
-                export_params=True,
-                opset_version=11,
-                do_constant_folding=True,
-                input_names=['input'],
-                output_names=['output'],
-                dynamic_axes={
-                    'input': {0: 'batch_size'},
-                    'output': {0: 'batch_size'}
-                }
-            )
-            # Additionally export hierarchical metadata to the same folder.
-            self.classifier.hierarchy.to_json(
-                "output/{}/hierarchy.json".format(name)
-            )
-        else:
-            print('5')
-            # Export as BentoML service
-            build_path = 'build/db_bhcn_awx_' + dataset_name.lower()
-            build_path_inference = ''
-            if reference_set_path is not None:
-                    # If a path to a reference dataset is available, export the
-                    # model as a service with monitoring capabilities.
-                with open(
-                        'models/db_bhcn_awx/bentoml/evidently.yaml', 'r'
-                ) as evidently_template:
-                    print('6')
-                    config = yaml.safe_load(evidently_template)
-                    config['prediction'] = self.classifier.hierarchy.classes[
-                        self.classifier.hierarchy.level_offsets[-2]:
-                        self.classifier.hierarchy.level_offsets[-1]
-                    ]
-                # Init folder structure, Evidently YAML and so on.
-                print('7')
-                build_path_inference = init_folder_structure(
-                    build_path,
-                    {
-                        'reference_set_path': reference_set_path,
-                        'grafana_dashboard_path':
-                            'models/db_bhcn_awx/bentoml/dashboard.json',
-                        'evidently_config': config
-                    }
-                )
-                print('8')
-            else:
-                # Init folder structure for a minimum system (no monitoring)
-                build_path_inference = init_folder_structure(build_path)
-            # Initialise a BentoService instance - we'll come to this soon
-            svc = svc_lts.DB_BHCN_AWX()
-            # Pack tokeniser along with encoder. Here we use KTT's DistilBERT
-            # facilities.
-            encoder = {
-                'tokenizer': get_tokenizer(),
-                'model': self.encoder
+        # Export into transformers model .bin format
+        torch.onnx.export(
+            self.classifier,
+            x,
+            classifier_path + 'classifier.onnx',
+            export_params=True,
+            opset_version=11,
+            do_constant_folding=True,
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'}
             }
-            svc.pack('encoder', encoder)
-            svc.pack('classifier', torch.jit.trace(self.classifier, x))
-            svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
-            svc.pack('config', {
-                'monitoring_enabled': reference_set_path is not None
-            })
-            # Export the BentoService to the correct path.
-            svc.save_to_dir(build_path_inference)
+        )
+        self.classifier.hierarchy.to_json(
+            "{}/hierarchy.json".format(classifier_path)
+        )
+
+    def export_bento_resources(self, svc_config={}):
+        """Export the necessary resources to build a BentoML service of this \
+        model.
+
+        Parameters
+        ----------
+        svc_config: dict
+            Additional configuration to pack into the BentoService.
+
+        Returns
+        -------
+        config: dict
+            Evidently configuration data specific to this instance.
+        svc: BentoService subclass
+            A fully packed BentoService.
+        """
+        self.eval()
+        # Sample input
+        x = torch.randn(1, 768, requires_grad=True).to(self.device)
+        # Config for monitoring service
+        config = {
+            'prediction': self.classifier.hierarchy.classes[
+                self.classifier.hierarchy.level_offsets[-2]:
+                self.classifier.hierarchy.level_offsets[-1]
+            ]
+        }
+        svc = svc_lts.DB_BHCN_AWX()
+        # Pack tokeniser along with encoder
+        encoder = {
+            'tokenizer': get_tokenizer(),
+            'model': self.encoder
+        }
+        svc.pack('encoder', encoder)
+        svc.pack('classifier', torch.jit.trace(self.classifier, x))
+        svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
+        svc.pack('config', svc_config)
+        return config, svc
 
     def to(self, device=None):
         """
