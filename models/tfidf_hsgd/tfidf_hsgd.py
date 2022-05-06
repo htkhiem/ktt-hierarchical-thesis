@@ -4,15 +4,18 @@ import joblib
 
 from sklearn import preprocessing, linear_model
 from sklearn.pipeline import make_pipeline, Pipeline
-from sklearn_hierarchical_classification.classifier import HierarchicalClassifier
+from sklearn_hierarchical_classification.classifier import \
+    HierarchicalClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
+
+from utils.encoders.snowballstemmer import SnowballStemmerPreprocessor
 
 import bentoml
 
-from models import model
+from models import model_sklearn
 
 
-class Tfidf_HSGD(model.Model):
+class Tfidf_HSGD(model_sklearn.SklearnModel):
     """A wrapper class around the scikit-learn-based tfidf-HSGD model.
 
     It exposes the same method signatures as the PyTorch-based models for
@@ -67,6 +70,11 @@ class Tfidf_HSGD(model.Model):
         instance = cls()
         instance.pipeline = joblib.load(path)
         return instance
+
+    @classmethod
+    def get_preprocessor(cls, config):
+        """Return a SnowballStemmere instance for this model."""
+        return SnowballStemmerPreprocessor(config)
 
     def save(self, path, optim=None, dvc=True):
         """Serialise the pipeline into a pickle.

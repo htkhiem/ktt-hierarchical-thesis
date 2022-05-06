@@ -5,7 +5,7 @@ Every model implementation in this framework is a subclass of this.
 This file also serves as documentation for future reference.
 """
 from abc import ABC, abstractmethod
-
+from utils.encoders.encoder import BasePreprocessor
 
 class Model(ABC):
     """Abstract model class for all frameworks.
@@ -18,6 +18,21 @@ class Model(ABC):
     forward propagation. This method needs not be public but should be used
     within the training and testing methods for consistency.
     """
+
+    @classmethod
+    def get_preprocessor(cls, config):
+        """Return an instance of this model's preferred preprocessor."""
+        return BasePreprocessor(config)
+
+    @classmethod
+    def get_dataloader_func(cls):
+        """Return the function that generates dataloaders for this model."""
+        pass
+
+    @classmethod
+    def get_metrics_func(cls):
+        """Return the metris function compatible with this model."""
+        pass
 
     @classmethod
     @abstractmethod
@@ -138,22 +153,36 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def export(self, dataset_name, bento=False, reference_set_path=None):
+    def export_onnx(self, classifier_path, encoder_path=None):
         """
-        Export current instance to ONNX or Bento.
+        Export current instance to ONNX. More than one graph can be created.
+        It is recommended that you export the classifier head and the encoder
+        separately into the two given paths.
 
         Parameters
         ----------
-        dataset_name: str
-            Name of the dataset this instance was trained on. Use the folder
-            name of the intermediate version in the datasets folder.
-        bento: bool
-            Whether to export this model as a BentoML service or not.
-        reference_set_path: str
-            Path to an optional reference dataset compatible with Evidently's
-            schema. It will be copied to the built service's folder. Only
-            applicable when Bento exporting is selected.
-            If not passed, the generated BentoService will not be configured to
-            work with Evidently.
+        classifier_path: str
+            Where to write the classifier head to.
+        encoder_path: None
+            Where to write the encoder (DistilBERT) to.
+        """
+        pass
+
+    @abstractmethod
+    def export_bento_resources(self, svc_config={}):
+        """Export the necessary resources to build a BentoML service of this \
+        model.
+
+        Parameters
+        ----------
+        svc_config: dict
+            Additional configuration to pack into the BentoService.
+
+        Returns
+        -------
+        config: dict
+            Evidently configuration data specific to this instance.
+        svc: BentoService subclass
+            A fully packed BentoService.
         """
         pass

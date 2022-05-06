@@ -1,25 +1,23 @@
 """Implementation of the DistilBERT+Linear model."""
 import os
-import shutil
 import yaml
 import pandas as pd
 import torch
 import numpy as np
 from tqdm import tqdm
-import bentoml
 
-from models import model, model_pytorch
+from models import model_pytorch
 from utils.hierarchy import PerLevelHierarchy
-from utils.distilbert import get_pretrained, get_tokenizer, export_trained
+from utils.encoders.distilbert import get_pretrained, get_tokenizer, \
+    export_trained, DistilBertPreprocessor
 from utils.build import init_folder_structure
 from .bentoml import svc_lts
-from sklearn import metrics
-import logging
+
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
 
-class DB_Linear(model.Model, torch.nn.Module):
+class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
     """Wrapper class combining DistilBERT with the above module."""
 
     def __init__(
@@ -52,7 +50,7 @@ class DB_Linear(model.Model, torch.nn.Module):
 
     @classmethod
     def from_checkpoint(cls, path):
-        """Construct model from saved checkpoints as produced by previous
+        """Construct model from saved checkpoints as produced by previous\
         instances of this model.
 
         Parameters
@@ -84,6 +82,11 @@ class DB_Linear(model.Model, torch.nn.Module):
             checkpoint['classifier_state_dict']
         )
         return instance
+
+    @classmethod
+    def get_preprocessor(cls, config):
+        """Return a DistilBERT preprocessor instance for this model."""
+        return DistilBertPreprocessor(config)
 
     def forward(self, ids, mask):
         """Forward-propagate tokeniser input to generate classification.

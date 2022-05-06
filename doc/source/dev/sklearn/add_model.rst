@@ -17,7 +17,7 @@ Scikit-learn model module structure
 
 Each sklearn model module ('module' for short) in KTT is a self-contained collection of implemented source code, metadata and configuration files. A module defines its own training, checkpointing and exporting procedures. It might also optionally implement a  BentoML service and configuration files for live inference using the integrated BentoML-powered inference system and monitoring using Prometheus/Grafana. The general folder tree of an sklearn model is as detailed in :ref:`model-struct`.
 
-The source implementation itself must subclass the abstract ``Model`` class (see :ref:`model-class`), like in any other framework.
+The source implementation itself must subclass the abstract ``SklearnModel`` class, which subclasses the abstract ``Model`` class (see :ref:`model-class`) pre-implements two of the abstract methods for you (``get_dataloader_func`` and ``get_metrics_func``).
 
 Scikit-learn utilities
 ----------------------
@@ -66,25 +66,31 @@ Implementing the model
 
 From here on we will refer to files using their paths in relative to the ``testmodel`` folder.
 
-In ``testmodel.py``, import the necessary libraries and define a concrete subclass of the ``Model`` abstract class:
+In ``testmodel.py``, import the necessary libraries and define a concrete subclass of the ``SklearnModel`` abstract class:
 
 .. code-block:: python
 
-    import os
-    import joblib
+	import os
+	import joblib
+	import yaml
 
-    from sklearn import preprocessing, linear_model
-    from sklearn.pipeline import Pipeline
+	import numpy as np
+	import pandas as pd
 
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from skl2onnx import to_onnx
-    from skl2onnx.common.data_types import StringTensorType
-    import bentoml
+	from sklearn import preprocessing, linear_model
+	from sklearn.pipeline import Pipeline
 
-    from models import model
+	from sklearn.feature_extraction.text import TfidfVectorizer
+	from skl2onnx import to_onnx
+	from skl2onnx.common.data_types import StringTensorType
+
+	from models import model_sklearn
+	from utils.encoders.snowballstemmer import SnowballStemmerPreprocessor
+	from utils.build import init_folder_structure
+	from .bentoml import svc_lts
 
 
-    class TestModel(model.Model):
+    class TestModel(model_sklearn.SklearnModel):
         """A wrapper class around the scikit-learn-based test model.
 
         It's basically a replica of the Tfidf-LeafSGD model bundled with KTT.
@@ -96,6 +102,10 @@ In ``testmodel.py``, import the necessary libraries and define a concrete subcla
         @classmethod
         def from_checkpoint(cls, path):
             pass
+            
+        @classmethod
+        def get_preprocessor(cls, config):
+        		pass
 
         def save(self, path, optim=None, dvc=True):
             pass
@@ -212,6 +222,18 @@ For Scikit-learn models, again the checkpoint already contains the code. In othe
 
 Doing it this way allows us to reuse the DVC handling implemented in ``cls.load()``.
 
+``get_preprocessor``
+^^^^^^^^^^^^^^^^^^^^
+For optimum performance with tf-idf vectorisers, we will stem the words before passing them to this model. KTT provides a preprocessor for this, called ``SnowballStemmerPreprocessor``, which as its name suggests, borrows NLTK's SnowballStemmer facilities.
+
+.. code-block:: python
+    :dedent: 0
+
+		@classmethod
+		def get_preprocessor(cls, config):
+		    """Return a SnowballStemmere instance for this model."""
+		    return SnowballStemmerPreprocessor(config)
+
 ``fit``
 ^^^^^^^
 
@@ -250,33 +272,43 @@ In this implementation, we'll also output a fifth key, called ``encodings``. As 
     :dedent: 0
 
         def test(self, loader, return_encodings=False):
-            y_avg = preprocessing.label_binarize(
-                loader[1],
-                classes=self.pipeline.classes_
-            )
-            tfidf_encoding = self.pipeline.steps[0].transform(loader[0])
-            scores = self.pipeline.steps[1](tfidf_encoding)
-            predictions = [self.pipeline.classes_[i] for i in np.argmax(scores, axis=1)]
+		    y_avg = preprocessing.label_binarize(
+		        loader[1],
+		        classes=self.pipeline.classes_
+		    )
+		    tfidf_encoding = self.pipeline.steps[0][1].transform(loader[0])
+		    scores = self.pipeline.steps[1][1].predict_proba(tfidf_encoding)
+		    predictions = [
+		        self.pipeline.classes_[i]
+		        for i in np.argmax(scores, axis=1)
+		    ]
 
-            res = {
-                'targets': loader[1],
-                'targets_b': y_avg,
-                'predictions': predictions,
-                'scores': scores,
-            }
-            if return_encodings:
-                # Average-pool encodings
-                res['encodings'] = np.array([
-                    np.average(
-                        tfidf_encoding[
-                            :,
-                            i*REFERENCE_SET_FEATURE_POOL:
-                            min((i+1)*REFERENCE_SET_FEATURE_POOL, len(scores))
-                        ]
-                    )
-                    for i in range(0, pooled_feature_size)
-                ])
-            return res
+		    res = {
+		        'targets': loader[1],
+		        'targets_b': y_avg,
+		        'predictions': predictions,
+		        'scores': scores,
+		    }
+		    if return_encodings:
+		        pooled_feature_size = len(self.pipeline.steps[0][1].vocabulary_) \
+		            // REFERENCE_SET_FEATURE_POOL
+		        # Average-pool encodings
+		        tfidf_encoding_dense = tfidf_encoding.toarray()
+		        res['encodings'] = np.array([
+		            [
+		                np.average(
+		                    tfidf_encoding_dense[
+		                        j,
+		                        i*REFERENCE_SET_FEATURE_POOL:
+		                        min((i+1)*REFERENCE_SET_FEATURE_POOL, len(scores))
+		                    ]
+		                )
+		                for i in range(0, pooled_feature_size)
+		            ]
+		            for j in range(tfidf_encoding_dense.shape[0])
+		        ])
+		    return res
+
 
 ``gen_reference_set``
 ^^^^^^^^^^^^^^^^^^^^^
@@ -285,21 +317,27 @@ This is where we generate the reference dataset for production-time model perfor
 
 Our goal is to create a Pandas dataframe with the columns detailed in :ref:`reference-set`, that is, one column for every feature (titled with a stringified number starting from 0), then one column for every leaf label's classification score (titled with the label names).
 
+There's a catch, however: Since this model runs without using the JSON, it only knows of internal indices instead of textual label names. In other words, we will have name collisions (against the feature column names, which are also numbers). To circumvent this, we spice up the terminology by prepending some letters to these names. 'C' for labels and 'F' for features should work well.
+
 .. code-block:: python
     :dedent: 0
 
         def gen_reference_set(self, loader):
-            results = self.test(loader, return_encodings=True)
-            pooled_features = results['encodings']
-            scores = results['scores']
-            pooled_feature_size = self.pipeline.n_features_in_ // REFERENCE_SET_FEATURE_POOL
-            targets = loader[1]
-            scores = result['scores']
-            cols = {
-                'targets': targets,
-            }
-            for col_idx in range(pooled_features[1]):
-                cols[str(col_idx)] = pooled_"""Service file for Tfidf-LeafSGD."""
+		    results = self.test(loader, return_encodings=True)
+		    pooled_features = results['encodings']
+		    scores = results['scores']
+		    targets = loader[1]
+		    scores = results['scores']
+		    cols = {
+		        'targets': targets,
+		    }
+		    for col_idx in range(pooled_features.shape[1]):
+		        cols['F' + str(col_idx)] = pooled_features[:, col_idx]
+		    for col_idx in range(scores.shape[1]):
+		        cols['C' + str(self.pipeline.classes_[col_idx])] =\
+		            scores[:, col_idx]
+		    return pd.DataFrame(cols)
+
 
 As you can see, this method is very similar to the ``test`` method above - in fact, it calls ``test`` to get most the necessary data. It additionally pools and stores features since we shouldn't be tracking a ton of separate columns at once - too much overhead for too little gain in insight.
 
@@ -328,6 +366,7 @@ First, we import all the dependencies needed at inference time and read a few en
 	from bentoml.service.artifacts.common import JSONArtifact
 	from bentoml.types import JsonSerializable
 
+	import nltk
 	from nltk.corpus import stopwords
 	from nltk.stem.snowball import SnowballStemmer
 	from nltk.tokenize import word_tokenize

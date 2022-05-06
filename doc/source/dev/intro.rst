@@ -51,11 +51,13 @@ With that out of the way, we will now deep-dive into how to implement each part 
 The model itself
 ----------------
 
-Every model must subclass ``models.model.Model``, which serves as the baseline requirement, or the minimum set of features a model must implement so they could be used with KTT's training and exporting facilities.
+Every model must subclass a framework-specific abstract model class, all of which in turn subclass ``models.model.Model``. This serves as the baseline requirement, or the minimum set of features a model must implement so they could be used with KTT's training and exporting facilities.
 
 .. autoclass:: models.model.Model
    :members:
    :special-members:
+
+Unless you are implementing your model in a framework other than PyTorch or Scikit-learn, you need not bother with ``get_dataloader_func`` and ``get_metrics_func``. The rest will be detailed below.
 
 Checkpointing
 -------------
@@ -75,6 +77,18 @@ In other words, the checkpoint name is ``best | last`` plus an ISO8601 datetime 
 
 .. note::
    Models that do not generate in-progress checkpoints (such as Scikit-learn models whose training process is a simple blocking ``fit()`` call) can produce their only checkpoint labelled as either ``best`` or ``last``. However, since the export script defaults to looking for ``best`` checkpoints, it would be more convenient to use ``best``. This would allow you to call the export script for these models without having to specify an additional option at the export script.
+
+Preprocessing needs
+-------------------
+Should your model require the dataset to be preprocessed in any way (for example, tokenisation for DistilBERT and stemming for simple term-based models), implement such logic by subclassing the ``BasePreprocessor`` class in ``utils/encoders/encoder.py``:
+
+.. autoclass:: utils.encoders.encoder.BasePreprocessor
+   :members:
+   :special-members:
+   
+With your logic implemented, instruct your model to use it by implementing the ``get_preprocessor`` method. This method returns an instance of your preprocessor class and will be called on every new dataset loading. That instance will be used to preprocess that dataset before its data is fed to your model.
+
+If your model directly takes in raw text from the datasets, simply skip this method. Its default implementation in the ``Model`` class simply returns an instance of the above ``BasePreprocessor`` which does nothing aside from putting your input text in a dictionary at key ``text``.
 
 Exporting
 ---------

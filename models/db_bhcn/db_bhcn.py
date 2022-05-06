@@ -1,6 +1,5 @@
 """Implementation of the DB-BHCN model."""
 import os
-import shutil
 import yaml
 
 import pandas as pd
@@ -9,9 +8,10 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
-from models import model, model_pytorch
+from models import model_pytorch
 from utils.hierarchy import PerLevelHierarchy
-from utils.distilbert import get_pretrained, get_tokenizer, export_trained
+from utils.encoders.distilbert import get_pretrained, get_tokenizer, \
+    export_trained, DistilBertPreprocessor
 from utils.build import init_folder_structure
 from .bentoml import svc_lts
 
@@ -107,7 +107,7 @@ class BHCN(torch.nn.Module):
         return self
 
 
-class DB_BHCN(model.Model, torch.nn.Module):
+class DB_BHCN(model_pytorch.PyTorchModel, torch.nn.Module):
     """The whole DB-BHCN model, DistilBERT included."""
 
     def __init__(
@@ -136,6 +136,11 @@ class DB_BHCN(model.Model, torch.nn.Module):
         )
         self.config = config
         self.device = 'cpu'  # default
+
+    @classmethod
+    def get_preprocessor(cls, config):
+        """Return a DistilBERT preprocessor instance for this model."""
+        return DistilBertPreprocessor(config)
 
     @classmethod
     def from_checkpoint(cls, path):
@@ -617,109 +622,82 @@ class DB_BHCN(model.Model, torch.nn.Module):
             ] = all_outputs[:, col_idx]
         return pd.DataFrame(cols)
 
-    def export(
-            self, dataset_name, bento=False, reference_set_path=None
-    ):
-        """Export model to ONNX/Bento.
-
-        If ONNX is selected (i.e. bento=False), then both the DistilBERT
-        encoder (with tokeniser) and classifier head are exported separately
-        as two ONNX models. If BentoML is selected instead, they will be
-        serialised using BentoML's default serialisation facilities, and
-        a complete BentoService will be built.
+    def export_onnx(self, classifier_path, encoder_path=None):
+        """Export this model as two ONNX graphs.
 
         Parameters
         ----------
-        dataset_name: str
-            Name of the dataset this instance was trained on. Use the folder
-            name of the intermediate version in the datasets folder.
-        bento: bool
-            Whether to export this model as a BentoML service or not.
-        reference_set_path: str
-            Path to an optional reference dataset compatible with Evidently's
-            schema. It will be copied to the built service's folder. Only
-            applicable when Bento exporting is selected.
-            If not passed, the generated BentoService will not be configured to
-            work with Evidently.
+        classifier_path: str
+            Where to write the classifier head to.
+        encoder_path: None
+            Where to write the encoder (DistilBERT) to.
         """
         self.eval()
-        # Create dummy input for tracing
-        batch_size = 1  # Dummy batch size. When exported, it will be dynamic
-        x = torch.randn(batch_size, 768, requires_grad=True).to(
+        if encoder_path is None:
+            raise RuntimeError('This model requires an encoder path')
+        export_trained(
+            self.encoder,
+            encoder_path
+        )
+        x = torch.randn(1, 768, requires_grad=True).to(
             self.device
         )
-        if not bento:
-            export_trained(
-                self.encoder,
-                dataset_name,
-                'db_bhcn',
-            )
-            name = '{}_{}'.format(
-                'db_bhcn',
-                dataset_name
-            )
-            path = 'output/{}/classifier/'.format(name)
-            if not os.path.exists(path):
-                os.makedirs(path)
-
-            path += 'classifier.onnx'
-            # Clear previous versions
-            if os.path.exists(path):
-                os.remove(path)
-            # Export into transformers model .bin format
-            torch.onnx.export(
-                self.classifier,
-                x,
-                path,
-                export_params=True,
-                opset_version=11,
-                do_constant_folding=True,
-                input_names=['input'],
-                output_names=['output'],
-                dynamic_axes={
-                    'input': {0: 'batch_size'},
-                    'output': {0: 'batch_size'}
-                }
-            )
-            self.classifier.hierarchy.to_json(
-                "output/{}/hierarchy.json".format(name)
-            )
-        else:
-            build_path = 'build/db_bhcn_' + dataset_name.lower()
-            build_path_inference = ''
-            if reference_set_path is not None:
-                with open(
-                        'models/db_bhcn/bentoml/evidently.yaml', 'r'
-                ) as evidently_template:
-                    config = yaml.safe_load(evidently_template)
-                    config['prediction'] = self.classifier.hierarchy.classes[
-                        self.classifier.hierarchy.level_offsets[-2]:
-                        self.classifier.hierarchy.level_offsets[-1]
-                    ]
-                build_path_inference = init_folder_structure(
-                    build_path,
-                    {
-                        'reference_set_path': reference_set_path,
-                        'grafana_dashboard_path':
-                            'models/db_bhcn/bentoml/dashboard.json',
-                        'evidently_config': config
-                    }
-                )
-            else:
-                build_path_inference = init_folder_structure(build_path)
-            svc = svc_lts.DB_BHCN()
-            # Pack tokeniser along with encoder
-            encoder = {
-                'tokenizer': get_tokenizer(),
-                'model': self.encoder
+        # Export into transformers model .bin format
+        torch.onnx.export(
+            self.classifier,
+            x,
+            classifier_path + 'classifier.onnx',
+            export_params=True,
+            opset_version=11,
+            do_constant_folding=True,
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'}
             }
-            svc.pack('encoder', encoder)
-            svc.pack('classifier', torch.jit.trace(self.classifier, x))
-            svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
-            svc.pack('config', {
-                'monitoring_enabled': reference_set_path is not None
-            })
-            svc.save_to_dir(build_path_inference)
+        )
+        self.classifier.hierarchy.to_json(
+            "{}/hierarchy.json".format(classifier_path)
+        )
+
+    def export_bento_resources(self, svc_config={}):
+        """Export the necessary resources to build a BentoML service of this \
+        model.
+
+        Parameters
+        ----------
+        svc_config: dict
+            Additional configuration to pack into the BentoService.
+
+        Returns
+        -------
+        config: dict
+            Evidently configuration data specific to this instance.
+        svc: BentoService subclass
+            A fully packed BentoService.
+        """
+        self.eval()
+        # Sample input
+        x = torch.randn(1, 768, requires_grad=True).to(self.device)
+        # Config for monitoring service
+        config = {
+            'prediction': self.classifier.hierarchy.classes[
+                self.classifier.hierarchy.level_offsets[-2]:
+                self.classifier.hierarchy.level_offsets[-1]
+            ]
+        }
+        svc = svc_lts.DB_BHCN()
+        # Pack tokeniser along with encoder
+        encoder = {
+            'tokenizer': get_tokenizer(),
+            'model': self.encoder
+        }
+        svc.pack('encoder', encoder)
+        svc.pack('classifier', torch.jit.trace(self.classifier, x))
+        svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
+        svc.pack('config', svc_config)
+        return config, svc
 
     def to(self, device=None):
         """Move this module to specified device.

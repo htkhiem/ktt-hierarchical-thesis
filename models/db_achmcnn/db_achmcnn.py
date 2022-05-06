@@ -6,9 +6,10 @@ import numpy as np
 from tqdm import tqdm
 import bentoml
 
-from models import model, model_pytorch
+from models import model_pytorch
 from utils.hierarchy import PerLevelHierarchy
-from utils.distilbert import get_pretrained, export_trained
+from utils.encoders.distilbert import get_pretrained, export_trained, \
+    DistilBertPreprocessor
 
 
 class MCM(torch.nn.Module):
@@ -118,7 +119,7 @@ class H_MCM_Model(torch.nn.Module):
         return self
 
 
-class DB_AC_HMCNN(model.Model, torch.nn.Module):
+class DB_AC_HMCNN(model_pytorch.PyTorchModel, torch.nn.Module):
     """Wrapper class combining DistilBERT and the adapted C-HMCNN model."""
 
     def __init__(self, hierarchy, config):
@@ -142,6 +143,11 @@ class DB_AC_HMCNN(model.Model, torch.nn.Module):
         )
         self.config = config
         self.device = 'cpu'
+
+    @classmethod
+    def get_preprocessor(cls, config):
+        """Return a DistilBERT preprocessor instance for this model."""
+        return DistilBertPreprocessor(config)
 
     @classmethod
     def from_checkpoint(cls, path):

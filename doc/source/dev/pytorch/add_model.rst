@@ -18,7 +18,7 @@ PyTorch model module structure
 
 Each PyTorch model module ('module' for short) in KTT is a self-contained collection of implemented source code, metadata and configuration files. A module defines its own training, checkpointing and exporting procedures. It might also optionally implement a  BentoML service and configuration files for live inference using the integrated BentoML-powered inference system and monitoring using Prometheus/Grafana. The general folder tree of a PyTorch model is as detailed in :ref:`model-struct`.
 
-The source implementation itself must subclass the abstract ``Model`` class (see :ref:`model-class`), like in any other framework. PyTorch models with additional submodules (bundled example: DB-BHCN and its AWX submodule, or DistilBERT+Adapted C-HMCNN with its ``MCM`` submodule) must implement a ``to(self, device)`` method similar to PyTorch's namesake method to recursively transfer the entire instance to the specified device.
+The source implementation itself must subclass the abstract ``PyTorchModel`` class, which subclasses the abstract ``Model`` class (see :ref:`model-class`) pre-implements two of the abstract methods for you (``get_dataloader_func`` and ``get_metrics_func``). PyTorch models with additional submodules (bundled example: DB-BHCN and its AWX submodule, or DistilBERT+Adapted C-HMCNN with its ``MCM`` submodule) must implement a ``to(self, device)`` method similar to PyTorch's namesake method to recursively transfer the entire instance to the specified device.
 
 PyTorch utilities
 -----------------
@@ -74,7 +74,7 @@ Implementing the model
 
 From here on we will refer to files using their paths in relative to the ``testmodel`` folder.
 
-In ``testmodel.py``, import the necessary libraries and define a concrete subclass of the ``Model`` abstract class:
+In ``testmodel.py``, import the necessary libraries and define a concrete subclass of the ``PyTorchModel`` abstract class:
 
 .. code-block:: python
 
@@ -87,7 +87,7 @@ In ``testmodel.py``, import the necessary libraries and define a concrete subcla
     from tqdm import tqdm
     import bentoml
 
-    from models import model
+    from models import model_pytorch
     from utils.hierarchy import PerLevelHierarchy
     from utils.distilbert import get_pretrained, export_trained
 
@@ -97,7 +97,7 @@ In ``testmodel.py``, import the necessary libraries and define a concrete subcla
     import logging
 
 
-    class TestModel(model.Model, torch.nn.Module):
+    class TestModel(model_pytorch.PyTorchModel, torch.nn.Module):
         """Wrapper class combining DistilBERT with a linear model."""
 
         def __init__(

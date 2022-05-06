@@ -12,7 +12,7 @@ import logging
 import json
 import torch
 
-from models import PYTORCH_MODEL_LIST, SKLEARN_MODEL_LIST, MODEL_LIST
+import models as mds
 
 from utils import cli
 
@@ -103,22 +103,7 @@ def train_and_test(
 )
 @click.option(
     '-m', '--models', default='', show_default=False, help=dedent("""
-    Pass a comma-separated list of model names to run. Available models:
-
-    db_bhcn\t\t(DistilBERT Branching Hierarchical Classifier)
-
-    db_bhcn_awx\t\t(DistilBERT Branching Hierarchical Classifier + Adjacency Wrapping matriX)
-
-    db_ahmcnf\t\t(Adapted HMCN-F model running on DistilBERT encodings)
-
-    db_achmcnn\t\t(Adapted C-HMCNN model running on DistilBERT encodings)
-
-    db_linear\t\t(DistilBERT+Linear layer)
-
-    tfidf_hsgd\t\t(Internal-node SGD classifier hierarchy using tf-idf encodings)
-
-    tfidf_lsgd\t\t(Leaf node SGD classifier hierarchy using tf-idf encodings)
-
+    Pass a comma-separated list of model names to run.
     By default, all models are run.
     """)
 )
@@ -175,24 +160,34 @@ def main(
     with open('./hyperparams.json', 'r') as j:
         hyperparams = json.loads(j.read())
 
-    def init_config(model_name, display_name):
+    def init_config(model_name):
         """Announce training and load configuration with common parameters."""
-        click.echo(
-            '{}Training {}...{}'.format(cli.BOLD, display_name, cli.PLAIN)
-        )
-        logging.info('Training {}...'.format(display_name))
         try:
             config = hyperparams[model_name]
+            logging.info('Training {}...'.format(config['display_name']))
+            click.echo(
+                '{}Training {}...{}'.format(
+                    cli.BOLD, config['display_name'], cli.PLAIN
+                )
+            )
+            config['model_name'] = model_name
+            if 'display_name' not in config.keys():
+                config['display_name'] = model_name
             config['epoch'] = epoch
             config['device'] = device
             return config
         except KeyError:
-            # sklearn models do not have configuration.
+            # Model does not have any configurable hyperparameter
+            logging.info('Training {}...'.format(model_name))
+            click.echo(
+                '{}Training {}...{}'.format(cli.BOLD, model_name, cli.PLAIN)
+            )
             return {
-                'model_name': model_name
+                'model_name': model_name,
+                'display_name': model_name,
             }
 
-    def init_dataset(dataset_name, loader_func, config):
+    def init_dataset(dataset_name, loader_func, preprocessor, config):
         config['dataset_name'] = dataset_name
         click.echo(
             '{}Runnning on {}...{}'.format(cli.CYAN, dataset_name, cli.PLAIN)
@@ -201,6 +196,8 @@ def main(
         train_loader, val_loader, test_loader, hierarchy = loader_func(
             dataset_name,
             config,
+            preprocessor,
+            verbose=verbose
         )
         return (
             train_loader,
@@ -210,189 +207,40 @@ def main(
             config
         )
     # Defaults
-    model_lst = MODEL_LIST[:]
+    model_lst = mds.MODELS.keys()
     dataset_lst = [name.strip() for name in datasets.split(",")]
     if len(models) > 0:
         model_lst = [name.strip() for name in models.split(",")]
-    os.environ['TRANNSFORMERS_OFFLINE'] = '1' if not distilbert else '0'
+    os.environ['TRANSFORMERS_OFFLINE'] = '1' if not distilbert else '0'
     device = 'cuda' if torch.cuda.is_available() and not cpu else 'cpu'
     print('Using', device.upper())
-
-    # Check if PyTorch models are requested
-    if any(m in model_lst for m in PYTORCH_MODEL_LIST):
-        model_pytorch = __import__(
-            'models', globals(), locals(), ['model_pytorch'], 0).model_pytorch
-
-    # Check if Scikit-learn models are requested
-    if any(m in model_lst for m in SKLEARN_MODEL_LIST):
-        model_sklearn = __import__(
-            'models', globals(), locals(), ['model_sklearn'], 0).model_sklearn
 
     logging.basicConfig(filename=log_path, level=logging.INFO)
 
     # Train models and log test set performance
-    if 'db_bhcn' in model_lst:
-        config = init_config('db_bhcn', 'DB-BHCN')
-        DB_BHCN = __import__(
-            'models', globals(), locals(), [], 0).DB_BHCN
+    for model_name in model_lst:
+        config = init_config(model_name)
+        model_class = mds.MODELS[model_name]
         for dataset_name in dataset_lst:
             (
                 train_loader, val_loader, test_loader, hierarchy, config
             ) = init_dataset(
-                dataset_name, model_pytorch.get_loaders, config
+                dataset_name,
+                model_class.get_dataloader_func(),
+                model_class.get_preprocessor(config),
+                config
             )
-            model = DB_BHCN(hierarchy, config).to(device)
+            model = model_class(hierarchy, config).to(device)
             train_and_test(
                 config,
                 model,
                 train_loader,
                 val_loader,
                 test_loader,
-                metrics_func=model_pytorch.get_metrics,
+                metrics_func=model_class.get_metrics_func(),
                 dry_run=dry_run,
                 verbose=verbose,
                 gen_reference=reference,
-                dvc=dvc
-            )
-
-    if 'db_bhcn_awx' in model_lst:
-        config = init_config('db_bhcn_awx', 'DB-BHCN+AWX')
-        DB_BHCN_AWX = __import__(
-            'models', globals(), locals(), [], 0).DB_BHCN_AWX
-        for dataset_name in dataset_lst:
-            (
-                train_loader, val_loader, test_loader, hierarchy, config
-            ) = init_dataset(
-                dataset_name, model_pytorch.get_loaders, config
-            )
-            model = DB_BHCN_AWX(hierarchy, config).to(device)
-            train_and_test(
-                config,
-                model,
-                train_loader,
-                val_loader,
-                test_loader,
-                metrics_func=model_pytorch.get_metrics,
-                dry_run=dry_run,
-                verbose=verbose,
-                gen_reference=reference,
-                dvc=dvc
-            )
-
-    if 'db_ahmcnf' in model_lst:
-        config = init_config('db_ahmcnf', 'DistilBERT + Adapted HMCN-F')
-        DB_AHMCN_F = __import__(
-            'models', globals(), locals(), [], 0).DB_AHMCN_F
-        for dataset_name in dataset_lst:
-            (
-                train_loader, val_loader, test_loader, hierarchy, config
-            ) = init_dataset(
-                dataset_name, model_pytorch.get_loaders, config
-            )
-            model = DB_AHMCN_F(hierarchy, config).to(device)
-            train_and_test(
-                config,
-                model,
-                train_loader,
-                val_loader,
-                test_loader,
-                metrics_func=model_pytorch.get_metrics,
-                dry_run=dry_run,
-                verbose=verbose,
-                dvc=dvc
-            )
-
-    if 'db_achmcnn' in model_lst:
-        config = init_config('db_achmcnn', 'DistilBERT + Adapted C-HMCNN')
-        DB_AC_HMCNN = __import__(
-            'models', globals(), locals(), [], 0).DB_AC_HMCNN
-        for dataset_name in dataset_lst:
-            (
-                train_loader, val_loader, test_loader, hierarchy, config
-            ) = init_dataset(
-                dataset_name, model_pytorch.get_loaders, config
-            )
-            model = DB_AC_HMCNN(hierarchy, config).to(device)
-            train_and_test(
-                config,
-                model,
-                train_loader,
-                val_loader,
-                test_loader,
-                metrics_func=model_pytorch.get_metrics,
-                dry_run=dry_run,
-                verbose=verbose,
-                gen_reference=reference,
-                dvc=dvc
-            )
-
-    if 'db_linear' in model_lst:
-        config = init_config('db_linear', 'DistilBERT+Linear')
-        DB_Linear = __import__(
-            'models', globals(), locals(), [], 0).DB_Linear
-        for dataset_name in dataset_lst:
-            (
-                train_loader, val_loader, test_loader, hierarchy, config
-            ) = init_dataset(
-                dataset_name, model_pytorch.get_loaders, config
-            )
-            model = DB_Linear(hierarchy, config).to(device)
-            train_and_test(
-                config,
-                model,
-                train_loader,
-                val_loader,
-                test_loader,
-                metrics_func=model_pytorch.get_metrics,
-                dry_run=dry_run,
-                verbose=verbose,
-                gen_reference=reference,
-                dvc=dvc
-            )
-
-    if 'tfidf_hsgd' in model_lst:
-        config = init_config('tfidf_hsgd', 'Tf-idf + Hierarchical SGD')
-        Tfidf_HSGD = __import__(
-            'models', globals(), locals(), [], 0).Tfidf_HSGD
-        for dataset_name in dataset_lst:
-            (
-                train_loader, val_loader, test_loader, hierarchy, config
-            ) = init_dataset(
-                dataset_name, model_sklearn.get_loaders, config
-            )
-            model = Tfidf_HSGD(config)
-            train_and_test(
-                config,
-                model,
-                train_loader,
-                None,  # No validation set for pure ML
-                test_loader,
-                metrics_func=model_sklearn.get_metrics,
-                dry_run=dry_run,
-                verbose=verbose,
-                dvc=dvc
-            )
-
-    if 'tfidf_lsgd' in model_lst:
-        config = init_config('tfidf_lsgd', 'Tf-idf + Leaf SGD')
-        Tfidf_LSGD = __import__(
-            'models', globals(), locals(), [], 0).Tfidf_LSGD
-        for dataset_name in dataset_lst:
-            (
-                train_loader, val_loader, test_loader, hierarchy, config
-            ) = init_dataset(
-                dataset_name, model_sklearn.get_loaders, config
-            )
-            model = Tfidf_LSGD(config)
-            train_and_test(
-                config,
-                model,
-                train_loader,
-                None,  # No validation set for pure ML
-                test_loader,
-                metrics_func=model_sklearn.get_metrics,
-                dry_run=dry_run,
-                verbose=verbose,
                 dvc=dvc
             )
 

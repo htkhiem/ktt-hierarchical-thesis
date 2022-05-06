@@ -1,4 +1,6 @@
+"""Utilities for PyTorch-based models."""
 import os
+from abc import ABC
 
 import torch
 import pandas as pd
@@ -6,30 +8,28 @@ from sklearn import metrics
 import numpy as np
 import logging
 
-from utils import distilbert
+from models.model import Model
+
 from utils.hierarchy import PerLevelHierarchy
 
 
-class CustomDataset(torch.utils.data.Dataset):
+class PyTorchDataset(torch.utils.data.Dataset):
     """A PyTorch-compatible dataset class with hierarchical capabilities."""
 
     def __init__(
             self,
             df,
             hierarchy,
-            tokenizer,
-            max_len,
-
+            preprocessor,
     ):
         """Create a dataset wrapper from the specified data."""
-        self.tokenizer = tokenizer
+        self.preprocessor = preprocessor
         self.text = df['name']  # All datasets coming from adapters use this.
         # Level sizes
         self.levels = hierarchy.levels
         # All datasets coming from adapters use this.
         self.labels = df['codes']
         self.level_offsets = hierarchy.level_offsets
-        self.max_len = max_len
 
     def __len__(self):
         """Return the number of rows in the dataset."""
@@ -37,28 +37,18 @@ class CustomDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         """Equivalent to data[index]."""
-        text = str(self.text.iloc[index])
-        text = " ".join(text.split())
-        inputs = self.tokenizer(
-            text,
-            None,  # No text_pair
-            add_special_tokens=True,  # CLS, SEP
-            max_length=self.max_len,
-            padding='max_length',
-            truncation=True
-            # BERT tokenisers return attention masks by default
+        text = " ".join(str(self.text.iloc[index]).split())
+        inputs = self.preprocessor(text)
+        inputs['labels'] = torch.tensor(
+            self.labels.loc[index], dtype=torch.long
         )
-        result = {
-            'ids': torch.tensor(inputs['input_ids'], dtype=torch.long),
-            'mask': torch.tensor(inputs['attention_mask'], dtype=torch.long),
-            'labels': torch.tensor(self.labels.loc[index], dtype=torch.long),
-        }
-        return result
+        return inputs
 
 
 def get_loaders(
         name,
         config,
+        preprocessor,
         verbose=False
 ):
     """Create loaders from the specified Parquet dataset.
@@ -76,7 +66,8 @@ def get_loaders(
         - ``device``: ``'cuda'`` or ``'cpu'``
         - ``train_minibatch_size``: Size of a minibatch while training.
         - ``val_test_minibatch_size``: Size of a minibatch in the validation and test phase.
-
+    preprocessor: utils.encoder.Preprocessor subclass
+        A preprocessor instance to be used before the minibatching process.
     verbose: bool
         If true, print more information about the importing process, such as
         all detected classes and hierarchy information.
@@ -125,33 +116,30 @@ def get_loaders(
 
     # Pack into DataLoaders using CustomDataset instances
     train_loader = torch.utils.data.DataLoader(
-        dataset=CustomDataset(
+        dataset=PyTorchDataset(
             train,
             hierarchy,
-            distilbert.get_tokenizer(),
-            64,
+            preprocessor,
         ),
         batch_size=config['train_minibatch_size'],
         shuffle=True,
         num_workers=0
     )
     val_loader = torch.utils.data.DataLoader(
-        dataset=CustomDataset(
+        dataset=PyTorchDataset(
             val,
             hierarchy,
-            distilbert.tokenizer,
-            64,
+            preprocessor,
         ),
         batch_size=config['val_test_minibatch_size'],
         shuffle=True,
         num_workers=0
     )
     test_loader = torch.utils.data.DataLoader(
-        dataset=CustomDataset(
+        dataset=PyTorchDataset(
             test,
             hierarchy,
-            distilbert.tokenizer,
-            64,
+            preprocessor,
         ),
         batch_size=config['val_test_minibatch_size'],
         shuffle=True,
@@ -307,7 +295,6 @@ def get_leaf_metrics(test_output, display=None, compute_auprc=False):
     return np.array([accuracy, precision, None, None])
 
 
-
 def get_hierarchical_metrics(test_output, display=None, compute_auprc=False):
     local_outputs = test_output['outputs']
     targets = test_output['targets']
@@ -375,3 +362,20 @@ def get_hierarchical_metrics(test_output, display=None, compute_auprc=False):
 
         return np.array([accuracies[-1], precisions[-1], global_accuracy, global_precision, auprc_score])
     return np.array([accuracies[-1], precisions[-1], global_accuracy, global_precision])
+
+
+class PyTorchModel(Model, ABC):
+    """Convenience class wrapping the Model abstract class.
+
+    It implements two class methods that are the same for all PyTorch models.
+    """
+
+    @classmethod
+    def get_dataloader_func(cls):
+        """Return KTT's PyTorch-compatible ``get_loaders`` implementation."""
+        return get_loaders
+
+    @classmethod
+    def get_metrics_func(cls):
+        """Return KTT's PyTorch-compatible ``get_metrics`` implementation."""
+        return get_metrics

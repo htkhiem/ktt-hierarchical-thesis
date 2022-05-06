@@ -6,20 +6,16 @@ or to a BentoML ModelStorage.
 """
 import os
 import shutil
+import yaml
 import click
 from textwrap import dedent
 import json
 import glob
 import torch
-import pandas as pd
 
-from models import PYTORCH_MODEL_LIST
-from models import SKLEARN_MODEL_LIST
-
+import models as mds
+from utils.build import init_folder_structure
 from utils import cli
-
-# Don't touch this
-MODEL_LIST = PYTORCH_MODEL_LIST + SKLEARN_MODEL_LIST
 
 
 def get_path(
@@ -80,18 +76,73 @@ def get_path(
     return weight_names[-1]
 
 
+def export_model(
+        model,
+        model_name,
+        dataset_name,
+        bento=False,
+        reference_set_path=False
+):
+    """Export a given model.
+
+    This function takes care of paths and configuration files for the exporting
+    process. Models need only implement details specific to them.
+    """
+    name = '{}_{}'.format(
+        model_name,
+        dataset_name
+    )
+    if not bento:
+        # Create path
+        enc_path = 'output/{}/encoder/'.format(name)
+        cls_path = 'output/{}/classifier/'.format(name)
+        if os.path.exists(enc_path):
+            shutil.rmtree(enc_path)
+        os.makedirs(enc_path)
+        if not os.path.exists(cls_path):
+            shutil.rmtree(cls_path)
+        os.makedirs(cls_path)
+        model.export_onnx(cls_path, enc_path)
+    else:
+        # Export as BentoML service
+        build_path = 'build/{}'.format(name)
+        if os.path.exists(build_path):
+            shutil.rmtree(build_path)
+        build_path_inference = ''
+        instance_config, svc = model.export_bento_resources(svc_config={
+            'monitoring_enabled': reference_set_path is not None
+        })
+        if reference_set_path is not None:
+            # If a path to a reference dataset is available, export the
+            # model as a service with monitoring capabilities.
+            with open(
+                    'models/{}/bentoml/evidently.yaml'.format(model_name), 'r'
+            ) as evidently_template:
+                evidently_config = yaml.safe_load(evidently_template)
+                evidently_config.update(instance_config)
+
+            # Init folder structure, Evidently YAML and so on.
+            build_path_inference = init_folder_structure(
+                build_path,
+                {
+                    'reference_set_path': reference_set_path,
+                    'grafana_dashboard_path':
+                        'models/{}/bentoml/dashboard.json'.format(model_name),
+                    'evidently_config': evidently_config
+                }
+            )
+        else:
+            # Init folder structure for a minimum system (no monitoring)
+            build_path_inference = init_folder_structure(build_path)
+        # Export the BentoService to the correct path.
+        svc.save_to_dir(build_path_inference)
+
+
 @click.command()
 @click.argument('datasets', required=1)
 @click.option(
     '-m', '--models', default='', show_default=False,
-    help=dedent("""Pass a comma-separated list of model names to run. Available models:
-    db_bhcn\t\t(DistilBERT Branching Hierarchical Classifier)
-    db_bhcn_awx\t\t(DistilBERT Branching Hierarchical Classifier + Adjacency Wrapping Matrix)
-    db_ahmcnf\t\t(Adapted HMCN-F model running on DistilBERT encodings)
-    db_achmcnn\t\t(Adapted C-HMCNN model running on DistilBERT encodings)
-    db_linear\t\t(DistilBERT + Linear layer)
-    tfidf_hsgd\t\t(Internal-node SGD classifier hierarchy using tf-idf encodings)
-    tfidf_lsgd\t\t(ILeaf node SGD classifier hierarchy using tf-idf encodings)
+    help=dedent("""Pass a comma-separated list of model names to run.
     By default, all models are exported. An error will be raised if a model has
     not been trained with any of the specified datasets.""")
 )
@@ -141,7 +192,7 @@ def main(
     # Defaults
     with open('./hyperparams.json', 'r') as j:
         hyperparams = json.loads(j.read())
-    model_lst = MODEL_LIST
+    model_lst = mds.MODELS.keys()
     dataset_lst = [name.strip() for name in datasets.split(",")]
     if len(models) > 0:
         model_lst = [name.strip() for name in models.split(",")]
@@ -149,93 +200,23 @@ def main(
     print('Using', device.upper())
 
     for dataset_name in dataset_lst:
-        if 'db_bhcn' in model_lst:
+        for model_name in model_lst:
+            config = hyperparams[model_name]
+            display_name = config['display_name'] if 'display_name' in\
+                config.keys() else model_name
             click.echo('{}Exporting {}...{}'.format(
-                cli.BOLD, 'DB-BHCN', cli.PLAIN))
-            DB_BHCN = __import__(
-                'models', globals(), locals(), [], 0).DB_BHCN
-            model = DB_BHCN.from_checkpoint(
-                get_path('db_bhcn', dataset_name, best=best, time=time),
+                cli.BOLD, display_name, cli.PLAIN))
+            model = mds.MODELS[model_name].from_checkpoint(
+                get_path(model_name, dataset_name, best=best, time=time),
             ).to(device)
             if monitoring:
                 reference_set_path = get_path(
-                    'db_bhcn', dataset_name, time=time, reference_set=True)
+                    model_name, dataset_name, time=time, reference_set=True)
                 if reference_set_path is not None:
-                    model.export(dataset_name, bento, reference_set_path)
-                else:
-                    model.export(dataset_name, bento)
-
-        if 'db_bhcn_awx' in model_lst:
-            click.echo('{}Exporting {}...{}'.format(
-                cli.BOLD, 'DB-BHCN+AWX', cli.PLAIN))
-            DB_BHCN_AWX = __import__(
-                'models', globals(), locals(), [], 0).DB_BHCN_AWX
-            model = DB_BHCN_AWX.from_checkpoint(
-                get_path('db_bhcn_awx', dataset_name, best, time),
-            ).to(device)
-            if monitoring:
-                reference_set_path = get_path(
-                    'db_bhcn_awx', dataset_name, time=time, reference_set=True)
-                if reference_set_path is not None:
-                    model.export(dataset_name, bento, reference_set_path)
-                else:
-                    model.export(dataset_name, bento)
-
-        if 'db_ahmcnf' in model_lst:
-            click.echo('{}Exporting {}...{}'.format(
-                cli.BOLD, 'DistilBERT+Adapted HMCN-F', cli.PLAIN))
-            DB_AHMCN_F = __import__(
-                'models', globals(), locals(), [], 0).DB_AHMCN_F
-            model = DB_AHMCN_F.from_checkpoint(
-                get_path('db_ahmcnf', dataset_name, best, time)
-            ).to(device)
-            model.export(dataset_name, bento)
-
-        if 'db_achmcnn' in model_lst:
-            click.echo('{}Exporting {}...{}'.format(
-                cli.BOLD, 'DistilBERT+Adapted C-HMCNN', cli.PLAIN))
-            DB_AC_HMCNN = __import__(
-                'models', globals(), locals(), [], 0).DB_AC_HMCNN
-            model = DB_AC_HMCNN.from_checkpoint(
-                get_path('db_achmcnn', dataset_name, best, time)
-            ).to(device)
-            model.export(dataset_name, bento)
-
-        if 'db_linear' in model_lst:
-            click.echo('{}Exporting {}...{}'.format(
-                cli.BOLD, 'DistilBERT+Linear', cli.PLAIN))
-            DB_Linear = __import__(
-                'models', globals(), locals(), [], 0).DB_Linear
-            model = DB_Linear.from_checkpoint(
-                get_path('db_linear', dataset_name, best, time)
-            ).to(device)
-            if monitoring:
-                reference_set_path = get_path(
-                    'db_linear', dataset_name, time=time, reference_set=True)
-                if reference_set_path is not None:
-                    model.export(dataset_name, bento, reference_set_path)
-                else:
-                    model.export(dataset_name, bento)
-
-        if 'tfidf_hsgd' in model_lst:
-            click.echo('{}Exporting {}...{}'.format(
-                cli.BOLD, 'Tf-idf + Hierarchical SGD', cli.PLAIN))
-            Tfidf_HSGD = __import__(
-                'models', globals(), locals(), [], 0).Tfidf_HSGD
-            model = Tfidf_HSGD.from_checkpoint(
-                get_path('tfidf_hsgd', dataset_name, best, time)
-            )
-            model.export(dataset_name, bento)
-
-        if 'tfidf_lsgd' in model_lst:
-            click.echo('{}Exporting {}...{}'.format(
-                cli.BOLD, 'Tf-idf + Leaf SGD', cli.PLAIN))
-            Tfidf_LSGD = __import__(
-                'models', globals(), locals(), [], 0).Tfidf_LSGD
-            model = Tfidf_LSGD.from_checkpoint(
-                get_path('tfidf_lsgd', dataset_name, best, time)
-            )
-            model.export(dataset_name, bento)
+                    export_model(model, model_name,
+                                 dataset_name, bento, reference_set_path)
+                    return
+            export_model(model, model_name, dataset_name, bento)
 
 
 if __name__ == "__main__":

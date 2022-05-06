@@ -1,24 +1,14 @@
 """This file defines functions specific to sklearn-based models."""
 import os
+from abc import ABC
+
 import logging
 from sklearn import metrics
 from sklearn_hierarchical_classification.constants import ROOT
 import pandas as pd
 import json
 
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem.snowball import SnowballStemmer
-from nltk.tokenize import word_tokenize
-
-
-# Initialise NLTK material
-nltk.download('punkt')
-nltk.download('stopwords')
-# These can't be put inside the class since they don't have _unload(), which
-# prevents joblib from correctly parallelising the class if included.
-stemmer = SnowballStemmer('english')
-stop_words = set(stopwords.words('english'))
+from models.model import Model
 
 
 def make_hierarchy(hierarchy_dict):
@@ -28,7 +18,6 @@ def make_hierarchy(hierarchy_dict):
 
     Parameters
     ----------
-
     hierarchy_dict: dict
         The hierarchy dictionary as read from the JSON metadata created
         by data adaptres.
@@ -62,25 +51,10 @@ def make_hierarchy(hierarchy_dict):
     return hierarchy
 
 
-def stem_series(series):
-    """Call stem_and_concat on series."""
-    def stem_and_concat(text):
-        """Stem words that are not stopwords."""
-        words = word_tokenize(text)
-        result_list = map(
-            lambda word: (
-                stemmer.stem(word)
-                if word not in stop_words
-                else word
-            ),
-            words
-        )
-        return ' '.join(result_list)
-    return series.apply(stem_and_concat)
-
 def get_loaders(
         name,
         config,
+        preprocessor,
         verbose=False
 ):
     """
@@ -94,7 +68,9 @@ def get_loaders(
     name: str
         Name of the intermediate dataset, for path construction.
     config: dict
-        Unused for sklearn, but kept for signature compatibility.
+        Unused by Sklearn models, but kept for API compatibility.
+    preprocessor: None
+        Unused by Sklearn models. but kept for API compatibility.
     verbose: bool
         If true, print more detailed information about the loading process.
 
@@ -135,8 +111,9 @@ def get_loaders(
     ) as hierarchy_file:
         hierarchy = make_hierarchy(json.load(hierarchy_file))
 
-    X_train = stem_series(train['name'])
-    X_test = stem_series(test['name'])
+    X_train = train['name'].apply(lambda n: preprocessor(n)['text'])
+    X_test = test['name'].apply(lambda n: preprocessor(n)['text'])
+
     y_train = train['codes'].apply(
         lambda row: row[-1]
     )
@@ -215,3 +192,27 @@ def get_metrics(test_output, display='log', compute_auprc=True):
         logging.info("Leaf AU(PRC): {}".format(leaf_auprc))
 
     return (leaf_accuracy, leaf_precision, None, None, leaf_auprc)
+
+
+class SklearnModel(Model, ABC):
+    """Convenience class wrapping the Model abstract class.
+
+    It implements two class methods that are the same for all Sklearn models.
+    """
+
+    @classmethod
+    def get_dataloader_func(cls):
+        """Return KTT's PyTorch-compatible ``get_loaders`` implementation."""
+        return get_loaders
+
+    @classmethod
+    def get_metrics_func(cls):
+        """Return KTT's PyTorch-compatible ``get_metrics`` implementation."""
+        return get_metrics
+
+    def to(self, device):
+        """All sklearn models are CPU-only, so this method is unused.
+
+        This class implements it as a passthrough method so you don't have to.
+        """
+        return self

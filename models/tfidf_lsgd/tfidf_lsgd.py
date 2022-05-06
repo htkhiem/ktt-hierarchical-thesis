@@ -1,6 +1,10 @@
 """Implementation of the tfidf + leaf SGD classifier model."""
 import os
 import joblib
+import yaml
+
+import numpy as np
+import pandas as pd
 
 from sklearn import preprocessing, linear_model
 from sklearn.pipeline import Pipeline
@@ -8,27 +12,33 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from skl2onnx import to_onnx
 from skl2onnx.common.data_types import StringTensorType
-import bentoml
 
-from models import model
+from models import model_sklearn
+from utils.encoders.snowballstemmer import SnowballStemmerPreprocessor
+from .bentoml import svc_lts
 
-REFERENCE_SET_FEATURE_POOL=64
+REFERENCE_SET_FEATURE_POOL = 64
 
-class Tfidf_LSGD(model.Model):
+
+class Tfidf_LSGD(model_sklearn.SklearnModel):
     """A wrapper class around the scikit-learn-based tfidf-LSGD model.
 
     It exposes the same method signatures as the PyTorch-based models for
     ease of use in the main training controller.
     """
 
-    def __init__(self, config=None, verbose=False):
+    def __init__(self, hierarchy=None, config=None, verbose=False):
         """Construct the TF-IDF + LeafSGD model.
 
         Parameters
         ----------
+        hierarchy: None
+            This model does not use the hierarchy parameter.
         config : dict
             A configuration dictionary. See the corresponding docs section for
             fields used by this model.
+        verbose: None
+            This model does not have additional printing options.
         """
         clf = linear_model.SGDClassifier(
             loss=config['loss'],
@@ -42,7 +52,7 @@ class Tfidf_LSGD(model.Model):
 
     @classmethod
     def from_checkpoint(cls, path):
-        """Construct model from saved checkpoints as produced by previous
+        """Construct model from saved checkpoints as produced by previous\
         instances of this model.
 
         Parameters
@@ -64,12 +74,17 @@ class Tfidf_LSGD(model.Model):
         instance.load(path)
         return instance
 
+    @classmethod
+    def get_preprocessor(cls, config):
+        """Return a SnowballStemmere instance for this model."""
+        return SnowballStemmerPreprocessor(config)
+
     def save(self, path, optim=None, dvc=True):
         """Serialise the pipeline into a pickle.
 
         The model state is saved as a `.pt` checkpoint with all the weights
-        as well as its code (Scikit-learn only). See the related docs section for
-        the schema of checkpoints produced by this model.
+        as well as its code (Scikit-learn only). See the related docs section
+        for the schema of checkpoints produced by this model.
 
         This method is mostly used internally but could be of use in case
         one prefers to implement a custom training routine.
@@ -89,8 +104,8 @@ class Tfidf_LSGD(model.Model):
     def load(self, path):
         """Load saved pipeline pickle.
 
-        Scikit-learn models also serialise their own code, so this is equivalent
-        to the ``from_checkpoint`` classmethod in PyTorch models.
+        Scikit-learn models also serialise their own code, so this is
+        equivalent to the ``from_checkpoint`` classmethod in PyTorch models.
 
         Parameters
         ----------
@@ -111,7 +126,7 @@ class Tfidf_LSGD(model.Model):
             best_path=None,
             dvc=True
     ):
-        """Train this TF-IDF + LeafSGD pipeline. No validation phase
+        """Train this TF-IDF + LeafSGD pipeline. No validation phase.
 
         Parameters
         ----------
@@ -120,8 +135,8 @@ class Tfidf_LSGD(model.Model):
             as the training set. The tuple contains a set of stemmed text as
             training input and a set of label.
         path : str, optional
-            Path to save the latest epoch's checkpoint to. If this or `best_path`
-            is unspecified, no checkpoint will be saved (dry-run).
+            Path to save the latest epoch's checkpoint to. If this or
+            `best_path` is unspecified, no checkpoint will be saved (dry-run).
         best_path: str, optional
             Path to separately save the best-performing epoch's checkpoint to.
             If this or `path` is unspecified, no checkpoint will be saved
@@ -138,8 +153,9 @@ class Tfidf_LSGD(model.Model):
 
     def test(self, loader, return_encodings=False):
         """Test this model on a dataset.
+
         This method can be used to run this instance (trained or not) over any
-        dataset wrapped in a suitable test set tuple. 
+        dataset wrapped in a suitable test set tuple.
 
         Parameters
         ----------
@@ -154,17 +170,20 @@ class Tfidf_LSGD(model.Model):
         Returns
         -------
         test_output: dict
-            The output of the testing phase, containing four metrics which can be
-            retrived by model_sklearn.get_metrics(): targets, targets_b (binarized label),
-            predictions and scores.
+            The output of the testing phase, containing four metrics which can
+            be retrived by model_sklearn.get_metrics(): targets, targets_b
+            (binarized label), predictions and scores.
         """
         y_avg = preprocessing.label_binarize(
             loader[1],
             classes=self.pipeline.classes_
         )
-        tfidf_encoding = self.pipeline.steps[0].transform(loader[0])
-        scores = self.pipeline.steps[1](tfidf_encoding)
-        predictions = [self.pipeline.classes_[i] for i in np.argmax(scores, axis=1)]
+        tfidf_encoding = self.pipeline.steps[0][1].transform(loader[0])
+        scores = self.pipeline.steps[1][1].predict_proba(tfidf_encoding)
+        predictions = [
+            self.pipeline.classes_[i]
+            for i in np.argmax(scores, axis=1)
+        ]
 
         res = {
             'targets': loader[1],
@@ -173,16 +192,22 @@ class Tfidf_LSGD(model.Model):
             'scores': scores,
         }
         if return_encodings:
+            pooled_feature_size = len(self.pipeline.steps[0][1].vocabulary_) \
+                // REFERENCE_SET_FEATURE_POOL
             # Average-pool encodings
+            tfidf_encoding_dense = tfidf_encoding.toarray()
             res['encodings'] = np.array([
-                np.average(
-                    tfidf_encoding[
-                        :,
-                        i*REFERENCE_SET_FEATURE_POOL:
-                        min((i+1)*REFERENCE_SET_FEATURE_POOL, len(scores))
-                    ]
-                )
-                for i in range(0, pooled_feature_size)
+                [
+                    np.average(
+                        tfidf_encoding_dense[
+                            j,
+                            i*REFERENCE_SET_FEATURE_POOL:
+                            min((i+1)*REFERENCE_SET_FEATURE_POOL, len(scores))
+                        ]
+                    )
+                    for i in range(0, pooled_feature_size)
+                ]
+                for j in range(tfidf_encoding_dense.shape[0])
             ])
         return res
 
@@ -207,101 +232,61 @@ class Tfidf_LSGD(model.Model):
         results = self.test(loader, return_encodings=True)
         pooled_features = results['encodings']
         scores = results['scores']
-        pooled_feature_size = self.pipeline.n_features_in_ // REFERENCE_SET_FEATURE_POOL
         targets = loader[1]
-        scores = result['scores']
+        scores = results['scores']
         cols = {
             'targets': targets,
         }
-        for col_idx in range(pooled_features[1]):
-            cols[str(col_idx)] = pooled_features[:, col_idx]
+        for col_idx in range(pooled_features.shape[1]):
+            cols['F' + str(col_idx)] = pooled_features[:, col_idx]
         for col_idx in range(scores.shape[1]):
-            cols[self.pipeline.classes_[col_idx]] = scores[:, col_idx]
+            cols['C' + str(self.pipeline.classes_[col_idx])] =\
+                scores[:, col_idx]
         return pd.DataFrame(cols)
 
-
-    def export(
-            self, dataset_name, bento=False, reference_set_path=None
-    ):
-        """Export model to ONNX/Bento.
-
-        If ONNX is selected (i.e. bento=False), then the pipeline is exported
-        as one ONNX graph. If BentoML is selected instead, they will be
-        serialised using BentoML's default serialisation facilities, and
-        a complete BentoService will be built.
+    def export_onnx(self, classifier_path, encoder_path=None):
+        """Export this model as an ONNX graph or two.
 
         Parameters
         ----------
-        dataset_name: str
-            Name of the dataset this instance was trained on. Use the folder
-            name of the intermediate version in the datasets folder.
-        bento: bool
-            Whether to export this model as a BentoML service or not.
-        reference_set_path: str
-            Path to an optional reference dataset compatible with Evidently's
-            schema. It will be copied to the built service's folder. Only
-            applicable when Bento exporting is selected.
-            If not passed, the generated BentoService will not be configured to
-            work with Evidently.
+        classifier_path: str
+            Where to write the classifier head to.
+        encoder_path: None
+            This model does not export its encoder (tfidf) separately.
         """
-        if not bento:
-            initial_type = [('str_input', StringTensorType([None, 1]))]
-            onx = to_onnx(
-                self.pipeline, initial_types=initial_type, target_opset=11
-            )
-            # Create path
-            name = '{}_{}'.format(
-                'tfidf_lsgd',
-                dataset_name
-            )
-            path = 'output/{}/classifier/'.format(name)
+        initial_type = [('str_input', StringTensorType([None, 1]))]
+        onx = to_onnx(
+            self.pipeline, initial_types=initial_type, target_opset=11
+        )
+        # Export
+        with open(classifier_path + 'classifier.onnx', "wb") as f:
+            f.write(onx.SerializeToString())
 
-            if not os.path.exists(path):
-                os.makedirs(path)
+    def export_bento_resources(self, svc_config={}):
+        """Export the necessary resources to build a BentoML service of this \
+        model.
 
-            path += 'classifier.onnx'
+        Parameters
+        ----------
+        config: dict
+            Additional configuration to pack into the BentoService.
 
-            # Clear previous versions
-            if os.path.exists(path):
-                os.remove(path)
+        Returns
+        -------
+        config: dict
+            Evidently configuration data specific to this instance.
+        svc: BentoService subclass
+            A fully packed BentoService.
+        """
+        # Config for monitoring service
+        config = {
+            'prediction': self.classifier.hierarchy.classes[
+                self.classifier.hierarchy.level_offsets[-2]:
+                self.classifier.hierarchy.level_offsets[-1]
+            ]
+        }
+        svc = svc_lts.Tfidf_LSGD()
+        svc.pack('model', self.pipeline)
+        svc.pack('config', svc_config)
 
-            # Export
-            with open(path, "wb") as f:
-                f.write(onx.SerializeToString())
-
-        else:
-            # Export as BentoML service
-            build_path = 'build/tfidf_lsgd_' + dataset_name.lower()
-            build_path_inference = ''
-            if reference_set_path is not None:
-                    # If a path to a reference dataset is available, export the
-                    # model as a service with monitoring capabilities.
-                with open(
-                        'models/tfidf_lsgd/bentoml/evidently.yaml', 'r'
-                ) as evidently_template:
-                    config = yaml.safe_load(evidently_template)
-                    config['prediction'] = self.hierarchy.classes[
-                        self.hierarchy.level_offsets[-2]:
-                        self.hierarchy.level_offsets[-1]
-                    ]
-                # Init folder structure, Evidently YAML and so on.
-                build_path_inference = init_folder_structure(
-                    build_path,
-                    {
-                        'reference_set_path': reference_set_path,
-                        'grafana_dashboard_path':
-                            'models/tfidf_lsgd/bentoml/dashboard.json',
-                        'evidently_config': config
-                    }
-                )
-            else:
-                    # Init folder structure for a minimum system (no monitoring)
-                build_path_inference = init_folder_structure(build_path)
-            # Initialise a BentoService instance
-            svc = svc_lts.Tfidf_LSGD()
-            svc.pack('model', self.pipeline)
-            svc.pack('config', {
-                'monitoring_enabled': reference_set_path is not None
-            })
-            # Export the BentoService to the correct path.
-            svc.save_to_dir(build_path_inference)
+        return config, svc

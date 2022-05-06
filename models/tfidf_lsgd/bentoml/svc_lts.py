@@ -12,6 +12,7 @@ from bentoml.frameworks.sklearn import SklearnModelArtifact
 from bentoml.service.artifacts.common import JSONArtifact
 from bentoml.types import JsonSerializable
 
+import nltk
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import word_tokenize
