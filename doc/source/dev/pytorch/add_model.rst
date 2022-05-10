@@ -18,16 +18,12 @@ PyTorch model module structure
 
 Each PyTorch model module ('module' for short) in KTT is a self-contained collection of implemented source code, metadata and configuration files. A module defines its own training, checkpointing and exporting procedures. It might also optionally implement a  BentoML service and configuration files for live inference using the integrated BentoML-powered inference system and monitoring using Prometheus/Grafana. The general folder tree of a PyTorch model is as detailed in :ref:`model-struct`.
 
-The source implementation itself must subclass the abstract ``PyTorchModel`` class, which subclasses the abstract ``Model`` class (see :ref:`model-class`) pre-implements two of the abstract methods for you (``get_dataloader_func`` and ``get_metrics_func``). PyTorch models with additional submodules (bundled example: DB-BHCN and its AWX submodule, or DistilBERT+Adapted C-HMCNN with its ``MCM`` submodule) must implement a ``to(self, device)`` method similar to PyTorch's namesake method to recursively transfer the entire instance to the specified device.
+The source implementation itself must subclass the abstract :py:class:`models.model_pytorch.PyTorchModel` class, which subclasses the abstract :py:class:`models.model.Model` class and pre-implements two of the abstract methods for you (:py:meth:`models.model.Model.get_dataloader_func` and :py:meth:`models.model.Model.metrics_func`). PyTorch models with additional submodules (bundled example: DB-BHCN and its AWX submodule, or DistilBERT+Adapted C-HMCNN with its ``MCM`` submodule) must implement a ``to(self, device)`` method similar to PyTorch's namesake method to recursively transfer the entire instance to the specified device.
 
 PyTorch utilities
 -----------------
 
-KTT provides framework-specific utilities for common tasks such as loading data in and computing performance metrics. For PyTorch, the following are available:
-
-.. automodule:: models.model_pytorch
-    :members:
-    :exclude-members: CustomDataset
+KTT provides framework-specific utilities for common tasks such as loading data in and computing performance metrics. For PyTorch, please see :ref:`pytorch-utils`.
     
 The process
 -----------

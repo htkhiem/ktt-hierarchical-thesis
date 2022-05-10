@@ -17,15 +17,12 @@ Scikit-learn model module structure
 
 Each sklearn model module ('module' for short) in KTT is a self-contained collection of implemented source code, metadata and configuration files. A module defines its own training, checkpointing and exporting procedures. It might also optionally implement a  BentoML service and configuration files for live inference using the integrated BentoML-powered inference system and monitoring using Prometheus/Grafana. The general folder tree of an sklearn model is as detailed in :ref:`model-struct`.
 
-The source implementation itself must subclass the abstract ``SklearnModel`` class, which subclasses the abstract ``Model`` class (see :ref:`model-class`) pre-implements two of the abstract methods for you (``get_dataloader_func`` and ``get_metrics_func``).
+The source implementation itself must subclass the abstract :py:class:`models.model_sklearn.SklearnModel` class, which subclasses the abstract :py:class:`models.model.Model` class and pre-implements two of the abstract methods for you (:py:meth:`models.model.Model.get_dataloader_func` and :py:meth:`models.model.Model.metrics_func`).
 
 Scikit-learn utilities
 ----------------------
 
-KTT provides framework-specific utilities for common tasks such as loading data in and computing performance metrics. For sklearn, the following are available:
-
-.. automodule:: models.model_sklearn
-    :members:
+KTT provides framework-specific utilities for common tasks such as loading data in and computing performance metrics. For Scikit-learn, see :ref:`sklearn-utils`.
 
 The process
 -----------

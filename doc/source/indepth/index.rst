@@ -7,5 +7,3 @@ System design
     adapters
     training
     exporting
-    bentoml
-    packaging
