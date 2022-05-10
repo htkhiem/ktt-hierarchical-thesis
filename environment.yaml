@@ -27,37 +27,60 @@ dependencies:
   - xz=5.2.5=h7b6447c_0
   - zlib=1.2.11=h7f8727e_4
   - pip:
-    - ray==1.12.0
     - aiohttp==3.8.1
     - aiohttp-cors==0.7.0
+    - aiohttp-retry==2.4.6
     - aiosignal==1.2.0
     - alabaster==0.7.12
     - alembic==1.7.7
+    - appdirs==1.4.4
     - async-timeout==4.0.2
     - asynctest==0.13.0
+    - atpublic==2.3
     - attrs==21.4.0
     - babel==2.9.1
     - bentoml==0.13.1
     - boto3==1.21.36
     - botocore==1.24.36
+    - cached-property==1.5.2
     - cerberus==1.3.4
+    - cffi==1.15.0
     - chardet==4.0.0
     - charset-normalizer==2.0.12
     - click==8.0.4
+    - colorama==0.4.4
+    - commonmark==0.9.1
+    - configobj==5.0.6
     - configparser==5.2.0
     - contextlib2==21.6.0
     - contextvars==2.4
     - dataclasses==0.8
     - decorator==4.4.2
     - deepmerge==1.0.1
+    - dictdiffer==0.9.0
+    - diskcache==5.4.0
+    - distlib==0.3.4
+    - distro==1.7.0
     - docker==5.0.3
     - docutils==0.17.1
+    - dpath==2.0.6
+    - dulwich==0.20.35
+    - dvc==2.8.1
     - evidently==0.1.47.dev1
     - filelock==3.4.1
     - flask==2.0.3
     - flatbuffers==2.0
+    - flatten-dict==0.4.2
+    - flufl-lock==3.2
     - frozenlist==1.2.0
-    - grpcio==1.44.0
+    - fsspec==2022.1.0
+    - ftfy==6.0.3
+    - funcy==1.17
+    - future==0.18.2
+    - gitdb==4.0.9
+    - gitpython==3.1.18
+    - grandalf==0.6
+    - grpcio==1.43.0
     - gunicorn==20.1.0
     - huggingface-hub==0.4.0
     - humanfriendly==10.0
@@ -71,34 +94,54 @@ dependencies:
     - jinja2==3.0.3
     - jmespath==0.10.0
     - joblib==1.1.0
+    - jsonschema==3.2.0
     - latexcodec==2.0.1
+    - mailchecker==4.1.15
     - mako==1.1.6
     - markupsafe==2.0.1
+    - msgpack==1.0.3
     - multidict==5.2.0
+    - nanotime==0.5.2
     - networkx==2.5.1
+    - nltk==3.6.7
     - numpy==1.19.5
     - onnx==1.8.1
     - onnxconverter-common==1.9.0
     - onnxruntime==1.8.1
     - packaging==21.3
     - pandas==1.1.5
+    - pathspec==0.8.1
     - patsy==0.5.2
+    - phonenumbers==8.12.46
     - pillow==8.4.0
+    - platformdirs==2.4.0
     - plotly==5.7.0
+    - ply==3.11
     - prometheus-client==0.14.0
     - protobuf==3.19.4
     - psutil==5.9.0
     - pyarrow==6.0.1
+    - pyasn1==0.4.8
     - pybtex==0.24.0
     - pybtex-docutils==1.0.1
+    - pycparser==2.21
+    - pydot==1.4.2
+    - pygit2==1.6.1
     - pygments==2.11.2
-    - pyparsing==3.0.7
+    - pygtrie==2.4.2
+    - pyparsing==2.4.7
+    - pyrsistent==0.18.0
+    - python-benedict==0.25.0
     - python-dateutil==2.8.2
+    - python-fsutil==0.6.0
     - python-json-logger==2.0.2
+    - python-slugify==6.1.1
     - pytz==2022.1
-    - pyyaml==5.4.1
+    - pyyaml==6.0
+    - ray==1.12.0
     - regex==2022.3.15
     - requests==2.27.1
+    - rich==12.2.0
     - ruamel-yaml==0.17.21
     - ruamel-yaml-clib==0.2.6
     - s3transfer==0.5.2
@@ -106,12 +149,19 @@ dependencies:
     - schema==0.7.5
     - scikit-learn==0.24.2
     - scipy==1.5.4
+    - shortuuid==1.0.8
+    - shtab==1.5.3
     - simple-di==0.1.5
     - six==1.16.0
     - skl2onnx==1.11.1
     - sklearn-hierarchical-classification==1.3.2
+    - smmap==5.0.0
     - snowballstemmer==2.2.0
+    - sphinx==4.5.0
+    - sphinx-click==3.1.0
+    - sphinx-rtd-theme==1.0.0
     - sphinxcontrib-applehelp==1.0.2
+    - sphinxcontrib-bibtex==2.4.1
     - sphinxcontrib-devhelp==1.0.2
     - sphinxcontrib-htmlhelp==2.0.0
     - sphinxcontrib-jsmath==1.0.1
@@ -122,14 +172,24 @@ dependencies:
     - statsmodels==0.12.2
     - tabulate==0.8.9
     - tenacity==8.0.1
+    - text-unidecode==1.3
     - threadpoolctl==3.1.0
     - tokenizers==0.11.6
+    - toml==0.10.2
+    - torch==1.10.2+cu113
+    - torchaudio==0.10.2+cu113
+    - torchvision==0.11.3+cu113
     - tqdm==4.64.0
     - transformers==4.18.0
     - types-dataclasses==0.6.4
     - typing-extensions==4.1.1
     - urllib3==1.25.11
+    - virtualenv==20.14.1
+    - voluptuous==0.13.1
+    - wcwidth==0.2.5
     - websocket-client==1.3.1
     - werkzeug==2.0.3
+    - xmltodict==0.12.0
     - yarl==1.7.2
+    - zc-lockfile==2.0
     - zipp==3.6.0
