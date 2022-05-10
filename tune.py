@@ -5,6 +5,9 @@ Use this Python script to search for the best hyperparameters for your own
 datasets using Ray Tune.
 """
 import os
+
+os.environ['RAY_DISABLE_IMPORT_WARNING'] = '1'
+
 import click
 from textwrap import dedent
 
@@ -12,11 +15,14 @@ import logging
 import json
 import torch
 
+import matplotlib.pyplot as plt
+
 import ray
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.trial import Trial
 from ray.tune.schedulers import ASHAScheduler
+from ray.tune.suggest.bayesopt import BayesOptSearch
 
 import models as mds
 
@@ -40,7 +46,6 @@ def tune_model(
         model_class,
         train_loader,
         val_loader,
-        test_loader,
         hierarchy,
         metrics_func,
         verbose=False
@@ -59,7 +64,7 @@ def tune_model(
         model = model_class(hierarchy, config).to(config['device'])
         val_metrics = model.fit(
             train_loader,
-            val_loader,
+            val_loader
         )
         last_epoch_leaf_acc = val_metrics[0, -1]
         tune.report(leaf_acc=last_epoch_leaf_acc)
@@ -67,7 +72,8 @@ def tune_model(
     search_space = {
         'model_name': tune_config['model_name'],
         'epoch': tune_config['epoch'],
-        'device': tune_config['device']
+        'device': tune_config['device'],
+        'progress': False  # Disable tqdm progressbar
     }
     # Construct Ray Tune search space from config
     for hyperparam in tune_config['mode'].keys():
@@ -96,7 +102,8 @@ def tune_model(
         metric='leaf_acc',
         mode='max',
         num_samples=tune_config['sample'],
-        scheduler=ASHAScheduler(metric='leaf_acc', mode="max"),
+        scheduler=ASHAScheduler(),
+        search_alg=BayesOptSearch(metric="leaf_acc", mode="max"),
         resources_per_trial={
             'cpu': 1 if not use_cuda else 0,
             'gpu': 1 if use_cuda else 0
@@ -203,7 +210,7 @@ def main(
                 'model_name': model_name,
                 'display_name': model_name,
                 'sample': sample,
-                'object_store': object_store
+                'object_store': object_store,
             }
 
     def init_dataset(dataset_name, loader_func, preprocessor, config):
@@ -212,7 +219,7 @@ def main(
             '{}Runnning on {}...{}'.format(cli.CYAN, dataset_name, cli.PLAIN)
         )
         logging.info('Running on {}...'.format(dataset_name))
-        train_loader, val_loader, test_loader, hierarchy = loader_func(
+        train_loader, val_loader, _, hierarchy = loader_func(
             dataset_name,
             tune_config,
             preprocessor,
@@ -222,7 +229,6 @@ def main(
         return (
             train_loader,
             val_loader,
-            test_loader,
             hierarchy,
             config
         )
@@ -243,7 +249,7 @@ def main(
         model_class = mds.MODELS[model_name]
         for dataset_name in dataset_lst:
             (
-                train_loader, val_loader, test_loader, hierarchy, config
+                train_loader, val_loader, hierarchy, config
             ) = init_dataset(
                 dataset_name,
                 model_class.get_dataloader_func(),
@@ -255,19 +261,12 @@ def main(
                 model_class,
                 train_loader,
                 val_loader,
-                test_loader,
                 hierarchy,
                 metrics_func=model_class.get_metrics_func(),
                 verbose=verbose,
             )
             print(analysis.best_config)
             logging.info(analysis.best_config)
-
-            # Plot by epoch
-            ax = None  # This plots everything on the same plot
-            for d in analysis.trial_dataframes.values():
-                ax = d.leaf_acc.plot(ax=ax, legend=False)
-
 
 if __name__ == "__main__":
     main()

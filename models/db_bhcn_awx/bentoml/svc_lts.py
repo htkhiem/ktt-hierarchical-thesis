@@ -25,7 +25,7 @@ POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 # the Dockerfile and requirements.txt in the service's folder.
 @bentoml.env(
     requirements_txt_file='models/db_bhcn_awx/bentoml/requirements.txt',
-    docker_base_image='bentoml/model-server:0.13.1-py36-gpu'
+    docker_base_image='bentoml/model-server:0.13.1-py38-gpu'
 )
 # What this service needs to run: an encoder (DistilBERT), a classifier
 # (our testmodel), the hierarchical metadata and a config variable

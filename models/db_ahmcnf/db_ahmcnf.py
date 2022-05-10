@@ -367,12 +367,14 @@ class DB_AHMCN_F(model_pytorch.PyTorchModel, torch.nn.Module):
 
         # Hierarchical loss gain
         lambda_h = self.config['lambda_h']
+
+        tqdm_disabled = 'progress' in self.config.keys() and not self.config['progress']
         for epoch in range(1, self.config['epoch'] + 1):
             train_loss = 0
             val_loss = 0
             self.train()
             print('Epoch {}: Training'.format(epoch))
-            for batch_idx, data in enumerate(tqdm(train_loader)):
+            for batch_idx, data in enumerate(tqdm(train_loader, disable=tqdm_disabled)):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels']
@@ -420,7 +422,7 @@ class DB_AHMCN_F(model_pytorch.PyTorchModel, torch.nn.Module):
                 ) for level in range(self.classifier.depth)]
 
             with torch.no_grad():
-                for batch_idx, data in tqdm(enumerate(val_loader)):
+                for batch_idx, data in tqdm(enumerate(val_loader, disable=tqdm_disabled)):
                     ids = data['ids'].to(self.device,
                                          dtype=torch.long)
                     mask = data['mask'].to(self.device,

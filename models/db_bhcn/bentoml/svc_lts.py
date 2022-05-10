@@ -23,7 +23,7 @@ POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
 @bentoml.env(
     requirements_txt_file='models/db_bhcn/bentoml/requirements.txt',
-    docker_base_image='bentoml/model-server:0.13.1-py36-gpu'
+    docker_base_image='bentoml/model-server:0.13.1-py38-gpu'
 )
 @bentoml.artifacts([
     TransformersModelArtifact('encoder'),

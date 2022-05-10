@@ -29,8 +29,7 @@ EVIDENTLY_PORT = os.environ.get('EVIDENTLY_PORT', 5001)
 REFERENCE_SET_FEATURE_POOL = 64
 
 @bentoml.env(
-    requirements_txt_file='models/db_bhcn/bentoml/requirements.txt',
-    docker_base_image='bentoml/model-server:0.13.1-py36-gpu'
+    requirements_txt_file='models/db_bhcn/bentoml/requirements.txt'
 )
 @bentoml.artifacts([
     SklearnModelArtifact('model'),

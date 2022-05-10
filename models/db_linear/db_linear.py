@@ -236,11 +236,12 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
         # Store validation metrics after each epoch
         val_metrics = np.empty((4, 0), dtype=float)
 
+        tqdm_disabled = 'progress' in self.config.keys() and not self.config['progress']
         for epoch in range(1, self.config['epoch'] + 1):
             val_loss = 0
             self.train()
             print('Epoch {}: Training'.format(epoch))
-            for batch_idx, data in enumerate(tqdm(train_loader)):
+            for batch_idx, data in enumerate(tqdm(train_loader, disable=tqdm_disabled)):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels'].to(self.device, dtype=torch.long)
@@ -261,7 +262,7 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
             val_outputs = np.empty((0, self.output_size), dtype=float)
 
             with torch.no_grad():
-                for batch_idx, data in tqdm(enumerate(val_loader)):
+                for batch_idx, data in tqdm(enumerate(val_loader, disable=tqdm_disabled)):
                     ids = data['ids'].to(self.device,
                                          dtype=torch.long)
                     mask = data['mask'].to(self.device,

@@ -93,8 +93,6 @@
             "h_hidden_dim": "fixed",
             "h_layer_count": "choice"
         }
-
-
     },
     "db_linear": {
         "display_name": "DistilBERT + Linear",
@@ -111,25 +109,31 @@
             "classifier_lr": "uniform",
             "dropout": "uniform"
         }
-
     },
     "tfidf_lsgd": {
         "display_name": "Tfidf + LinearSGD",
-        "loss": "modified_huber",
         "range": {
+        		"loss": "modified_huber",
             "max_iter": [500, 1000, 2000],
             "min_df": [1, 2, 4, 8, 16, 32, 64, 128]
-        }
+        },
         "mode": {
+        		"loss": "fixed",
             "max_iter": "choice",
-            "min_df": "choice",
+            "min_df": "choice"
         }
-
     },
     "tfidf_hsgd": {
         "display_name": "Tfidf + HierarchicalSGD",
-        "loss": "modified_huber",
-        "max_iter": 1000,
-        "min_df": 50
+		"range": {
+        		"loss": "modified_huber",
+            "max_iter": [500, 1000, 2000],
+            "min_df": [1, 2, 4, 8, 16, 32, 64, 128]
+        },
+        "mode": {
+        		"loss": "fixed",
+            "max_iter": "choice",
+            "min_df": "choice"
+        }
     }
 }
