@@ -1,0 +1,135 @@
+{
+    "db_bhcn": {
+        "display_name": "DB-BHCN",
+        "train_minibatch_size": 16,
+        "val_test_minibatch_size": 64,
+        "max_len": 64,
+        "range": {
+            "encoder_lr": [0.00002, 0.00009],
+            "classifier_lr": [0.0002, 0.0009],
+            "gamma_l": [-0.2, 0.2],
+            "lambda_l": 1.0,
+            "lambda_h": [0.2, 0.9],
+            "dropout": [0.1, 0.5],
+            "hidden_nonlinear": "relu"
+        },
+        "mode": {
+            "encoder_lr": "uniform",
+            "classifier_lr": "uniform",
+            "gamma_l": "uniform",
+            "lambda_l": "fixed",
+            "lambda_h": "uniform",
+            "dropout": "uniform",
+            "hidden_nonlinear": "fixed"
+        }
+
+    },
+    "db_bhcn_awx": {
+        "display_name": "DB-BHCN+AWX",
+        "train_minibatch_size": 16,
+        "val_test_minibatch_size": 64,
+        "max_len": 64,
+        "range": {
+            "encoder_lr": [0.00002, 0.00009],
+            "classifier_lr": [0.0002, 0.0009],
+            "gamma_l": [-0.7, 0.7],
+            "lambda_l": [0.2, 0.8],
+            "dropout": [0.1, 0.6],
+            "awx_norm": 5,
+            "hidden_nonlinear": "relu"
+        },
+        "mode": {
+            "encoder_lr": "uniform",
+            "classifier_lr": "uniform",
+            "gamma_l": "uniform",
+            "lambda_l": "uniform",
+            "dropout": "uniform",
+            "awx_norm": "fixed",
+            "hidden_nonlinear": "fixed"
+        }
+    },
+    "db_ahmcnf": {
+        "display_name": "DistilBERT + Adapted HMCN-F",
+        "max_len": 64,
+        "train_minibatch_size": 4,
+        "val_test_minibatch_size": 4,
+        "range": {
+            "classifier_lr": [0.0005,0.002],
+            "lambda_h": [0.02, 0.08],
+            "dropout": [0.1, 0.7],
+            "global_hidden_sizes": [384, 384],
+            "local_hidden_sizes": [384, 384],
+            "global_weight": [0.2, 0.8],
+            "hidden_nonlinear": "relu"
+        },
+        "mode": {
+            "classifier_lr": "uniform",
+            "lambda_h": "uniform",
+            "dropout": "uniform",
+            "global_hidden_sizes": "fixed",
+            "local_hidden_sizes": "fixed",
+            "global_weight": "uniform",
+            "hidden_nonlinear": "fixed"
+        }
+    },
+    "db_achmcnn": {
+        "display_name": "DistilBERT + Adapted C-HMCNN",
+        "train_minibatch_size": 16,
+        "val_test_minibatch_size": 64,
+        "max_len": 64,
+        "range": {
+            "encoder_lr": [0.00001, 0.00006],
+            "classifier_lr": [0.0002, 0.001],
+            "h_dropout": [0.0, 0.75],
+            "h_nonlinear": "relu",
+            "h_hidden_dim": 512,
+            "h_layer_count": [1, 2, 3, 4]
+        },
+        "mode": {
+            "encoder_lr": "uniform",
+            "classifier_lr": "uniform",
+            "h_dropout": "uniform",
+            "h_nonlinear": "fixed",
+            "h_hidden_dim": "fixed",
+            "h_layer_count": "choice"
+        }
+
+
+    },
+    "db_linear": {
+        "display_name": "DistilBERT + Linear",
+        "train_minibatch_size": 32,
+        "val_test_minibatch_size": 64,
+        "max_len": 64,
+        "range": {
+            "encoder_lr": [0.000005, 0.0001],
+            "classifier_lr": [0.000008, 0.0001],
+            "dropout": [0.1, 0.5]
+        },
+        "mode": {
+            "encoder_lr": "uniform",
+            "classifier_lr": "uniform",
+            "dropout": "uniform"
+        }
+
+    },
+    "tfidf_lsgd": {
+        "display_name": "Tfidf + LinearSGD",
+        "loss": "modified_huber",
+        "range": {
+            "max_iter": [500, 1000, 2000],
+            "min_df": [1, 2, 4, 8, 16, 32, 64, 128]
+        }
+        "mode": {
+            "max_iter": "choice",
+            "min_df": "choice",
+        }
+
+    },
+    "tfidf_hsgd": {
+        "display_name": "Tfidf + HierarchicalSGD",
+        "loss": "modified_huber",
+        "max_iter": 1000,
+        "min_df": 50
+    }
+}

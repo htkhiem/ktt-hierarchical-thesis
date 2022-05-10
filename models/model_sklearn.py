@@ -55,6 +55,7 @@ def get_loaders(
         name,
         config,
         preprocessor,
+        shuffle=False,
         verbose=False
 ):
     """
@@ -71,6 +72,8 @@ def get_loaders(
         Unused by Sklearn models, but kept for API compatibility.
     preprocessor: None
         Unused by Sklearn models. but kept for API compatibility.
+    shuffle: bool
+        Unused, as Sklearn "DataLoaders" are just constant DataFrames.
     verbose: bool
         If true, print more detailed information about the loading process.
 
