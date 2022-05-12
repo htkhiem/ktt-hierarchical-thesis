@@ -243,22 +243,13 @@ This is the reverse of ``save``. Simply use PyTorch's ``load`` function to load 
     :dedent: 0
 
         def load(self, path):
-                # DVC automation: if checkpoint file is not found, see if
-                # it's tracked with DVC
-            if not os.path.exists(path):
-                    # DVC tracking placeholder does not exist
-                if not os.path.exists(path + '.dvc'):
-                    raise OSError('Checkpoint not present and cannot be retrieved')
-                # DVC tracking placeholder exists. Retrieve the file from remote.
-                os.system('dvc checkout {}.dvc'.format(path))
-            # Now that we have ensured that the file exists locally, load it in.
             checkpoint = torch.load(path)
             self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
             self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
             # Return the optimiser state dict so the fit() function can do its job.
             return checkpoint['optimizer_state_dict']
         
-Note that DVC integration is a required part of this function - there is no parameter to enable/disable it and as such the training script assumes that all ``load`` implementation handles DVC checkouts by themselves.
+Note that DVC is taken care of by KTT at the pulling phase - your model need only push it.
         
 ``from_checkpoint``
 ^^^^^^^^^^^^^^^^^^^
@@ -270,13 +261,6 @@ This is a ``@classmethod`` to be used as an alternative constructor to ``__init_
 
         @classmethod
         def from_checkpoint(cls, path):
-            if not os.path.exists(path):
-                # DVC tracking placeholder does not exist
-                if not os.path.exists(path + '.dvc'):
-                    raise OSError('Checkpoint not present and cannot be retrieved')
-                # DVC tracking placeholder exists. Retrieve the file from remote.
-                os.system('dvc checkout {}.dvc'.format(path))
-            # Now that we have ensured that the file exists locally, load it in.
             checkpoint = torch.load(path)
             # Where this differs from self.load(): it constructs a new instance instead
             # of loading the checkpoint into an existing instance.
@@ -611,13 +595,17 @@ Note the two environment variables here (``EVIDENTLY_HOST`` and ``EVIDENTLY_PORT
 
 Next, we need to implement the service class. It will be a subclass of ``bentoml.BentoService``. All of its dependencies, data (called 'artifacts') and configuration are defined via @decorators, as BentoML internally uses a dependency injection framework.
 
+One thing of note is the base image for Dockerisation. KTT is currently built and tested using a Python 3.8 environment. Also, our model is GPU-capable. With these two taken in, the resulting BentoML base image should then be ``bentoml/model-server:0.13.1-py38-gpu``.
+
+All available BentoML base images can be viewed at `their Docker Hub <https://hub.docker.com/r/bentoml/model-server/tags>`_.
+
 .. code-block:: python
 
     # Tell the BentoML exporter what needs to be installed. These will go into
     # the Dockerfile and requirements.txt in the service's folder.
     @bentoml.env(
         requirements_txt_file='models/testmodel/bentoml/requirements.txt',
-        docker_base_image='bentoml/model-server:0.13.1-py36-gpu'
+        docker_base_image='bentoml/model-server:0.13.1-py38-gpu'
     )
     # What this service needs to run: an encoder (DistilBERT), a classifier
     # (our testmodel), the hierarchical metadata and a config variable
@@ -654,7 +642,7 @@ Next, we need to implement the service class. It will be a subclass of ``bentoml
             # We use PyTorch-based Transformers
             self.encoder.to(device)
             # Identical pool layer as in the test script.
-            self.pool = torch.nn.AvgPool1d(REFERENCE_SET_FEATURE_POOL)
+            self.pool = torch.nn.AvgPool1d(32)
 
             self._initialised = True
 
@@ -749,6 +737,12 @@ For more information regarding the format of the data to be sent to the monitori
                     data=json.dumps({'data': new_rows.tolist()}),
                     headers={"content-type": "application/json"},
                 )
+              
+Lastly, return the result mapped back to the actual class name.
+
+.. code-block:: python
+	:dedent: 0
+                
             return ['\n'.join(row) for row in predicted_names]
 
 The configuration files

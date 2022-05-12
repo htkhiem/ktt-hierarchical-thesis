@@ -152,22 +152,28 @@ Now we will go through the process of implementing each method.
 
 Constructing an sklearn model in KTT is quite simple compared to PyTorch. One is recommended to package all components into *pipelines* for easier exporting and importing. Here we have two components: the tfidf vectoriser and the SGD classifier. The stemmer and tokeniser is not present since they have already been taken care of by KTT's default sklearn facilities at the data-loading level.
 
+One point of difference in terms of design from PyTorch model is that Scikit-learn models can entirely serialise themselves without needing external configuration and hierarchical metadata to be stored along. To take advantage of this, we will package everything into a single ``Pipeline`` and later use ``joblib`` to pickle it. However, there's a catch: since we do not store those information separately, we cannot reuse them to instantiate this model through the normal constructor as with PyTorch. As a workaround, we set up the constructor such that it can tolerate having no arguments (and later call ``load`` on it). In this case, the constructor should create an empty model with no pipeline or config saved.
+
 .. code-block:: python
     :dedent: 0
 
-        def __init__(self, config=None, verbose=False):
-            # The SGD classifier
-            clf = linear_model.SGDClassifier(
-                loss=config['loss'],
-                max_iter=config['max_iter']
-            )
-            # Package into pipeline
-            self.pipeline = Pipeline([
-                ('tfidf', TfidfVectorizer(config['min_df'])),
-                ('clf', clf),
-            ])
-            # Back up config for later use
-            self.config = config
+        def __init__(self, hierarchy=None, config=None, verbose=False):
+        		# It is possible that the constructor will be called without
+        		# any of the arguments (by the from_checkpoint constructor).
+        		# In that case simply instantiate an empty class.
+        		if hierarchy is not None and config is not None:
+		        # The SGD classifier
+		        clf = linear_model.SGDClassifier(
+		            loss=config['loss'],
+		            max_iter=config['max_iter']
+		        )
+		        # Package into pipeline
+		        self.pipeline = Pipeline([
+		            ('tfidf', TfidfVectorizer(config['min_df'])),
+		            ('clf', clf),
+		        ])
+		        # Back up config for later use
+		        self.config = config
 
 ``save``
 ^^^^^^^^
@@ -191,25 +197,21 @@ The reverse is performed in this method compared to ``save``.
 Thanks to how sklearn models are serialised, we can fully replicate the previous instance without
 having to go through a class constructor. In other words, this and the ``from_checkpoint`` classmethod
 that we will be implementing soon are functionally equivalent.
-
+https://hub.docker.com/r/bentoml/model-server/tags
 .. code-block:: python
     :dedent: 0
 
         def load(self, path):
-            if not os.path.exists(path):
-                if not os.path.exists(path + '.dvc'):
-                    raise OSError('Checkpoint not present and cannot be retrieved')
-            os.system('dvc checkout {}.dvc'.format(path))
             self.pipeline = joblib.load(path)
 
-Note that DVC integration is a required part of this function - there is no parameter to enable/disable it and as such the training script assumes that all ``load`` implementation handles DVC checkouts by themselves.
+Note that DVC is taken care of by KTT at the pulling phase - your model need only push it.
 
 ``from_checkpoint``
 ^^^^^^^^^^^^^^^^^^^
 
 This is a ``@classmethod`` to be used as an alternative constructor to ``__init__()``. It will be capable of fully reading the checkpoint to construct an exact replica of the model by itself, topology included, without needing the user to input the correct hierarchical metadata. Or that's what applied to PyTorch models.
 
-For Scikit-learn models, again the checkpoint already contains the code. In other words, we can just create a blank instance then call its ``load`` method on the checkpoint!
+For Scikit-learn models, again the checkpoint already contains the code. In other words, we can just create a blank instance then call its ``load`` method on the checkpoint! This is possible thanks to the workaround above.
 
 .. code-block:: python
     :dedent: 0
@@ -272,10 +274,12 @@ In this implementation, we'll also output a fifth key, called ``encodings``. As 
     :dedent: 0
 
         def test(self, loader, return_encodings=False):
-		    y_avg = preprocessing.label_binarize(
+		    # We need binarised targets for AU(PRC)
+			y_avg = preprocessing.label_binarize(
 		        loader[1],
 		        classes=self.pipeline.classes_
 		    )
+		    # Separately run each stage so we can extract the feature vectors
 		    tfidf_encoding = self.pipeline.steps[0][1].transform(loader[0])
 		    scores = self.pipeline.steps[1][1].predict_proba(tfidf_encoding)
 		    predictions = [
@@ -375,6 +379,7 @@ First, we import all the dependencies needed at inference time and read a few en
 	nltk.download('stopwords')
 	# These can't be put inside the class since they don't have _unload(), which
 	# prevents joblib from correctly parallelising the class if included.
+	SNOWBALLSTEMMER = SnowballStemmer('english')
 	STOP_WORDS = set(stopwords.words('english'))
 
 	EVIDENTLY_HOST = os.environ.get('EVIDENTLY_HOST', 'localhost')
@@ -389,15 +394,14 @@ Next, we need to implement the service class. It will be a subclass of ``bentoml
 .. code-block:: python
 
 	@bentoml.env(
-		requirements_txt_file='models/db_bhcn/bentoml/requirements.txt',
-		docker_base_image='bentoml/model-server:0.13.1-py36-gpu'
+		requirements_txt_file='models/db_bhcn/bentoml/requirements.txt'
 	)
 	@bentoml.artifacts([
 		SklearnModelArtifact('model'),
 		JSONArtifact('config'),
 	])
-	class DB_BHCN(bentoml.BentoService):
-		"""Real-time inference service for DB-BHCN."""
+	class TestModel(bentoml.BentoService):
+		"""Real-time inference service for TestModel."""
 
 		_initialised = False
 
@@ -422,17 +426,19 @@ Lastly, we implement the actual predict() API handler as a method in that class,
 		    mb_max_latency=2000,
 		)
 		def predict(self, parsed_json_list: List[JsonSerializable]):
-		    """Classify text to the trained hierarchy."""
+			"""Classify text to the trained hierarchy."""
 		    if not self._initialised:
 		        self.init_fields()
 		    tokenized = [word_tokenize(j['text']) for j in parsed_json_list]
 		    stemmed = [
-		        ' '.join([stemmer.stem(word) if word not in STOP_WORDS else word for word in lst])
+		        ' '.join([SNOWBALLSTEMMER.stem(word) if word not in STOP_WORDS
+		                  else word for word in lst])
 		        for lst in tokenized
 		    ]
-		    tfidf_encoding = model.steps[0].transform(stemmed)
-		    scores = model.steps[1].steppredict_proba(tfidf_encoding)
-		    predictions = [model.classes_[i] for i in np.argmax(scores, axis=1)]
+		    tfidf_encoding = self.model.steps[0].transform(stemmed)
+		    scores = self.model.steps[1].steppredict_proba(tfidf_encoding)
+		    predictions = [
+		        self.model.classes_[i] for i in np.argmax(scores, axis=1)]
 		    
 There's one more thing in this method to implement: some code to send the newly-received data-in-the-wild plus our model's scores for it to the monitoring service.
 For more information regarding the format of the data to be sent to the monitoring service, please see :ref:`service-spec`.
@@ -440,7 +446,7 @@ For more information regarding the format of the data to be sent to the monitori
 .. code-block:: python
     :dedent: 0
 
-		    if self.monitoring_enabled:
+			if self.monitoring_enabled:
 		        """
 		        Create a 2D list contains the following content:
 		        [:, 0]: leaf target names (left as zeroes)
@@ -450,7 +456,7 @@ For more information regarding the format of the data to be sent to the monitori
 		        The first axis is the microbatch axis.
 		        """
 		        new_rows = np.zeros(
-		            (len(texts), 1 + self.pooled_feature_size + len(self.pipeline.classes_)),
+		            (len(stemmed), 1 + self.pooled_feature_size + len(self.pipeline.classes_)),
 		            dtype=np.float64
 		        )
 		        new_rows[
@@ -464,7 +470,7 @@ For more information regarding the format of the data to be sent to the monitori
 		                    min((i+1)*REFERENCE_SET_FEATURE_POOL, len(scores))
 		                ]
 		            )
-		            for i in range(0, pooled_feature_size)
+		            for i in range(0, self.pooled_feature_size)
 		        ])
 		        new_rows[
 		            :,
@@ -475,6 +481,12 @@ For more information regarding the format of the data to be sent to the monitori
 		            data=json.dumps({'data': new_rows.tolist()}),
 		            headers={"content-type": "application/json"},
 		        )
+		        
+Lastly, return the predictions. There is no need to post-process - Scikit-learn models do that by themselves and return the class names as discovered from the datasets!
+
+.. code-block:: python
+	:dedent: 0
+
 		    return predictions
 
 The configuration files
