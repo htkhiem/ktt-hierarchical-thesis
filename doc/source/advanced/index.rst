@@ -8,3 +8,4 @@ Here are some topics that are optional to daily usage, but may provide significa
 .. toctree::
     dvc
     gpu
+    tuning

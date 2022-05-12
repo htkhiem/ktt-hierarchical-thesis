@@ -22,7 +22,6 @@
             "dropout": "uniform",
             "hidden_nonlinear": "fixed"
         }
-
     },
     "db_bhcn_awx": {
         "display_name": "DB-BHCN+AWX",

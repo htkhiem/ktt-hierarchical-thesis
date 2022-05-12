@@ -1,7 +1,7 @@
 .. DB-BHCN and DB-BHCN+AWX documentation.
 
-DB-BHCN and DB-BHCN+AWX
-=======================
+DB-BHCN
+=======
 
 API
 ---
@@ -12,16 +12,50 @@ API
 
 Configuration schema
 --------------------
+
 The configuration for this model defines the following hyperparameters:
 
 * ``encoder_lr``: Encoder (DistilBERT) learning rate.
 * ``classifier_lr``: Classifier learning rate.
 * ``dropout``: The model's dropout rate.
 * ``hidden_nonlinear``: The FCFF model's nonlinear type, which can be either ``relu`` or ``tanhh``.
-* ``awx_norm``: represents the max that the matrix awx stretches (default 5) (Adjacency Wrapping Matrix layer option).
+* ``lambda_l``: intensity of the local loss function.
+* ``gamma_l``: the gamma value of the loss function (how skewed are bottom levels' penalisation compared to upper levels).
+* ``lambda_h``: intensity of the hierarchical loss function.
+
+Default tuning configuration
+----------------------------
+
+.. code-block:: json
+
+    "db_bhcn": {
+        "display_name": "DB-BHCN",
+        "train_minibatch_size": 16,
+        "val_test_minibatch_size": 64,
+        "max_len": 64,
+        "range": {
+            "encoder_lr": [0.00002, 0.00009],
+            "classifier_lr": [0.0002, 0.0009],
+            "gamma_l": [-0.2, 0.2],
+            "lambda_l": 1.0,
+            "lambda_h": [0.2, 0.9],
+            "dropout": [0.1, 0.5],
+            "hidden_nonlinear": "relu"
+        },
+        "mode": {
+            "encoder_lr": "uniform",
+            "classifier_lr": "uniform",
+            "gamma_l": "uniform",
+            "lambda_l": "fixed",
+            "lambda_h": "uniform",
+            "dropout": "uniform",
+            "hidden_nonlinear": "fixed"
+        }
+    },
 
 Checkpoint schema
 -----------------
+
 * ``config``: A copy of the configuration dictionary passed to this instance's constructor, either explicitly, or by ``from_checkpoint`` (extracted from a prior checkpoint).
 * ``hierarchy``: A serialised dictionary of hierarchical metadata created by ``PerLevelHierarchy.to_dict()``.
 * ``encoder_state_dict``: Weights of the DistilBERT model.
@@ -38,7 +72,7 @@ An example computation graph for the classifier is given below.
 
 .. image:: bhcn.svg
    :width: 320
-   :alt: Topology of the BHCN.
+   :alt: Topology of the BHCN classifier head.
 
 The topology's depth matches that of the hierarchy with no additional layer, while its output size at each layer corresponds to the number of classes at the corresponding hierarchical level. Outputs are taken in a residual manner from each layer, 'branching' from the main flow, hence the name. Between layers, the hidden output first goes through a hidden nonlinear function, then a layer normalisation function, then a dropout stage whose probability is a hyperparameter.
 
@@ -64,9 +98,3 @@ Then, for each non-leaf layer :math:`0 < h \neq |H|`, the same happens, with a s
    P^h = \psi(z^h) 
 
 where, :math:`W^h \in \mathbb{R}^{|C_{H_h}| \times (|x| + |A^{h - 1}|)}`. The last layer (where :math:`h = |H|`) does not produce `A^{|H|}` as there is no further layer after it. Layer normalisation and dropout are performed in said order but not shown here for clarity. For indexing classes, each hierarchical level's label indexing starts from zero, and the hierarchical label is then represented as an ordered list of indices. The complete classification for each example is the concatenation of one-hot vectors from each level.
-
-DB-BHCN+AWX
-~~~~~~~~~~~~~~~~~~~~~~~~~
-One large weakness of DB-BHCN is that it only strives to be as close to be hierarchically-compliant as possible, but cannot guarantee to be always so. As its name implies, this variant is a modified instance of our model that is then coupled with our implementation of the Adjacency Wrapping Matrix (AWX) layer from :cite:`masera2018awx`. In this variant, the local outputs branching from the flow are relegated to loss function minimisation duty. 
-
-DB-BHCN requires small changes to be able to integrate with AWX, the most significant of which being the omission of the hierarchical loss function. As AWX already uses :math:`R`, it needs not learn hierarchical constraints through backward propagation. In addition, we have empirically found that the hierarchical loss conflicts with the AWX layer. In its place, we compute a binary cross-entropy (BCE) loss value from the AWX output and use it in conjunction with the existing local loss function. The local loss function on the other hand was found to contribute significantly to this variant's capability to quickly pick up performance early in training. Another adaptation is the usage of the Sigmoid activation function before feeding the last hidden layer to AWX. LogSoftmax activation is still used for the concatenated local outputs for use with the existing NLL-based local loss function.

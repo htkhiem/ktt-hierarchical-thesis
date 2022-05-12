@@ -22,9 +22,10 @@ KTT's configuration format for the tuning script is different from the one used 
     - List of values (any data type, any length): a set of possible values. Hyperparameters specified with this kind of range will have their value sampled at random.
     - List of two numbers: if your range is in this form, then it can be used to define the lower and upper bound of a continuous range.
 - The ``mode`` object, which defines the type of sampling to use for each hyperparameter range as configured in the above ``range`` object. Three modes are currently supported, listed in the same order as the ranges they support above:
-    - ``fixed``: Not tuneable - keep constant.
-    - ``choice``: Pick one value out of those specified.
-    - ``uniform``: Sample a value from the continuous space bounded by the two numbers given in the list.
+
+	- ``fixed``: Not tuneable - keep constant.
+	- ``choice``: Pick one value out of those specified.
+	- ``uniform``: Sample a value from the continuous space bounded by the two numbers given in the list.
 
 An example configuration:
 
