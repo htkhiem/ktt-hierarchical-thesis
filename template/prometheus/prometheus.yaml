@@ -1,0 +1,13 @@
+global:
+  scrape_interval:     60s
+  evaluation_interval: 120s
+  # scrape_timeout is set to the global default (10s).
+
+scrape_configs:
+- job_name: prometheus
+
+  honor_labels: true
+  static_configs:
+  - targets:
+    - inference:5000  # all of our Bento models run on this port by default
+    - monitoring:5001  # for Evidently

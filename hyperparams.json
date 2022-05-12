@@ -1,0 +1,74 @@
+{
+    "db_bhcn": {
+        "display_name": "DB-BHCN",
+        "max_len": 64,
+        "encoder_lr": 0.00003,
+        "classifier_lr": 0.0005,
+        "gamma_l": -0.1,
+        "lambda_l": 1.0,
+        "lambda_h": 0.7,
+        "dropout": 0.3,
+        "hidden_nonlinear": "relu",
+        "train_minibatch_size": 16,
+        "val_test_minibatch_size": 64
+    },
+    "db_bhcn_awx": {
+        "display_name": "DB-BHCN+AWX",
+        "max_len": 64,
+        "encoder_lr": 0.00003,
+        "classifier_lr": 0.0005,
+        "gamma_l": -0.5,
+        "lambda_l": 0.3,
+        "dropout": 0.4,
+        "awx_norm": 5,
+        "hidden_nonlinear": "relu",
+        "train_minibatch_size": 16,
+        "val_test_minibatch_size": 64
+    },
+    "db_ahmcnf": {
+        "display_name": "DistilBERT + Adapted HMCN-F",
+        "max_len": 64,
+        "classifier_lr": 0.001,
+        "lambda_h": 0.05,
+        "dropout": 0.25,
+        "global_hidden_sizes": [384, 384],
+        "local_hidden_sizes": [384, 384],
+        "global_weight": 0.5,
+        "hidden_nonlinear": "relu",
+        "train_minibatch_size": 4,
+        "val_test_minibatch_size": 4
+    },
+    "db_achmcnn": {
+        "display_name": "DistilBERT + Adapted C-HMCNN",
+        "max_len": 64,
+        "encoder_lr": 0.00002,
+        "classifier_lr": 0.0005,
+        "h_dropout": 0.7,
+        "h_nonlinear": "relu",
+        "h_hidden_dim": 512,
+        "h_layer_count": 3,
+        "train_minibatch_size": 16,
+        "val_test_minibatch_size": 64
+    },
+    "db_linear": {
+        "display_name": "DistilBERT + Linear",
+        "max_len": 64,
+        "encoder_lr": 0.00001,
+        "classifier_lr": 0.00001,
+        "dropout": 0.25,
+        "train_minibatch_size": 32,
+        "val_test_minibatch_size": 64
+    },
+    "tfidf_lsgd": {
+        "display_name": "Tfidf + LinearSGD",
+        "loss": "modified_huber",
+        "max_iter": 1000,
+        "min_df": 50
+    },
+    "tfidf_hsgd": {
+        "display_name": "Tfidf + HierarchicalSGD",
+        "loss": "modified_huber",
+        "max_iter": 1000,
+        "min_df": 50
+    }
+}

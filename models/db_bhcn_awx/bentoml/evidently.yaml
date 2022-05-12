@@ -1,0 +1,10 @@
+service:
+    reference_path: './references.parquet'
+    min_reference_size: 30
+    use_reference: true
+    moving_reference: false
+    window_size: 30
+    calculation_period_sec: 60
+    monitors:
+        - cat_target_drift
+        - data_drift
