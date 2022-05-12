@@ -10,6 +10,34 @@ API
    :members:
    :special-members:
 
+Configuration schema
+--------------------
+
+The configuration for this model defines the following hyperparameters:
+
+* ``loss``: Type of loss function for use with the ``SGDClassifier``. See `the related documentation <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.SGDClassifier.html>`_ for more details.
+* ``max_iter``: The maximum number of iterations to train the ``SGDClassifier`` over.
+* ``min_df``: The minimum number of occurences a token must have in the training dataset for it to be included in the ``tfidf`` vectoriser's vocabulary.
+
+Default tuning configuration
+----------------------------
+
+.. code-block:: json
+
+	"tfidf_hsgd": {
+        "display_name": "Tfidf + HierarchicalSGD",
+		"range": {
+        	"loss": "modified_huber",
+            "max_iter": [500, 1000, 2000],
+            "min_df": [1, 2, 4, 8, 16, 32, 64, 128]
+        },
+        "mode": {
+        	"loss": "fixed",
+            "max_iter": "choice",
+            "min_df": "choice"
+        }
+    }
+
 Theory
 ------
 

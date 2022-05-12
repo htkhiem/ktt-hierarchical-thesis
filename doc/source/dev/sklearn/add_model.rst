@@ -552,12 +552,12 @@ We will now use the above facilities to export our new model as a self-contained
 		def export_bento_resources(self, svc_config={}):
 		    # Config for monitoring service
 		    config = {
-		        'prediction': self.classifier.hierarchy.classes[
-		            self.classifier.hierarchy.level_offsets[-2]:
-		            self.classifier.hierarchy.level_offsets[-1]
+		        'prediction': [
+		            'C' + str(i) for i in self.pipeline.classes_
 		        ]
 		    }
-		    svc = svc_lts.Tfidf_LSGD()
+		    svc_lts = import_module('models.tfidf_lsgd.bentoml.svc_lts')
+		    svc = svc_lts.TestModel()
 		    svc.pack('model', self.pipeline)
 		    svc.pack('config', svc_config)
 

@@ -837,7 +837,7 @@ We will now use the above facilities to export our new model as a self-contained
 		            self.classifier.hierarchy.level_offsets[-1]
 		        ]
 		    }
-		    svc = svc_lts.DB_Linear()
+		    svc = svc_lts.TestModel()
 		    # Pack tokeniser along with encoder
 		    encoder = {
 		        'tokenizer': get_tokenizer(),

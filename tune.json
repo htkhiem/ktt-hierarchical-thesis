@@ -112,12 +112,12 @@
     "tfidf_lsgd": {
         "display_name": "Tfidf + LinearSGD",
         "range": {
-        		"loss": "modified_huber",
+        	"loss": "modified_huber",
             "max_iter": [500, 1000, 2000],
             "min_df": [1, 2, 4, 8, 16, 32, 64, 128]
         },
         "mode": {
-        		"loss": "fixed",
+        	"loss": "fixed",
             "max_iter": "choice",
             "min_df": "choice"
         }
@@ -125,12 +125,12 @@
     "tfidf_hsgd": {
         "display_name": "Tfidf + HierarchicalSGD",
 		"range": {
-        		"loss": "modified_huber",
+        	"loss": "modified_huber",
             "max_iter": [500, 1000, 2000],
             "min_df": [1, 2, 4, 8, 16, 32, 64, 128]
         },
         "mode": {
-        		"loss": "fixed",
+        	"loss": "fixed",
             "max_iter": "choice",
             "min_df": "choice"
         }
