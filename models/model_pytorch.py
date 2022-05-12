@@ -49,6 +49,7 @@ def get_loaders(
         name,
         config,
         preprocessor,
+        shuffle=True,
         verbose=False
 ):
     """Create loaders from the specified Parquet dataset.
@@ -68,6 +69,8 @@ def get_loaders(
         - ``val_test_minibatch_size``: Size of a minibatch in the validation and test phase.
     preprocessor: utils.encoder.Preprocessor subclass
         A preprocessor instance to be used before the minibatching process.
+    shuffle: bool
+        Randomise load order of minibatches. Useful for averaging results.
     verbose: bool
         If true, print more information about the importing process, such as
         all detected classes and hierarchy information.
@@ -122,7 +125,7 @@ def get_loaders(
             preprocessor,
         ),
         batch_size=config['train_minibatch_size'],
-        shuffle=True,
+        shuffle=shuffle,
         num_workers=0
     )
     val_loader = torch.utils.data.DataLoader(
@@ -132,7 +135,7 @@ def get_loaders(
             preprocessor,
         ),
         batch_size=config['val_test_minibatch_size'],
-        shuffle=True,
+        shuffle=shuffle,
         num_workers=0
     )
     test_loader = torch.utils.data.DataLoader(
@@ -142,7 +145,7 @@ def get_loaders(
             preprocessor,
         ),
         batch_size=config['val_test_minibatch_size'],
-        shuffle=True,
+        shuffle=shuffle,
         num_workers=0
     )
 

@@ -1,2 +1,5 @@
-if __name__ == '__main__':
-    pass
+from .encoder import BasePreprocessor
+
+__all__ = [
+    'BasePreprocessor',
+]

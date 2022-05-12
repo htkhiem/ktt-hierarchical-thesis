@@ -22,6 +22,36 @@ The configuration for this model defines the following hyperparameters:
 * ``global_weight``: Global weight to be forward-propagated.
 * ``hidden_nonlinear``: Hidden nonlinear type which can be either ``relu`` or ``tanhh``.
 
+Default tuning configuration
+----------------------------
+
+.. code-block:: json
+
+    "db_ahmcnf": {
+        "display_name": "DistilBERT + Adapted HMCN-F",
+        "max_len": 64,
+        "train_minibatch_size": 4,
+        "val_test_minibatch_size": 4,
+        "range": {
+            "classifier_lr": [0.0005,0.002],
+            "lambda_h": [0.02, 0.08],
+            "dropout": [0.1, 0.7],
+            "global_hidden_sizes": [384, 384],
+            "local_hidden_sizes": [384, 384],
+            "global_weight": [0.2, 0.8],
+            "hidden_nonlinear": "relu"
+        },
+        "mode": {
+            "classifier_lr": "uniform",
+            "lambda_h": "uniform",
+            "dropout": "uniform",
+            "global_hidden_sizes": "fixed",
+            "local_hidden_sizes": "fixed",
+            "global_weight": "uniform",
+            "hidden_nonlinear": "fixed"
+        }
+    },
+
 Checkpoint schema
 -----------------
 * ``config``: A copy of the configuration dictionary passed to this instance's constructor, either explicitly, or by ``from_checkpoint`` (extracted from a prior checkpoint).

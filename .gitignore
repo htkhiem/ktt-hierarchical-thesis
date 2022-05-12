@@ -7,12 +7,14 @@ doc/build/*
 output/*
 tmp/*
 weights/*
+!weights/*/*/*.dvc
 airflow/*
 !airflow/airflow.cfg
 !airflow/webserver_config.py
 benchmark/text-strings.json
 datasets/*
 !datasets/Walmart_30k.parquet
+!datasets/*/*.dvc
 
 # Byte-compiled / optimized / DLL files
 */__pycache__/*

@@ -1,5 +1,6 @@
 """Implementation of the DistilBERT+Linear model."""
 import os
+from importlib import import_module
 import pandas as pd
 import torch
 import numpy as np
@@ -9,7 +10,6 @@ from models import model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.encoders.distilbert import get_pretrained, get_tokenizer, \
     export_trained, DistilBertPreprocessor
-from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
@@ -58,7 +58,7 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
 
         Returns
         -------
-        instance : DB_AC_HMCNN
+        instance : DB_Linear
             An instance that fully replicates the one producing the checkpoint.
 
         See also
@@ -66,10 +66,6 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
         save : Create a checkpoint readable by this method.
         load : An alternative to this method for already-constructed instances.
         """
-        if not os.path.exists(path):
-            if not os.path.exists(path + '.dvc'):
-                raise OSError('Checkpoint not present and cannot be retrieved')
-        os.system('dvc checkout {}.dvc'.format(path))
         checkpoint = torch.load(path)
         hierarchy = PerLevelHierarchy.from_dict(checkpoint['hierarchy'])
         instance = cls(hierarchy, checkpoint['config'])
@@ -170,10 +166,6 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
         The state dictionary of the optimiser at that time, which can be loaded
         using `optimizer.load_state_dict()`.
         """
-        if not os.path.exists(path):
-            if not os.path.exists(path + '.dvc'):
-                raise OSError('Checkpoint not present and cannot be retrieved')
-            os.system('dvc checkout {}.dvc'.format(path))
         checkpoint = torch.load(path)
         self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
@@ -236,11 +228,12 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
         # Store validation metrics after each epoch
         val_metrics = np.empty((4, 0), dtype=float)
 
+        tqdm_disabled = 'progress' in self.config.keys() and not self.config['progress']
         for epoch in range(1, self.config['epoch'] + 1):
             val_loss = 0
             self.train()
             print('Epoch {}: Training'.format(epoch))
-            for batch_idx, data in enumerate(tqdm(train_loader)):
+            for batch_idx, data in enumerate(tqdm(train_loader, disable=tqdm_disabled)):
                 ids = data['ids'].to(self.device, dtype=torch.long)
                 mask = data['mask'].to(self.device, dtype=torch.long)
                 targets = data['labels'].to(self.device, dtype=torch.long)
@@ -261,7 +254,7 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
             val_outputs = np.empty((0, self.output_size), dtype=float)
 
             with torch.no_grad():
-                for batch_idx, data in tqdm(enumerate(val_loader)):
+                for batch_idx, data in enumerate(tqdm(val_loader, disable=tqdm_disabled)):
                     ids = data['ids'].to(self.device,
                                          dtype=torch.long)
                     mask = data['mask'].to(self.device,
@@ -465,7 +458,7 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
                 'output': {0: 'batch_size'}
             }
         )
-        self.classifier.hierarchy.to_json(
+        self.hierarchy.to_json(
             "{}/hierarchy.json".format(classifier_path)
         )
 
@@ -490,11 +483,12 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
         x = torch.randn(1, 768, requires_grad=True).to(self.device)
         # Config for monitoring service
         config = {
-            'prediction': self.classifier.hierarchy.classes[
-                self.classifier.hierarchy.level_offsets[-2]:
-                self.classifier.hierarchy.level_offsets[-1]
+            'prediction': self.hierarchy.classes[
+                self.hierarchy.level_offsets[-2]:
+                self.hierarchy.level_offsets[-1]
             ]
         }
+        svc_lts = import_module('models.db_linear.bentoml.svc_lts')
         svc = svc_lts.DB_Linear()
         # Pack tokeniser along with encoder
         encoder = {
@@ -503,7 +497,7 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
         }
         svc.pack('encoder', encoder)
         svc.pack('classifier', torch.jit.trace(self.classifier, x))
-        svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
+        svc.pack('hierarchy', self.hierarchy.to_dict())
         svc.pack('config', svc_config)
         return config, svc
 

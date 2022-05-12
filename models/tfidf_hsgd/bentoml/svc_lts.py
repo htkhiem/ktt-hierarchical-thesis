@@ -1,4 +1,4 @@
-"""Service file for Tfidf+LeafSGD."""
+"""Service file for Tfidf+HierarchicalSGD."""
 import os
 import requests
 from typing import List
@@ -37,8 +37,8 @@ REFERENCE_SET_FEATURE_POOL = 64
     SklearnModelArtifact('model'),
     JSONArtifact('config'),
 ])
-class Tfidf_LSGD(bentoml.BentoService):
-    """Real-time inference service for Tfidf+LeafSGD."""
+class Tfidf_HSGD(bentoml.BentoService):
+    """Real-time inference service for Tfidf+HierarchicalSGD."""
 
     _initialised = False
 
@@ -47,8 +47,7 @@ class Tfidf_LSGD(bentoml.BentoService):
         self.model = self.artifacts.model
         # Load service configuration JSON
         self.monitoring_enabled = self.artifacts.config['monitoring_enabled']
-        self.pooled_feature_size = self.model.n_features_in_ // \
-            REFERENCE_SET_FEATURE_POOL
+        self.pooled_feature_size = self.model.n_features_in_ // REFERENCE_SET_FEATURE_POOL
 
         self._initialised = True
 
@@ -70,8 +69,7 @@ class Tfidf_LSGD(bentoml.BentoService):
         ]
         tfidf_encoding = self.model.steps[0].transform(stemmed)
         scores = self.model.steps[1].steppredict_proba(tfidf_encoding)
-        predictions = [
-            self.model.classes_[i] for i in np.argmax(scores, axis=1)]
+        predictions = [self.model.classes_[i] for i in np.argmax(scores, axis=1)]
 
         if self.monitoring_enabled:
             """
@@ -83,7 +81,8 @@ class Tfidf_LSGD(bentoml.BentoService):
             The first axis is the microbatch axis.
             """
             new_rows = np.zeros(
-                (len(stemmed), 1 + self.pooled_feature_size + len(self.pipeline.classes_)),
+                (len(stemmed), 1 + self.pooled_feature_size +
+                 len(self.pipeline.classes_)),
                 dtype=np.float64
             )
             new_rows[

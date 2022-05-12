@@ -1,4 +1,4 @@
-"""Service file for DB-BHCN+AWX."""
+"""Service file for DistilBERT+Adapted C-HMCNN."""
 import os
 import requests
 from typing import List
@@ -17,37 +17,26 @@ from bentoml.types import JsonSerializable
 EVIDENTLY_HOST = os.environ.get('EVIDENTLY_HOST', 'localhost')
 EVIDENTLY_PORT = os.environ.get('EVIDENTLY_PORT', 5001)
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
-# Tell the BentoML exporter what needs to be installed. These will go into
-# the Dockerfile and requirements.txt in the service's folder.
+
 @bentoml.env(
-    requirements_txt_file='models/db_bhcn_awx/bentoml/requirements.txt',
+    requirements_txt_file='models/db_achmcnn/bentoml/requirements.txt',
     docker_base_image='bentoml/model-server:0.13.1-py38-gpu'
 )
-# What this service needs to run: an encoder (DistilBERT), a classifier
-# (our testmodel), the hierarchical metadata and a config variable
-# specifying whether a monitoring server has been exported along.
 @bentoml.artifacts([
     TransformersModelArtifact('encoder'),
     PytorchModelArtifact('classifier'),
     JSONArtifact('hierarchy'),
     JSONArtifact('config'),
 ])
-# The actual class
-class DB_BHCN_AWX(bentoml.BentoService):
-    """Real-time inference service for the test model."""
+class DB_AC_HMCNN(bentoml.BentoService):
+    """Real-time inference service for DistilBERT+Adapted C-HMCNN."""
 
     _initialised = False
 
-    # We could also put these in the predict() method, but that will put
-    # unnecessary load on the interpreter and reduce our throughput.
-    # However, we cannot put them in __init__() as this class will also
-    # be constructed without any of the artifacts injected once (in the
-    # export() method of the model implementation).
     def init_fields(self):
         """Initialise the necessary fields. This is not a constructor."""
         self.tokeniser = self.artifacts.encoder.get('tokenizer')
@@ -114,7 +103,7 @@ class DB_BHCN_AWX(bentoml.BentoService):
             [self.classes[level] for level in row]
             for row in pred_codes.swapaxes(1, 0)
         ])
-        
+
         if self.monitoring_enabled:
             """
             Create a 2D list contains the following content:

@@ -11,6 +11,10 @@ Individual components in our system are controlled via command-line arguments. T
 .. click:: export:main
    :prog: python3 train.py
 
+.. _tune-cli:
+
+.. click:: tune:main
+   :prog: python3 tune.py
 
 Adapters
 --------

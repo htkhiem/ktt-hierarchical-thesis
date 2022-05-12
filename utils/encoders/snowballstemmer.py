@@ -41,7 +41,6 @@ class SnowballStemmerPreprocessor(BasePreprocessor):
             A dictionary containing the following field:
 
             - ``text``: Stemmed text
-            - ``mask``: DistilBERT LM mask (all 1s)
         """
         words = word_tokenize(text)
         result_list = map(

@@ -21,6 +21,34 @@ The configuration for this model defines the following hyperparameters:
 * ``h_hidden_dim``: The hidden layer size in the FCFF.
 * ``h_layer_count``: Number of feedforward layers in the FCFF. Minimum is 1. If 1 is specified, a Linear layer with size (768, `class_count`) will be created and ``h_hidden_dim`` is not used.
 
+Default tuning configuration
+----------------------------
+
+.. code-block:: json
+
+    "db_achmcnn": {
+        "display_name": "DistilBERT + Adapted C-HMCNN",
+        "train_minibatch_size": 16,
+        "val_test_minibatch_size": 64,
+        "max_len": 64,
+        "range": {
+            "encoder_lr": [0.00001, 0.00006],
+            "classifier_lr": [0.0002, 0.001],
+            "h_dropout": [0.0, 0.75],
+            "h_nonlinear": "relu",
+            "h_hidden_dim": 512,
+            "h_layer_count": [1, 2, 3, 4]
+        },
+        "mode": {
+            "encoder_lr": "uniform",
+            "classifier_lr": "uniform",
+            "h_dropout": "uniform",
+            "h_nonlinear": "fixed",
+            "h_hidden_dim": "fixed",
+            "h_layer_count": "choice"
+        }
+    },
+
 Checkpoint schema
 -----------------
 * ``config``: A copy of the configuration dictionary passed to this instance's constructor, either explicitly, or by ``from_checkpoint`` (extracted from a prior checkpoint).

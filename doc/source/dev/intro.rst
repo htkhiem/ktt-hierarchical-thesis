@@ -73,7 +73,7 @@ Checkpoint file names must abide by the following convention:
     - Best-performing checkpoints (by your own metric, for example the smallest validation loss value): ``best_YYYY-MM-DDTHH:MM:SS.<extension>``.
     - The last checkpoint (produced at the last epoch): ``last_YYYY-MM-DDTHH:MM:SS.<extension>``.
 
-In other words, the checkpoint name is ``best | last`` plus an ISO8601 datetime string (truncated to seconds) and then the file extension. The exact extension depends on the format you choose to save your model's checkpoint in. All bundled models use Pickle to serialise their models and as such use the ``.pt`` extension.
+In other words, the checkpoint name is ``best | last`` plus an ISO8601 datetime string (truncated to seconds) and then the file extension. **Every checkpoint must be packaged within a single file.** The exact extension depends on the format you choose to save your model's checkpoint in. All bundled models use Pickle to serialise their models and as such use the ``.pt`` extension.
 
 .. note::
    Models that do not generate in-progress checkpoints (such as Scikit-learn models whose training process is a simple blocking ``fit()`` call) can produce their only checkpoint labelled as either ``best`` or ``last``. However, since the export script defaults to looking for ``best`` checkpoints, it would be more convenient to use ``best``. This would allow you to call the export script for these models without having to specify an additional option at the export script.
