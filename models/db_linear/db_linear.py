@@ -262,7 +262,7 @@ class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
             val_outputs = np.empty((0, self.output_size), dtype=float)
 
             with torch.no_grad():
-                for batch_idx, data in tqdm(enumerate(val_loader, disable=tqdm_disabled)):
+                for batch_idx, data in enumerate(tqdm(val_loader, disable=tqdm_disabled)):
                     ids = data['ids'].to(self.device,
                                          dtype=torch.long)
                     mask = data['mask'].to(self.device,

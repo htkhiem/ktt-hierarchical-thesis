@@ -27,13 +27,13 @@ def make_hierarchy(hierarchy_dict):
     hierarchy: dict
         A special hierarchy dictionary for sklearn_hierarchical_classification.
     """
-    classes = hierarchy_dict['classes']
+    # classes = hierarchy_dict['classes']
     levels = hierarchy_dict['level_sizes']
     offsets = hierarchy_dict['level_offsets']
     # Init level 0 to root list
     hierarchy = {
         ROOT: [
-            classes[i]
+            str(i)
             for i in range(levels[0])
         ]
     }
@@ -42,12 +42,12 @@ def make_hierarchy(hierarchy_dict):
         depth = i+1
         for child_idx, parent_idx in enumerate(level):
             # Convert to global space
-            gl_child_idx = child_idx + offsets[depth]
-            gl_parent_idx = parent_idx + offsets[depth-1]
+            gl_child_idx = str(child_idx + offsets[depth])
+            gl_parent_idx = str(parent_idx + offsets[depth-1])
             try:
-                hierarchy[classes[gl_parent_idx]].append(classes[gl_child_idx])
+                hierarchy[gl_parent_idx].append(gl_child_idx)
             except KeyError:
-                hierarchy[classes[gl_parent_idx]] = [classes[gl_child_idx]]
+                hierarchy[gl_parent_idx] = [gl_child_idx]
     return hierarchy
 
 

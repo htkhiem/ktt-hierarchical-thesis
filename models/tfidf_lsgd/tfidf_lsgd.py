@@ -1,7 +1,6 @@
 """Implementation of the tfidf + leaf SGD classifier model."""
 import os
 import joblib
-import yaml
 
 import numpy as np
 import pandas as pd
@@ -45,7 +44,7 @@ class Tfidf_LSGD(model_sklearn.SklearnModel):
             max_iter=config['max_iter']
         )
         self.pipeline = Pipeline([
-            ('tfidf', TfidfVectorizer(config['min_df'])),
+            ('tfidf', TfidfVectorizer(min_df=config['min_df'])),
             ('clf', clf),
         ])
         self.config = config

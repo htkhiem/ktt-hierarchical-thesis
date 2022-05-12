@@ -1,6 +1,7 @@
 """Implementation of the Adapted C-HMCNN classifier atop DistilBERT."""
 import os
 
+import pandas as pd
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -8,8 +9,12 @@ import bentoml
 
 from models import model_pytorch
 from utils.hierarchy import PerLevelHierarchy
-from utils.encoders.distilbert import get_pretrained, export_trained, \
-    DistilBertPreprocessor
+from utils.encoders.distilbert import get_pretrained, get_tokenizer,\
+    export_trained, DistilBertPreprocessor
+from .bentoml import svc_lts
+
+REFERENCE_SET_FEATURE_POOL = 32
+POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
 
 class MCM(torch.nn.Module):
@@ -144,6 +149,9 @@ class DB_AC_HMCNN(model_pytorch.PyTorchModel, torch.nn.Module):
         self.config = config
         self.device = 'cpu'
 
+        # For reference set generation
+        self.pool = torch.nn.AvgPool1d(REFERENCE_SET_FEATURE_POOL)
+
     @classmethod
     def get_preprocessor(cls, config):
         """Return a DistilBERT preprocessor instance for this model."""
@@ -151,7 +159,7 @@ class DB_AC_HMCNN(model_pytorch.PyTorchModel, torch.nn.Module):
 
     @classmethod
     def from_checkpoint(cls, path):
-        """Construct model from saved checkpoints as produced by previous
+        """Construct model from saved checkpoints as produced by previous\
         instances of this model.
 
         Parameters
@@ -502,51 +510,113 @@ class DB_AC_HMCNN(model_pytorch.PyTorchModel, torch.nn.Module):
             'outputs': all_outputs,
         }
 
-    def export(self, dataset_name, bento=False):
-        """Export model to ONNX/Bento.
+    def forward_with_features(self, ids, mask):
+        """Forward-propagate input to generate classification.
 
-        The classifier head (AC-HMCNN) is always exported as ONNX (which is
-        then loaded into BentoML as an `onnxruntime` runner). The DistilBERT
-        encoder is either exported as ONNX or straight to BentoML.
+        This version additionally returns pooled features from DistilBERT
+        for generating the reference set. By default, a kernel size and
+        stride of 32 is used, which means there are 24 features pooled from
+        the original 768 features.
 
         Parameters
         ----------
-        dataset_name: str
-            Name of the dataset this instance was trained on. Use the folder
-            name of the intermediate version in the datasets folder.
+        ids : torch.LongTensor of shape (batch_size, num_choices)
+             Indices of input sequence tokens in the vocabulary.
+        mask : torch.FloatTensor of shape (batch_size, num_choices), optional
+            Mask to avoid performing attention on padding token indices. Mask
+            values are 0 for real tokens and 1 for masked tokens such as pads.
 
-        bento: bool
-            Whether to export this model as a BentoML model or not. If true,
-            the DistilBERT encoder will be directly packaged into a BentoML
-            model and the entire model will be saved in your local BentoML
-            store. The classifier is always exported as ONNX.
+        Returns
+        -------
+        leaf_outputs : torch.FloatTensor of size (batch_size, leaf_class_count)
+            Scores for the leaf layer. Only the leaf layer is returned
+            to as Evidently doesn't seem to play well with multilabel tasks.
+        pooled_features: torch.FloatTensor of shape(batch_size, 24)
+        """
+        encoder_outputs = self.encoder(ids, mask)[0][:, 0, :]
+        outputs = self.classifier(
+            encoder_outputs
+        )
+        return outputs[
+            :, self.classifier.level_offsets[-2]:], self.pool(encoder_outputs)
 
+    def gen_reference_set(self, loader):
+        """Generate an Evidently-compatible reference dataset.
+
+        Due to the data drift tests' computational demands, we only record
+        average-pooled features.
+
+        Parameters
+        ----------
+        loader: torch.utils.data.DataLoader
+            A DataLoader wrapping around a dataset to become the reference
+            dataset (ideally the test set).
+
+        Returns
+        -------
+        reference_set: pandas.DataFrame
+            An Evidently-compatible dataset. Numerical feature column names are
+            simple stringified numbers from 0 to 23 (for the default kernel/
+            stride of 32), while targets are leaf classes' string names.
         """
         self.eval()
-        export_trained(self.encoder, dataset_name, 'db_achmcnn', bento=bento)
+        all_pooled_features = np.empty((0, POOLED_FEATURE_SIZE))
+        all_targets = np.empty((0), dtype=int)
+        all_outputs = np.empty(
+            (0, self.classifier.hierarchy.levels[-1]), dtype=float)
 
-        # Create dummy input for tracing
-        batch_size = 1  # Dummy batch size. When exported, it will be dynamic
-        x = torch.randn(batch_size, 768, requires_grad=True).to(
+        with torch.no_grad():
+            for batch_idx, data in enumerate(tqdm(loader)):
+                ids = data['ids'].to(self.device, dtype=torch.long)
+                mask = data['mask'].to(self.device, dtype=torch.long)
+                targets = data['labels']
+
+                leaf_outputs, pooled_features = self.\
+                    forward_with_features(ids, mask)
+                all_pooled_features = np.concatenate(
+                    [all_pooled_features, pooled_features.cpu()]
+                )
+                # Only store leaves
+                all_targets = np.concatenate([all_targets, targets[:, -1]])
+                all_outputs = np.concatenate([all_outputs, leaf_outputs.cpu()])
+
+        cols = {
+            'targets': all_targets
+        }
+        leaf_start = self.classifier.hierarchy.level_offsets[-2]
+        for col_idx in range(all_pooled_features.shape[1]):
+            cols[str(col_idx)] = all_pooled_features[:, col_idx]
+        for col_idx in range(all_outputs.shape[1]):
+            cols[
+                self.classifier.hierarchy.classes[leaf_start + col_idx]
+            ] = all_outputs[:, col_idx]
+        return pd.DataFrame(cols)
+
+    def export_onnx(self, classifier_path, encoder_path=None):
+        """Export this model as two ONNX graphs.
+
+        Parameters
+        ----------
+        classifier_path: str
+            Where to write the classifier head to.
+        encoder_path: None
+            Where to write the encoder (DistilBERT) to.
+        """
+        self.eval()
+        if encoder_path is None:
+            raise RuntimeError('This model requires an encoder path')
+        export_trained(
+            self.encoder,
+            encoder_path
+        )
+        x = torch.randn(1, 768, requires_grad=True).to(
             self.device
         )
-        name = '{}_{}'.format('db_achmcnn', dataset_name)
-        path = 'output/{}/classifier/'.format(name)
-
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-        path += 'classifier.onnx'
-
-        # Clear previous versions
-        if os.path.exists(path):
-            os.remove(path)
-
         # Export into transformers model .bin format
         torch.onnx.export(
             self.classifier,
             x,
-            path,
+            classifier_path + 'classifier.onnx',
             export_params=True,
             opset_version=11,
             do_constant_folding=True,
@@ -557,19 +627,47 @@ class DB_AC_HMCNN(model_pytorch.PyTorchModel, torch.nn.Module):
                 'output': {0: 'batch_size'}
             }
         )
-
-        hierarchy_json = self.classifier.hierarchy.to_json(
-            "output/{}/hierarchy.json".format(name)
+        self.classifier.hierarchy.to_json(
+            "{}/hierarchy.json".format(classifier_path)
         )
 
-        # Optionally save to BentoML model store. Pack hierarchical metadata
-        # along with model for convenience.
-        if bento:
-            bentoml.onnx.save(
-                'classifier_' + name,
-                path,
-                metadata=hierarchy_json
-            )
+    def export_bento_resources(self, svc_config={}):
+        """Export the necessary resources to build a BentoML service of this \
+        model.
+
+        Parameters
+        ----------
+        svc_config: dict
+            Additional configuration to pack into the BentoService.
+
+        Returns
+        -------
+        config: dict
+            Evidently configuration data specific to this instance.
+        svc: BentoService subclass
+            A fully packed BentoService.
+        """
+        self.eval()
+        # Sample input
+        x = torch.randn(1, 768, requires_grad=True).to(self.device)
+        # Config for monitoring service
+        config = {
+            'prediction': self.classifier.hierarchy.classes[
+                self.classifier.hierarchy.level_offsets[-2]:
+                self.classifier.hierarchy.level_offsets[-1]
+            ]
+        }
+        svc = svc_lts.DB_AC_HMCNN()
+        # Pack tokeniser along with encoder
+        encoder = {
+            'tokenizer': get_tokenizer(),
+            'model': self.encoder
+        }
+        svc.pack('encoder', encoder)
+        svc.pack('classifier', torch.jit.trace(self.classifier, x))
+        svc.pack('hierarchy', self.classifier.hierarchy.to_dict())
+        svc.pack('config', svc_config)
+        return config, svc
 
     def to(self, device=None):
         """Move this module to specified device.
