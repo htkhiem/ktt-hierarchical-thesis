@@ -111,6 +111,8 @@ class Model(ABC):
 
         It also takes in optimiser state for resuming capability.
 
+        All implementations must take care of running ``dvc add`` themselves.
+
         Parameters
         ----------
         path : str
@@ -133,10 +135,6 @@ class Model(ABC):
         must match the instance that created said saved state).
         It returns optimiser state as extracted from the saved state, which is
         useful for resuming the optimiser in the training script.
-
-        All implementations must support automatically checking out DVC remotes
-        if a local copy is not available. If the dataset is not available on the
-        remote too, then an OSError with a suitable message must be raised.
 
         Parameters
         ----------
