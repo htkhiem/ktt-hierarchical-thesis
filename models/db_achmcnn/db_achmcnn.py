@@ -1,17 +1,16 @@
 """Implementation of the Adapted C-HMCNN classifier atop DistilBERT."""
 import os
+from importlib import import_module
 
 import pandas as pd
 import torch
 import numpy as np
 from tqdm import tqdm
-import bentoml
 
 from models import model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.encoders.distilbert import get_pretrained, get_tokenizer,\
     export_trained, DistilBertPreprocessor
-from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
@@ -266,10 +265,6 @@ class DB_AC_HMCNN(model_pytorch.PyTorchModel, torch.nn.Module):
         The state dictionary of the optimiser at that time, which can be loaded
         using `optimizer.load_state_dict()`.
         """
-        if not os.path.exists(path):
-            if not os.path.exists(path + '.dvc'):
-                raise OSError('Checkpoint not present and cannot be retrieved')
-            os.system('dvc checkout {}.dvc'.format(path))
         checkpoint = torch.load(path)
         self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
@@ -657,6 +652,7 @@ class DB_AC_HMCNN(model_pytorch.PyTorchModel, torch.nn.Module):
                 self.classifier.hierarchy.level_offsets[-1]
             ]
         }
+        svc_lts = import_module('models.db_achmcnn.bentoml.svc_lts')
         svc = svc_lts.DB_AC_HMCNN()
         # Pack tokeniser along with encoder
         encoder = {

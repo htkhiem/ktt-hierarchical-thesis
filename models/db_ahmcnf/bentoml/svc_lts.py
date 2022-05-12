@@ -1,4 +1,4 @@
-"""Service file for DB-BHCN + Walmart_30k."""
+"""Service file for DistilBERT+Adapted C-HMCNN."""
 import os
 import requests
 from typing import List
@@ -21,8 +21,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
+
 @bentoml.env(
-    requirements_txt_file='models/db_bhcn/bentoml/requirements.txt',
+    requirements_txt_file='models/db_ahmcnf/bentoml/requirements.txt',
     docker_base_image='bentoml/model-server:0.13.1-py38-gpu'
 )
 @bentoml.artifacts([
@@ -31,8 +32,8 @@ POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
     JSONArtifact('hierarchy'),
     JSONArtifact('config'),
 ])
-class DB_BHCN(bentoml.BentoService):
-    """Real-time inference service for DB-BHCN."""
+class DB_AHMCN_F(bentoml.BentoService):
+    """Real-time inference service for DistilBERT+Adapted C-HMCNN."""
 
     _initialised = False
 
@@ -84,7 +85,7 @@ class DB_BHCN(bentoml.BentoService):
         )[0][:, 0, :]
         encoder_cls_pooled = self.pool(encoder_cls)
         # Classify using our classifier head
-        scores = self.classifier(encoder_cls).cpu().detach().numpy()
+        _, scores = self.classifier(encoder_cls).cpu().detach().numpy()
         # Segmented argmax, as usual
         pred_codes = np.array([
             np.argmax(

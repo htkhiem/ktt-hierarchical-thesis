@@ -1,4 +1,4 @@
-"""Service file for Tfidf-LeafSGD."""
+"""Service file for Tfidf+HierarchicalSGD."""
 import os
 import requests
 from typing import List
@@ -22,11 +22,13 @@ nltk.download('stopwords')
 # These can't be put inside the class since they don't have _unload(), which
 # prevents joblib from correctly parallelising the class if included.
 STOP_WORDS = set(stopwords.words('english'))
+SNOWBALLSTEMMER = SnowballStemmer('english')
 
 EVIDENTLY_HOST = os.environ.get('EVIDENTLY_HOST', 'localhost')
 EVIDENTLY_PORT = os.environ.get('EVIDENTLY_PORT', 5001)
 
 REFERENCE_SET_FEATURE_POOL = 64
+
 
 @bentoml.env(
     requirements_txt_file='models/db_bhcn/bentoml/requirements.txt'
@@ -35,8 +37,8 @@ REFERENCE_SET_FEATURE_POOL = 64
     SklearnModelArtifact('model'),
     JSONArtifact('config'),
 ])
-class Tfidf_LSGD(bentoml.BentoService):
-    """Real-time inference service for Tf-idf+LeafSGD."""
+class Tfidf_HSGD(bentoml.BentoService):
+    """Real-time inference service for Tfidf+HierarchicalSGD."""
 
     _initialised = False
 
@@ -61,12 +63,13 @@ class Tfidf_LSGD(bentoml.BentoService):
             self.init_fields()
         tokenized = [word_tokenize(j['text']) for j in parsed_json_list]
         stemmed = [
-            ' '.join([stemmer.stem(word) if word not in STOP_WORDS else word for word in lst])
+            ' '.join([SNOWBALLSTEMMER.stem(word) if word not in STOP_WORDS
+                      else word for word in lst])
             for lst in tokenized
         ]
-        tfidf_encoding = model.steps[0].transform(stemmed)
-        scores = model.steps[1].steppredict_proba(tfidf_encoding)
-        predictions = [model.classes_[i] for i in np.argmax(scores, axis=1)]
+        tfidf_encoding = self.model.steps[0].transform(stemmed)
+        scores = self.model.steps[1].steppredict_proba(tfidf_encoding)
+        predictions = [self.model.classes_[i] for i in np.argmax(scores, axis=1)]
 
         if self.monitoring_enabled:
             """
@@ -78,7 +81,8 @@ class Tfidf_LSGD(bentoml.BentoService):
             The first axis is the microbatch axis.
             """
             new_rows = np.zeros(
-                (len(texts), 1 + self.pooled_feature_size + len(self.pipeline.classes_)),
+                (len(stemmed), 1 + self.pooled_feature_size +
+                 len(self.pipeline.classes_)),
                 dtype=np.float64
             )
             new_rows[
@@ -92,7 +96,7 @@ class Tfidf_LSGD(bentoml.BentoService):
                         min((i+1)*REFERENCE_SET_FEATURE_POOL, len(scores))
                     ]
                 )
-                for i in range(0, pooled_feature_size)
+                for i in range(0, self.pooled_feature_size)
             ])
             new_rows[
                 :,

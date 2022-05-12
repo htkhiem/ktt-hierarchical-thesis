@@ -1,6 +1,7 @@
 """Implementation of the tfidf + leaf SGD classifier model."""
 import os
 import joblib
+from importlib import import_module
 
 import numpy as np
 import pandas as pd
@@ -14,7 +15,6 @@ from skl2onnx.common.data_types import StringTensorType
 
 from models import model_sklearn
 from utils.encoders.snowballstemmer import SnowballStemmerPreprocessor
-from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 64
 
@@ -39,14 +39,17 @@ class Tfidf_LSGD(model_sklearn.SklearnModel):
         verbose: None
             This model does not have additional printing options.
         """
-        clf = linear_model.SGDClassifier(
-            loss=config['loss'],
-            max_iter=config['max_iter']
-        )
-        self.pipeline = Pipeline([
-            ('tfidf', TfidfVectorizer(min_df=config['min_df'])),
-            ('clf', clf),
-        ])
+        if hierarchy is not None:
+            clf = linear_model.SGDClassifier(
+                loss=config['loss'],
+                max_iter=config['max_iter']
+            )
+            self.pipeline = Pipeline([
+                ('tfidf', TfidfVectorizer(min_df=config['min_df'])),
+                ('clf', clf),
+            ])
+        else:
+            self.pipeline = None
         self.config = config
 
     @classmethod
@@ -111,10 +114,6 @@ class Tfidf_LSGD(model_sklearn.SklearnModel):
         path : str
              Path to the checkpoint file.
         """
-        if not os.path.exists(path):
-            if not os.path.exists(path + '.dvc'):
-                raise OSError('Checkpoint not present and cannot be retrieved')
-            os.system('dvc checkout {}.dvc'.format(path))
         self.pipeline = joblib.load(path)
 
     def fit(
@@ -279,11 +278,11 @@ class Tfidf_LSGD(model_sklearn.SklearnModel):
         """
         # Config for monitoring service
         config = {
-            'prediction': self.classifier.hierarchy.classes[
-                self.classifier.hierarchy.level_offsets[-2]:
-                self.classifier.hierarchy.level_offsets[-1]
+            'prediction': [
+                'C' + str(i) for i in self.pipeline.classes_
             ]
         }
+        svc_lts = import_module('models.tfidf_lsgd.bentoml.svc_lts')
         svc = svc_lts.Tfidf_LSGD()
         svc.pack('model', self.pipeline)
         svc.pack('config', svc_config)

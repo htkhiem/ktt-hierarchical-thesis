@@ -1,5 +1,6 @@
 """Implementation of the DB-BHCN+AWX model."""
 import os
+from importlib import import_module
 import pandas as pd
 import torch
 import numpy as np
@@ -9,7 +10,6 @@ from models import model_pytorch
 from utils.hierarchy import PerLevelHierarchy
 from utils.encoders.distilbert import get_pretrained, get_tokenizer, \
     export_trained, DistilBertPreprocessor
-from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 24
@@ -231,7 +231,7 @@ class DB_BHCN_AWX(model_pytorch.PyTorchModel, torch.nn.Module):
 
         Returns
         -------
-        instance : DB_AC_HMCNN
+        instance : DB_BHCN_AWX
             An instance that fully replicates the one producing the checkpoint.
 
         See also
@@ -378,10 +378,6 @@ class DB_BHCN_AWX(model_pytorch.PyTorchModel, torch.nn.Module):
         The state dictionary of the optimiser at that time, which can be loaded
         using `optimizer.load_state_dict()`.
         """
-        if not os.path.exists(path):
-            if not os.path.exists(path + '.dvc'):
-                raise OSError('Checkpoint not present and cannot be retrieved')
-            os.system('dvc checkout {}.dvc'.format(path))
         checkpoint = torch.load(path)
         self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
@@ -765,6 +761,7 @@ class DB_BHCN_AWX(model_pytorch.PyTorchModel, torch.nn.Module):
                 self.classifier.hierarchy.level_offsets[-1]
             ]
         }
+        svc_lts = import_module('models.db_bhcn_awx.bentoml.svc_lts')
         svc = svc_lts.DB_BHCN_AWX()
         # Pack tokeniser along with encoder
         encoder = {

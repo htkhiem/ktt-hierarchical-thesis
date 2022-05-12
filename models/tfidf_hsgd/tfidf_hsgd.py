@@ -1,6 +1,7 @@
 """Implementation of the tfidf + hierarchical SGD classifier model."""
 import os
 import joblib
+from importlib import import_module
 
 import pandas as pd
 import numpy as np
@@ -13,7 +14,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from utils.encoders.snowballstemmer import SnowballStemmerPreprocessor
 
 from models import model_sklearn
-from .bentoml import svc_lts
 
 REFERENCE_SET_FEATURE_POOL = 64
 
@@ -25,7 +25,7 @@ class Tfidf_HSGD(model_sklearn.SklearnModel):
     ease of use in the main training controller.
     """
 
-    def __init__(self, hierarchy, config, verbose=False):
+    def __init__(self, hierarchy=None, config=None, verbose=False):
         """Construct the TF-IDF + HierSGD model.
 
         Parameters
@@ -36,18 +36,21 @@ class Tfidf_HSGD(model_sklearn.SklearnModel):
         hierarchy : dict
             A special hierarchy data structure constructed by model_sklearn.make_hierarchy().
         """
-        bclf = make_pipeline(linear_model.SGDClassifier(
-            loss=config['loss'],
-            max_iter=config['max_iter']
-        ))
-        clf = HierarchicalClassifier(
-            base_estimator=bclf,
-            class_hierarchy=hierarchy,
-        )
-        self.pipeline = Pipeline([
-            ('tfidf', TfidfVectorizer(min_df=config['min_df'])),
-            ('clf', clf),
-        ])
+        if hierarchy is not None:
+            bclf = make_pipeline(linear_model.SGDClassifier(
+                loss=config['loss'],
+                max_iter=config['max_iter']
+            ))
+            clf = HierarchicalClassifier(
+                base_estimator=bclf,
+                class_hierarchy=hierarchy,
+            )
+            self.pipeline = Pipeline([
+                ('tfidf', TfidfVectorizer(min_df=config['min_df'])),
+                ('clf', clf),
+            ])
+        else:
+            self.pipeline = None
         self.config = config
 
     @classmethod
@@ -115,10 +118,6 @@ class Tfidf_HSGD(model_sklearn.SklearnModel):
         path : str
              Path to the checkpoint file.
         """
-        if not os.path.exists(path):
-            if not os.path.exists(path + '.dvc'):
-                raise OSError('Checkpoint not present and cannot be retrieved')
-            os.system('dvc checkout {}.dvc'.format(path))
         self.pipeline = joblib.load(path)
 
     def fit(
@@ -278,11 +277,11 @@ class Tfidf_HSGD(model_sklearn.SklearnModel):
         """
         # Config for monitoring service
         config = {
-            'prediction': self.classifier.hierarchy.classes[
-                self.classifier.hierarchy.level_offsets[-2]:
-                self.classifier.hierarchy.level_offsets[-1]
+            'prediction': [
+                'C' + str(i) for i in self.pipeline.classes_
             ]
         }
+        svc_lts = import_module('models.tfidf_hsgd.bentoml.svc_lts')
         svc = svc_lts.Tfidf_HSGD()
         svc.pack('model', self.pipeline)
         svc.pack('config', svc_config)

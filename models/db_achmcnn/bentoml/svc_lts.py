@@ -1,4 +1,4 @@
-"""Service file for DB-BHCN + Walmart_30k."""
+"""Service file for DistilBERT+Adapted C-HMCNN."""
 import os
 import requests
 from typing import List
@@ -21,8 +21,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
+
 @bentoml.env(
-    requirements_txt_file='models/db_bhcn/bentoml/requirements.txt',
+    requirements_txt_file='models/db_achmcnn/bentoml/requirements.txt',
     docker_base_image='bentoml/model-server:0.13.1-py38-gpu'
 )
 @bentoml.artifacts([
@@ -31,8 +32,8 @@ POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
     JSONArtifact('hierarchy'),
     JSONArtifact('config'),
 ])
-class DB_BHCN(bentoml.BentoService):
-    """Real-time inference service for DB-BHCN."""
+class DB_AC_HMCNN(bentoml.BentoService):
+    """Real-time inference service for DistilBERT+Adapted C-HMCNN."""
 
     _initialised = False
 

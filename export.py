@@ -5,6 +5,7 @@ This script controls the exporting of models, either directly to ONNX,
 or to a BentoML ModelStorage.
 """
 import os
+import sys
 import shutil
 import yaml
 import click
@@ -40,8 +41,8 @@ def get_path(
     Returns
     -------
     path: str
-        Either the path to the corresponding model checkpoint, or to the reference
-        dataset.
+        Either the path to the corresponding model checkpoint, or to the
+        reference dataset.
     """
     if reference_set:
         if best:
@@ -51,7 +52,7 @@ def get_path(
                 'to the reference set instead.'.format(cli.RED, cli.PLAIN)
             )
         set_names = sorted(glob.glob(
-            'weights/{}/{}/last_{}_reference.parquet'.format(
+            'weights/{}/{}/reference_{}.parquet'.format(
                 model_name,
                 dataset_name,
                 time if time is not None else '*'
@@ -65,14 +66,30 @@ def get_path(
             return None
         print('Using reference dataset at', set_names[-1])
         return set_names[-1]
+    pathname = 'weights/{}/{}/{}_{}.*'.format(
+        model_name,
+        dataset_name,
+        'best' if best else 'last',
+        time if time is not None else '*'
+    )
     weight_names = sorted(glob.glob(
-        'weights/{}/{}/{}_{}.pt'.format(
-            model_name,
-            dataset_name,
-            'best' if best else 'last',
-            time if time is not None else '*'
-        )
+        pathname
+    ) + glob.glob(
+        pathname + '.dvc'
     ))
+    if len(weight_names) < 1:
+        print('{}ERROR:{} No trained weights found for {} on {}!'.format(
+            cli.RED,
+            cli.PLAIN,
+            model_name,
+            dataset_name
+        ))
+        sys.exit(1)
+    if weight_names[-1].endswith('.dvc'):
+        name_no_dvc = weight_names[-1][:-4]
+        if not os.path.exists(name_no_dvc):
+            os.system('dvc checkout {}.dvc'.format(weight_names[-1]))
+        return name_no_dvc
     return weight_names[-1]
 
 
@@ -152,7 +169,7 @@ def export_model(
     """)
 )
 @click.option(
-    '--best/--latest', default=True, show_default=True,
+    '--best/--latest', default=False, show_default=True,
     help='User best-epoch weights instead of latest-epoch.'
 )
 @click.option(

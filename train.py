@@ -81,7 +81,7 @@ def train_and_test(
 
     if gen_reference:
         ref_df = model.gen_reference_set(test_loader)
-        ref_df.to_parquet('{}/last_{}_reference.parquet'.format(checkpoint_dir, start_datetime))
+        ref_df.to_parquet('{}/reference_{}.parquet'.format(checkpoint_dir, start_datetime))
 
 
 @click.command()

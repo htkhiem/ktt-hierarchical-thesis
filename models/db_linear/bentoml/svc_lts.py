@@ -1,4 +1,4 @@
-"""Service file for DB-Linear + Walmart_30k."""
+"""Service file for DistilBERT+Linear."""
 import os
 import requests
 from typing import List
