@@ -10,14 +10,13 @@ from locust import HttpUser, task
 
 # Read dataset text
 try:
-    with open('test-strings.json', 'r') as text_json:
+    with open('text-strings.json', 'r') as text_json:
         TEXT = json.load(text_json)['strings']
 except FileNotFoundError:
     # No dataset template found - use default strings.
     TEXT = [
         'apple', 'orange', 'sedan', 'lorry', 'table salt', 'suit', 't-shirt'
     ]
-
 
 class KttUser(HttpUser):
     """Simulated user querying classifications from KTT."""

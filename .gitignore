@@ -12,6 +12,7 @@ airflow/*
 !airflow/airflow.cfg
 !airflow/webserver_config.py
 benchmark/text-strings.json
+benchmark/*.csv
 datasets/*
 !datasets/Walmart_30k.parquet
 !datasets/*/*.dvc
