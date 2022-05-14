@@ -19,6 +19,22 @@ class Model(ABC):
     within the training and testing methods for consistency.
     """
 
+    @abstractmethod
+    def __init__(self, hierarchy, config):
+        """Construct a model. All models must follow this constructor
+        signature, but the exact data type of the hierarchy parameter
+        may vary.
+
+        Parameters
+        ----------
+        hierarchy: any
+            A hierarchical representation suitable for this model.
+            Specific implementations will dictate this.
+        config: dict
+            A configuration dictionary.
+        """
+        pass
+
     @classmethod
     def get_preprocessor(cls, config):
         """Return an instance of this model's preferred preprocessor."""

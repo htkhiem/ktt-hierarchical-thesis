@@ -25,7 +25,7 @@ def main(dataset_name):
     with open('text-strings.json', 'w') as jsonfile:
         json.dump(json_content, jsonfile)
 
-    os.system('locust')
+    os.system('locust --csv-full-history --csv=benchmark_{}'.format(dataset_name))
 
 if __name__ == '__main__':
     main()
