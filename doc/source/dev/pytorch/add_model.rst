@@ -87,7 +87,7 @@ In ``testmodel.py``, import the necessary libraries and define a concrete subcla
 		export_trained, DistilBertPreprocessor
 	from .bentoml import svc_lts
 
-    class TestModel(model_pytorch.PyTorchModel, torch.nn.Module):
+    class TestModel(model_pytorch.PyTorchModel):
         """Wrapper class combining DistilBERT with a linear model."""
 
         def __init__(

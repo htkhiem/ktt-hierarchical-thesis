@@ -367,11 +367,15 @@ def get_hierarchical_metrics(test_output, display=None, compute_auprc=False):
     return np.array([accuracies[-1], precisions[-1], global_accuracy, global_precision])
 
 
-class PyTorchModel(Model, ABC):
+class PyTorchModel(torch.nn.Module, Model, ABC):
     """Convenience class wrapping the Model abstract class.
 
     It implements two class methods that are the same for all PyTorch models.
     """
+
+    def __init__(self, hierarchy=None, config=None):
+        """Initialise the underlying PyTorch module."""
+        super(PyTorchModel, self).__init__()
 
     @classmethod
     def get_dataloader_func(cls):

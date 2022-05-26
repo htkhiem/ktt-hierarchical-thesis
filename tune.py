@@ -22,7 +22,8 @@ from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.trial import Trial
 from ray.tune.schedulers import ASHAScheduler
-from ray.tune.suggest.bayesopt import BayesOptSearch
+# from ray.tune.suggest.bayesopt import BayesOptSearch
+from ray.tune.suggest.hebo import HEBOSearch
 
 import models as mds
 
@@ -103,7 +104,7 @@ def tune_model(
         mode='max',
         num_samples=tune_config['sample'],
         scheduler=ASHAScheduler(),
-        search_alg=BayesOptSearch(metric="leaf_acc", mode="max"),
+        search_alg=HEBOSearch(metric="leaf_acc", mode="max"),
         resources_per_trial={
             'cpu': 1 if not use_cuda else 0,
             'gpu': 1 if use_cuda else 0

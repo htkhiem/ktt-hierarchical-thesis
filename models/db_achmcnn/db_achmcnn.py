@@ -123,7 +123,7 @@ class H_MCM_Model(torch.nn.Module):
         return self
 
 
-class DB_AC_HMCNN(model_pytorch.PyTorchModel, torch.nn.Module):
+class DB_AC_HMCNN(model_pytorch.PyTorchModel):
     """Wrapper class combining DistilBERT and the adapted C-HMCNN model."""
 
     def __init__(self, hierarchy, config):

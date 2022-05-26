@@ -159,7 +159,7 @@ class AHMCN_F(torch.nn.Module):
         return self
 
 
-class DB_AHMCN_F(model_pytorch.PyTorchModel, torch.nn.Module):
+class DB_AHMCN_F(model_pytorch.PyTorchModel):
     """Wrapper class combining DistilBERT with the adapted HMCN-F model."""
 
     def __init__(

@@ -15,7 +15,7 @@ REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
 
-class DB_Linear(model_pytorch.PyTorchModel, torch.nn.Module):
+class DB_Linear(model_pytorch.PyTorchModel):
     """Wrapper class combining DistilBERT with the above module."""
 
     def __init__(
