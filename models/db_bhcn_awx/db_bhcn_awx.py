@@ -182,7 +182,7 @@ class BHCN_AWX(torch.nn.Module):
         return self
 
 
-class DB_BHCN_AWX(model_pytorch.PyTorchModel, torch.nn.Module):
+class DB_BHCN_AWX(model_pytorch.PyTorchModel):
     """The whole DB-BHCN+AWX model, DistilBERT included."""
 
     def __init__(
