@@ -14,8 +14,8 @@ id: int
 parent_id: int
 """
 import sys
+from textwrap import dedent
 sys.path.append('../')
-
 import os
 import json
 import click
@@ -104,6 +104,7 @@ def main(
         config,
         name,
         train_ratio,
+        depth,
         val_ratio,
         seed,
         proportion,
@@ -182,14 +183,14 @@ def main(
     for node in children_dict[-1]:
         odd_queue.put(node)
 
-    depth = 1  # Which queue to pop depends on depth
+    current_depth = 1  # Which queue to pop depends on depth
 
     put_queue = even_queue
     pop_queue = odd_queue
 
-    while not even_queue.empty() or not odd_queue.empty():
+    while (not even_queue.empty() or not odd_queue.empty()):
         if verbose:
-            print('Level', depth)
+            print('Level', current_depth)
         level_sizes.append(pop_queue.qsize())
         while not pop_queue.empty():
             node = pop_queue.get()
@@ -214,7 +215,7 @@ def main(
         temp = pop_queue
         pop_queue = put_queue
         put_queue = temp
-        depth += 1
+        current_depth += 1
 
     # Special case: root node
     id2idx[-1] = -1
@@ -228,16 +229,16 @@ def main(
     for node in children_dict[-1]:
         odd_queue.put(node)
 
-    depth = 1  # which queue to pop depends on depth
+    current_depth = 1  # which queue to pop depends on depth
 
     put_queue = even_queue
     pop_queue = odd_queue
 
     parent_of = []
 
-    while not even_queue.empty() or not odd_queue.empty():
+    while (not even_queue.empty() or not odd_queue.empty()):
         if verbose:
-            print('Level', depth)
+            print('Level', current_depth)
         parent_of.append([-1] * pop_queue.qsize())
         while not pop_queue.empty():
             node = pop_queue.get()
@@ -262,7 +263,7 @@ def main(
         temp = pop_queue
         pop_queue = put_queue
         put_queue = temp
-        depth += 1
+        current_depth += 1
 
     def trace_hierarchy(leaf_db_id):
         """Given leaf label's database ID, return hierarchical path from top level but in internal indices."""
@@ -271,9 +272,19 @@ def main(
         while parent_db_id != -1:
             path = np.append(path, [id2idx[parent_db_id]])
             parent_db_id = node_dict[parent_db_id].parent_db_id
-        return np.flip(path) - level_offsets[:-1]
+        full_path = np.flip(path) - level_offsets[:-1]
+        if len(full_path) < depth:
+            raise ValueError(dedent("""Database does not meet minimum class
+            depth of {} (found entry with depth {})""").format(
+                depth, len(full_path)))
+        return full_path[:depth]
 
     sql_dataitems['codes'] = sql_dataitems['class_id'].apply(trace_hierarchy)
+
+    # Trim hierarchical depth for hierarchical metadata
+    level_sizes = level_sizes[:depth]
+    level_offsets = level_offsets[:depth+1]
+    classes = classes[:level_offsets[-1]]
 
     hierarchy = PerLevelHierarchy(
         codes=sql_dataitems['codes'],
