@@ -21,10 +21,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 
+# Tell the BentoML exporter what needs to be installed. These will go into
+# the Dockerfile and requirements.txt in the service's folder.
 @bentoml.env(
     requirements_txt_file='models/db_bhcn/bentoml/requirements.txt',
     docker_base_image='bentoml/model-server:0.13.1-py38-gpu'
 )
+# What this service needs to run: an encoder (DistilBERT), a classifier
+# (BHCN), the hierarchical metadata and a config variable
+# specifying whether a monitoring server has been exported along.
 @bentoml.artifacts([
     TransformersModelArtifact('encoder'),
     PytorchModelArtifact('classifier'),

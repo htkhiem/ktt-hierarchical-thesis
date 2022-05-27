@@ -17,7 +17,6 @@ from bentoml.types import JsonSerializable
 EVIDENTLY_HOST = os.environ.get('EVIDENTLY_HOST', 'localhost')
 EVIDENTLY_PORT = os.environ.get('EVIDENTLY_PORT', 5001)
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REFERENCE_SET_FEATURE_POOL = 32
 POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
@@ -29,7 +28,7 @@ POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
     docker_base_image='bentoml/model-server:0.13.1-py38-gpu'
 )
 # What this service needs to run: an encoder (DistilBERT), a classifier
-# (our testmodel), the hierarchical metadata and a config variable
+# (BHCN+AWX), the hierarchical metadata and a config variable
 # specifying whether a monitoring server has been exported along.
 @bentoml.artifacts([
     TransformersModelArtifact('encoder'),
@@ -39,7 +38,7 @@ POOLED_FEATURE_SIZE = 768 // REFERENCE_SET_FEATURE_POOL
 ])
 # The actual class
 class DB_BHCN_AWX(bentoml.BentoService):
-    """Real-time inference service for the test model."""
+    """Real-time inference service for DB-BHCN+AWX."""
 
     _initialised = False
 
@@ -96,7 +95,7 @@ class DB_BHCN_AWX(bentoml.BentoService):
         )[0][:, 0, :]
         encoder_cls_pooled = self.pool(encoder_cls)
         # Classify using our classifier head
-        scores = self.classifier(encoder_cls).cpu().detach().numpy()
+        scores = self.classifier(encoder_cls)[1].cpu().detach().numpy()
         # Segmented argmax, as usual
         pred_codes = np.array([
             np.argmax(

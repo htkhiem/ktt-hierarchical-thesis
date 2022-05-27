@@ -75,128 +75,17 @@
   "liveNow": false,
   "panels": [
     {
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 0.1,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
+      "collapsed": false,
       "gridPos": {
-        "h": 8,
-        "w": 4,
+        "h": 1,
+        "w": 24,
         "x": 0,
         "y": 0
       },
-      "id": 12,
-      "options": {
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      },
-      "pluginVersion": "8.4.4",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": true,
-          "expr": "evidently:cat_target_drift:drift{instance=\"monitoring:5001\"}",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Target drift",
-      "type": "gauge"
-    },
-    {
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 20,
-        "x": 4,
-        "y": 0
-      },
-      "id": 2,
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true
-      },
-      "pluginVersion": "8.4.4",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(BENTOML_DB_BHCN_request_duration_seconds_bucket{endpoint=\"/predict\",http_response_code=\"200\",instance=\"inference:5000\"}[$__range])",
-          "format": "heatmap",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "{{le}}",
-          "refId": "Current target"
-        }
-      ],
-      "title": "Response time distribution",
-      "type": "bargauge"
+      "id": 16,
+      "panels": [],
+      "title": "Classification performance",
+      "type": "row"
     },
     {
       "description": "",
@@ -227,10 +116,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 4,
         "w": 4,
         "x": 0,
-        "y": 8
+        "y": 1
       },
       "id": 6,
       "options": {
@@ -263,6 +152,68 @@
       "type": "gauge"
     },
     {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 0.1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 12,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "8.4.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": true,
+          "expr": "evidently:cat_target_drift:drift{instance=\"monitoring:5001\"}",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Target drift",
+      "type": "gauge"
+    },
+    {
       "cards": {},
       "color": {
         "cardColor": "#b4ff00",
@@ -273,10 +224,10 @@
       },
       "dataFormat": "tsbuckets",
       "gridPos": {
-        "h": 16,
-        "w": 20,
-        "x": 4,
-        "y": 8
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 1
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -340,10 +291,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 4,
         "w": 4,
         "x": 0,
-        "y": 17
+        "y": 5
       },
       "id": 10,
       "options": {
@@ -376,6 +327,206 @@
       ],
       "title": "Drifted features count",
       "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 14,
+      "panels": [],
+      "title": "API performance",
+      "type": "row"
+    },
+    {
+      "description": "Average number of requests per second within the dashboard's currently selected time range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 0,
+        "y": 10
+      },
+      "id": 20,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.4.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(BENTOML_DB_BHCN_request_total{endpoint=\"/predict\",instance=\"inference:5000\"}[$__range])",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Requests/s",
+      "type": "stat"
+    },
+    {
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 4,
+        "y": 10
+      },
+      "id": 2,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "pluginVersion": "8.4.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(BENTOML_DB_BHCN_request_duration_seconds_bucket{endpoint=\"/predict\",http_response_code=\"200\",instance=\"inference:5000\"}[$__range])",
+          "format": "heatmap",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "Current target"
+        }
+      ],
+      "title": "Response time distribution",
+      "type": "bargauge"
+    },
+    {
+      "description": "Distribution of microbatch sizes as marshalled by BentoML.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 14,
+        "y": 10
+      },
+      "id": 18,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "pluginVersion": "8.4.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": true,
+          "expr": "BENTOML_DB_BHCN_mb_batch_size_bucket{endpoint=\"predict\",instance=\"inference:5000\"}",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Adaptive microbatching batch size",
+      "type": "bargauge"
     }
   ],
   "refresh": false,
@@ -391,8 +542,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "BentoML DB-BHCN",
+  "title": "DB-BHCN",
   "uid": "ptCPByynk",
-  "version": 5,
+  "version": 4,
   "weekStart": ""
 }
