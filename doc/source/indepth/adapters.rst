@@ -107,12 +107,12 @@ A full list of supported dialects and their drivers is available at `SQLAlchemy'
 
 After installing ``mysqlclient``, change the dialect and driver in the configuration file to ``mysql`` and ``mysqlclient`` respectively:
 
-.. code-block:: json
+.. code-block:: javascript
 
 	{
 		"dialect": "mysql",
 		"driver": "mysqlclient",
-		...
+		// ...
 	}
 	
 Configuration schema

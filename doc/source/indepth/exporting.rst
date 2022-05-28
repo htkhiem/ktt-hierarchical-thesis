@@ -12,7 +12,7 @@ ONNX exporting
 --------------
 
 This is the way to go if you intend to use KTT-generated models with an existing inference service, such as Azure ML, or if you already have your own framework set up and just need the models themselves.
-All bundled models in KTT except one (:doc:`models/tfidf_hsgd`) supports exporting to ONNX. The exact file structure is not enforced to allow model implementers more freedom in how they export their designs, but bundled PyTorch models generally follow a two-graph scheme:
+All bundled models in KTT except one (:doc:`/models/tfidf_hsgd`) supports exporting to ONNX. The exact file structure is not enforced to allow model implementers more freedom in how they export their designs, but bundled PyTorch models generally follow a two-graph scheme:
 
 - The encoder (currently DistilBERT is bundled) is exported to an ONNX graph in ``outputs/modelname_datasetname/encoder`` in several different files based on their own exporting logic.
 - The classifier head (any of the five PyTorch models) is exported to a single file, ``outputs/modelname_datasetname/classifier/classifier.onnx``.

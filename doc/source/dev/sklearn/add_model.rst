@@ -11,7 +11,7 @@ The model
 ---------
 
 To keep everything simple and focus on the system integration aspects only, we will recreate tfidf+LinearSGD, which is the simpler of the two bundled sklearn models. It consists of an NLTK-powered word tokeniser+stemmer, a term frequency-inverse document frequency (tfidf) vectoriser, and a single custom classifier performing stochastic gradient descent usinga modified Huber loss. More information about this model can be found in :ref:`tfidf-lsgd-theory`.
-
+/home/htkhiem/Documents/Thesis/ktt-hierarchical-thesis/doc/source/dev/sklearn/add_model.rst:202: ERROR: Unexpected indentation.
 Scikit-learn model module structure
 -----------------------------------
 
@@ -197,7 +197,7 @@ The reverse is performed in this method compared to ``save``.
 Thanks to how sklearn models are serialised, we can fully replicate the previous instance without
 having to go through a class constructor. In other words, this and the ``from_checkpoint`` classmethod
 that we will be implementing soon are functionally equivalent.
-https://hub.docker.com/r/bentoml/model-server/tags
+
 .. code-block:: python
     :dedent: 0
 

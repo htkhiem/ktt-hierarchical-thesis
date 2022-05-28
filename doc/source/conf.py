@@ -17,12 +17,12 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'ktt-hierarchical-system'
-copyright = '2022, Khiem, Tac, Tu'
-author = 'khiemtactu'
+project = 'KTT Hierarchical Classification System'
+copyright = '2022, Huynh Thien Khiem, Voong Xay Tac, Huynh Truong Tu'
+author = 'Huynh Thien Khiem, Voong Xay Tac, Huynh Truong Tu'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1a'
+release = '0.3a'
 
 
 # -- General configuration ---------------------------------------------------
