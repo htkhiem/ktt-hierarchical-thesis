@@ -15,21 +15,25 @@ parent_id: int
 """
 import sys
 from textwrap import dedent
-sys.path.append('../')
+from sqlalchemy import create_engine
+import importlib
 import os
 import json
 import click
 from textwrap import dedent
-import psycopg2
 import pandas as pd
 import numpy as np
 from queue import Queue
 from collections import namedtuple
+sys.path.append('../')
 from utils.hierarchy import PerLevelHierarchy
 
 # Readable definition of a Node in the hierarchical DAG.
 Node = namedtuple('Node', ['db_id', 'parent_db_id'])
 
+
+def get_connection():
+    """Get an SQL connection"""
 
 @click.command()
 @click.argument('name', required=1)
@@ -124,15 +128,17 @@ def main(
         config = json.load(config_file)
         print(config)
 
-    conn = psycopg2.connect(
-        host=config['host'],
-        database=config['database'],
-        user=config['user'],
-        password=config['password']
-    )
+    engine = create_engine('{}+{}://{}:{}@{}/{}'.format(
+        config['dialect'],
+        config['driver'],
+        config['user'],
+        config['password'],
+        config['host'],
+        config['database']
+    ))
 
-    sql_dataitems = pd.io.sql.read_sql(config['dataitem_query'], conn)
-    sql_classes = pd.io.sql.read_sql(config['class_query'], conn)
+    sql_dataitems = pd.io.sql.read_sql(config['dataitem_query'], con=engine)
+    sql_classes = pd.io.sql.read_sql(config['class_query'], con=engine)
 
     # Build the tree. Root node has no name and  ID = -1 to completely avoid
     # collision risks

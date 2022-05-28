@@ -1,4 +1,6 @@
 {
+    "dialect": "postgresql",
+    "driver": "psycopg2",
     "host": "localhost",
     "database": "amazon",
     "user": "postgres",
