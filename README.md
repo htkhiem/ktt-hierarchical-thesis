@@ -22,7 +22,7 @@ Building documentation requires you to install additional dependencies not cover
 - `sphinx`
 - `sphinx-click`
 - `sphinxcontrib-bibtex`
-- `sphinxcontrib-inkscapeconverter`
+- `sphinxcontrib-svg2pdfconverter`
 - `sphinx-rtd-theme`
 
 Ensure you are in KTT's conda environment (as doc-building still needs to import KTT's Python modules and thus requires all the runtime dependencies, too) and install these via `pip` as follows:
