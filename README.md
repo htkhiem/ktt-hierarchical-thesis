@@ -14,7 +14,10 @@ conda activate ktt
 This is a complete and minimal environment with just the dependencies needed to run KTT to its full capabilities. For building documentation, please refer to that section.
 
 # Documentation
-Documentation regarding the production training and inference system is located in `onnx/doc`. We use Sphinx with the RTD theme.
+
+Our documentation is hosted publicly at [our GitHub Page](https://htkhiem.github.io/ktt-hierarchical-thesis/).
+
+Documentation source is located in `onnx/doc`. We use Sphinx with the RTD theme.
 
 ## Additional dependencies
 Building documentation requires you to install additional dependencies not covered by our `environment.yaml`:
