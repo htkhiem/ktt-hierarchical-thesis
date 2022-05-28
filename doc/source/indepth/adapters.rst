@@ -74,8 +74,11 @@ A data adapter is responsible for fetching data from a source they are specialis
 
 Currently, two adapters are provided:
 
-The (Postgre)SQL adapter
+The SQL adapter
 ~~~~~~~~~~~~~~~~~~~~~~~~
+
+Design
+^^^^^^
 
 .. image:: adapter-sql.svg
    :width: 800
@@ -87,7 +90,58 @@ This adapter takes two queries from the user, one for each view as seen in the a
 
 The two queries are recommended to have some kind of limiting clause to restrict the size of the returned SQL views. The SQL adapter currently has to store everything in-memory for the processing algorithms.
 
-Currently it only supports PostgreSQL due to its usage of ``psycopg2``. In the future we will switch to a more general API to support other SQL DBMSes.
+Supported databases
+^^^^^^^^^^^^^^^^^^^
+
+The SQL adapter supports all SQL database management systems as supported by ``sqlalchemy``. It has been tested with PostgreSQL using the ``psycopg2`` driver.
+
+The default instllation of KTT comes bundled with ``psycopg2`` and thus supports PostgreSQL out-of-the-box. To connect to other databases, you need to manually install drivers for them through either ``conda install`` or ``pip install``, and then configure the adapter correspondingly using the ``adapter_sql.json`` file. We recommend ``conda install`` if possible as Anaconda additionally takes care of non-Python executables and dependences as well as trying to install packages in the most compatible way possible (which is an entire optimisation problem). `This article <https://pythonspeed.com/articles/conda-vs-pip/>`_ is a good read on the matter.
+
+A full list of supported dialects and their drivers is available at `SQLAlchemy's DBAPI support page <https://docs.sqlalchemy.org/en/14/dialects/>`_.
+
+**Example:** to connect to a MariaDB database, you can pick one out of the many drivers available - here we choose `mysqlclient <https://docs.sqlalchemy.org/en/14/dialects/mysql.html#module-sqlalchemy.dialects.mysql.mysqldb>`_:
+
+.. code-block:: bash
+	
+	 conda install -c conda-forge mysqlclient 
+
+After installing ``mysqlclient``, change the dialect and driver in the configuration file to ``mysql`` and ``mysqlclient`` respectively:
+
+.. code-block:: json
+
+	{
+		"dialect": "mysql",
+		"driver": "mysqlclient",
+		...
+	}
+	
+Configuration schema
+^^^^^^^^^^^^^^^^^^^^
+
+- ``"dialect"``: The SQL dialect to use. ``sqlalchemy`` needs to support it.
+- ``"driver"``: The driver to use with the above SQL dialect. ``sqlalchemy`` needs to support it.
+- ``"host"``: Where the database server is, for example ``localhost``. Port number can be manually specified if your server runs on a non-default port.
+- ``"database"``: Name of the database to read from.
+- ``"user"`` and ``"password"``: Credentials to log into the database.
+- ``"dataitem_query"``: How to query the database for data items (labeled objects to learn from). See :ref:`expected-schema` to know what the adapter expects. The default value shows an example of how to query from an e-commerce products database with product names in the ``title`` column and their leaf category IDs (labels) in the ``category_id`` column.
+- ``"class_query"``: How to query the database for classes (labels). See :ref:`expected-schema` to know what the adapter expects. The default value shows an example of how to query from an e-commerce products database with product categories in a recursive relationship (thus forming a hierarchy) with ``id`` and ``parent_id`` being the ID of the category and its parent, respectively.
+
+.. _expected-schema:
+
+Expected view schema
+^^^^^^^^^^^^^^^^^^^^
+
+We expect two views, one for the data items and one for the classes.
+
+The data item view needs to have two columns:
+
+- ``name``: Textual name of the data object. This is the input to all the models.
+- ``class_id``: The foreign key pointing to the primary key of the **leaf** class that this data object belongs to.
+
+The class view needs to have two columns also:
+
+- ``id``: The primary key of each class.
+- ``parent_id``: The foreign key pointing to the primary key of the parent of each class. Use ``NULL`` if this is a top-level class (i.e. having no parent class).
 
 The flatfile adapter
 ~~~~~~~~~~~~~~~~~~~~
