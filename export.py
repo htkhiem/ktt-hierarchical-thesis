@@ -216,7 +216,17 @@ def main(
     device = 'cuda' if torch.cuda.is_available() and not cpu else 'cpu'
     print('Using', device.upper())
 
+    click.echo('{}Building services using these models:{}'.format(cli.BOLD, cli.PLAIN))
+    for model_name in model_lst:
+        print('\t' + model_name)
+    click.echo('{}using weights trained on:{}'.format(cli.BOLD, cli.PLAIN))
     for dataset_name in dataset_lst:
+        print('\t' + dataset_name)
+
+    for dataset_name in dataset_lst:
+        click.echo(
+            '{}Runnning on {}...{}'.format(cli.CYAN, dataset_name, cli.PLAIN)
+        )
         for model_name in model_lst:
             config = hyperparams[model_name]
             display_name = config['display_name'] if 'display_name' in\
@@ -232,8 +242,10 @@ def main(
                 if reference_set_path is not None:
                     export_model(model, model_name,
                                  dataset_name, bento, reference_set_path)
-                    return
-            export_model(model, model_name, dataset_name, bento)
+            else:
+                export_model(model, model_name, dataset_name, bento)
+
+    click.echo('\n{}Finished!{}'.format(cli.GREEN, cli.PLAIN))
 
 
 if __name__ == "__main__":

@@ -217,6 +217,13 @@ def main(
 
     logging.basicConfig(filename=log_path, level=logging.INFO)
 
+    click.echo('{}Training these models:{}'.format(cli.BOLD, cli.PLAIN))
+    for model_name in model_lst:
+        print('\t' + model_name)
+    click.echo('{}on these datasets:{}'.format(cli.BOLD, cli.PLAIN))
+    for dataset_name in dataset_lst:
+        print('\t' + dataset_name)
+
     # Train models and log test set performance
     for model_name in model_lst:
         config = init_config(model_name)
@@ -243,6 +250,8 @@ def main(
                 gen_reference=reference,
                 dvc=dvc
             )
+
+    click.echo('\n{}Finished!{}'.format(cli.GREEN, cli.PLAIN))
 
 
 if __name__ == "__main__":
