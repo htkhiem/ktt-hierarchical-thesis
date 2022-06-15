@@ -58,3 +58,13 @@ html_theme_options = {
     'collapse_navigation': False,
 
 }
+
+latex_engine = 'xelatex'
+latex_docclass = {
+    'howto': 'report',
+    'manual': 'report'
+}
+latex_elements = {
+    'papersize': 'a4paper',
+    'extraclassoptions': 'twoside'
+}
