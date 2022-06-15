@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inferencing with GPUs &mdash; KTT Hierarchical Classification System 0.3a documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Automatic hyperparameter tuning" href="tuning.html" />
+    <link rel="prev" title="Using DVC with our system" href="dvc.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> KTT Hierarchical Classification System
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/installation.html">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/installation.html#downloading">Downloading</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/installation.html#setting-up-dependencies">Setting up dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/quickstart.html">Quickstart</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#data-preparation">Data preparation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#training-a-model">Training a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#exporting-the-trained-model">Exporting the trained model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#serving-up-a-bento">Serving up a Bento</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#shipping-bentos-in-a-container">Shipping Bentos in a container</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/commands.html">CLI usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/commands.html#adapters">Adapters</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../indepth/index.html">System design</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../indepth/adapters.html">Data adapters</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/adapters.html#intermediate-format-specification">Intermediate format specification</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#parquet-schema">Parquet schema</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#hierarchy-json-schema">Hierarchy JSON schema</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/adapters.html#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#the-sql-adapter">The SQL adapter</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#the-flatfile-adapter">The flatfile adapter</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../indepth/training.html">Training stage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/training.html#the-process">The process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/training.html#classes">Classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/training.html#common-classes">Common classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/training.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/training.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../indepth/exporting.html">Exporting your models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/exporting.html#onnx-exporting">ONNX exporting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/exporting.html#bentoml-exporting">BentoML exporting</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/exporting.html#packaging">Packaging</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../encoders/index.html">Encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../encoders/distilbert.html">DistilBERT</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../encoders/distilbert.html#api">API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../encoders/sklearn_text.html">Scikit-learn text feature extractors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../encoders/sklearn_text.html#api">API</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../models/index.html">Prebuilt models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../models/tfidf_lsgd.html">Tf-idf + Leaf SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/tfidf_hsgd.html">Tf-idf + Hierarchy SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_bhcn.html">DB-BHCN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../models/db_bhcn.html#id1">DB-BHCN</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_bhcn_awx.html">DB-BHCN+AWX</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_ahmcnf.html">DistilBERT + Adapted HMCN-F</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_achmcnn.html">DistilBERT + Adapted C-HMCNN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_linear.html">DistilBERT + Linear</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#theory">Theory</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-encoder/index.html">Developing new encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#where-encoders-come-in">Where encoders come in</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#adding-encoders">Adding encoders</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#implementing-preprocessors">Implementing preprocessors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/intro.html">Developing new models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#frameworks">Frameworks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#general-model-folder-structure">General model folder structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#the-model-itself">The model itself</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#checkpointing">Checkpointing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#preprocessing-needs">Preprocessing needs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#exporting">Exporting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#onnx">ONNX</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#export-bento-resources"><code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-service-implementation">The service implementation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-service-configuration-files">The service configuration files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-reference-dataset">The reference dataset</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-export-bento-resources-method">The <code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code> method</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#specifying-your-hyperparameters-optional">Specifying your hyperparameters (optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#registering-your-model-with-the-rest-of-the-system">Registering your model with the rest of the system</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#the-model-lists">The model lists</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#test-run-your-model">Test-run your model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#grafana-dashboard-design-optional">Grafana dashboard design (optional)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#testing-automatic-dashboard-provisioning">Testing automatic dashboard provisioning</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#framework-specific-guides">Framework-specific guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/pytorch/add_model.html">Implementing a model with PyTorch+DistilBERT</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#pytorch-model-module-structure">PyTorch model module structure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../dev/sklearn/add_model.html">Implementing a model with Scikit-learn</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Advanced guides</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="dvc.html">Using DVC with our system</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Inferencing with GPUs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gpu-based-inference-using-bentos">GPU-based inference using Bentos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gpu-based-inference-for-dockerised-services">GPU-based inference for Dockerised services</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#without-monitoring-capabilities">Without monitoring capabilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#with-monitoring-capabilities">With monitoring capabilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tuning.html">Automatic hyperparameter tuning</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tuning.html#cli-usage">CLI usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tuning.html#tune-configuration-format">Tune configuration format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ref.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">KTT Hierarchical Classification System</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Advanced guides</a> &raquo;</li>
+      <li>Inferencing with GPUs</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/advanced/gpu.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="inferencing-with-gpus">
+<h1>Inferencing with GPUs<a class="headerlink" href="#inferencing-with-gpus" title="Permalink to this heading"></a></h1>
+<p>By default, we support accelerating training using CUDA (on supported NVIDIA GPUs). However, you may also use CUDA to accelerate the <em>inference</em> workload and achieve much higher API throughput than what’s possible using a CPU, especially for DistilBERT-based models.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Currently, GPU inference has only been tested on Linux hosts. Specifically, we require a Linux installation on an <code class="docutils literal notranslate"><span class="pre">x86_64</span></code> architecture with kernel version of at least <code class="docutils literal notranslate"><span class="pre">3.10</span></code>. To check your currentn kernel version, run <code class="docutils literal notranslate"><span class="pre">uname</span> <span class="pre">-a</span></code>.</p></li>
+<li><p>NVIDIA drivers and CUDA <code class="docutils literal notranslate"><span class="pre">&gt;11.3</span></code>. Please use the official (proprietary) drivers instead of the open-source <code class="docutils literal notranslate"><span class="pre">nouveau</span></code> one.
+- If you want to use Docker containerisation, then Docker <code class="docutils literal notranslate"><span class="pre">19.03</span></code> or newer is required.
+- If your BentoService has monitoring capabilities enabled (i.e. it runs as a <code class="docutils literal notranslate"><span class="pre">docker-compose</span></code> network) then you also need to install the NVIDIA Container Runtime. Arch Linux users can install <code class="docutils literal notranslate"><span class="pre">nvidia-container-runtime</span></code> from the AUR.</p></li>
+</ul>
+</section>
+<section id="gpu-based-inference-using-bentos">
+<h2>GPU-based inference using Bentos<a class="headerlink" href="#gpu-based-inference-using-bentos" title="Permalink to this heading"></a></h2>
+<p>If you decide to stop at raw BentoServices for deployment to your inference server, you simply need to ensure that the server has direct access to a compatible NVIDIA GPU and install all drivers and dependencies accordingly. KTT-generated BentoServices are designed to automatically take advantage of the <em>first</em>-found NVIDIA GPU.</p>
+<p>To verify that the GPU is being used, you should use <code class="docutils literal notranslate"><span class="pre">nvidia-smi</span></code>. If the Bento is using your GPU:</p>
+<ul class="simple">
+<li><p>Video memory utilisation will be higher than idle. For DistilBERT-based models, expect usage of around 4GB.</p></li>
+<li><p>There is a <code class="docutils literal notranslate"><span class="pre">python</span></code> process listed in the process list.</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt; nvidia-smi
++-----------------------------------------------------------------------------+
+<span class="p">|</span> NVIDIA-SMI <span class="m">465</span>.31       Driver Version: <span class="m">465</span>.31       CUDA Version: <span class="m">11</span>.3     <span class="p">|</span>
+<span class="p">|</span>-------------------------------+----------------------+----------------------+
+<span class="p">|</span> GPU  Name        Persistence-M<span class="p">|</span> Bus-Id        Disp.A <span class="p">|</span> Volatile Uncorr. ECC <span class="p">|</span>
+<span class="p">|</span> Fan  Temp  Perf  Pwr:Usage/Cap<span class="p">|</span>         Memory-Usage <span class="p">|</span> GPU-Util  Compute M. <span class="p">|</span>
+<span class="p">|</span>                               <span class="p">|</span>                      <span class="p">|</span>               MIG M. <span class="p">|</span>
+<span class="p">|</span><span class="o">===============================</span>+<span class="o">======================</span>+<span class="o">======================</span><span class="p">|</span>
+<span class="p">|</span>   <span class="m">0</span>  NVIDIA GeForce ...  Off  <span class="p">|</span> <span class="m">00000000</span>:01:00.0 Off <span class="p">|</span>                  N/A <span class="p">|</span>
+<span class="p">|</span> N/A   49C    P8     6W /  N/A <span class="p">|</span>    753MiB /  6078MiB <span class="p">|</span>      <span class="m">0</span>%      Default <span class="p">|</span>
+<span class="p">|</span>                               <span class="p">|</span>                      <span class="p">|</span>                  N/A <span class="p">|</span>
++-------------------------------+----------------------+----------------------+
+
++-----------------------------------------------------------------------------+
+<span class="p">|</span> Processes:                                                                  <span class="p">|</span>
+<span class="p">|</span>  GPU   GI   CI        PID   Type   Process name                  GPU Memory <span class="p">|</span>
+<span class="p">|</span>        ID   ID                                                   Usage      <span class="p">|</span>
+<span class="p">|</span><span class="o">=============================================================================</span><span class="p">|</span>
+<span class="p">|</span>    <span class="m">0</span>   N/A  N/A    <span class="m">179346</span>      C   /opt/conda/bin/python             745MiB <span class="p">|</span>
++-----------------------------------------------------------------------------+
+</pre></div>
+</div>
+</section>
+<section id="gpu-based-inference-for-dockerised-services">
+<h2>GPU-based inference for Dockerised services<a class="headerlink" href="#gpu-based-inference-for-dockerised-services" title="Permalink to this heading"></a></h2>
+<p>Docker containers can simply be deployed to a server without needing to care about dependencies. One only needs to ensure that the host machine itself satisfies the hardware requirements and has the correct drivers installed.</p>
+<section id="without-monitoring-capabilities">
+<h3>Without monitoring capabilities<a class="headerlink" href="#without-monitoring-capabilities" title="Permalink to this heading"></a></h3>
+<p>Services built without monitoring capabilities are Dockerised into single Docker images. They can be run directly from the terminal using your typical <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">run</span></code> command.
+Due to a recent <code class="docutils literal notranslate"><span class="pre">systemd</span></code> architectural redesign, we need a workaround to grant hardware access to the container.</p>
+<p>Instead of starting the Docker container as usual, please add <code class="docutils literal notranslate"><span class="pre">--gpu</span> <span class="pre">all</span></code> and specific <code class="docutils literal notranslate"><span class="pre">--device</span></code> options as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt; docker run --gpus all --device /dev/nvidia0 --device /dev/nvidia-uvm --device /dev/nvidia-uvm-tools --device /dev/nvidia-modeset --device /dev/nvidiactl &lt;your arguments&gt;
+</pre></div>
+</div>
+<p>In <code class="docutils literal notranslate"><span class="pre">&lt;your</span> <span class="pre">arguments&gt;</span></code>, fill in your usual Docker arguments such as the image ID and port forwarding. Again, you can verify that the GPU is being utilised by running <code class="docutils literal notranslate"><span class="pre">nvidia-smi</span></code> and looking out for the signs described above. Of course, you should run it on the host machine’s terminal instead of within the shell of the container.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Due to how BentoML GPU-enabled base images are configured, you might encounter errors like the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ne">RuntimeError</span><span class="p">:</span> <span class="n">Click</span> <span class="n">will</span> <span class="n">abort</span> <span class="n">further</span> <span class="n">execution</span> <span class="n">because</span> <span class="n">Python</span> <span class="n">was</span> <span class="n">configured</span> <span class="n">to</span> <span class="n">use</span> <span class="n">ASCII</span> <span class="k">as</span> <span class="n">encoding</span> <span class="k">for</span> <span class="n">the</span> <span class="n">environment</span><span class="o">.</span> <span class="n">Consult</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">click</span><span class="o">.</span><span class="n">palletsprojects</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">unicode</span><span class="o">-</span><span class="n">support</span><span class="o">/</span> <span class="k">for</span> <span class="n">mitigation</span> <span class="n">steps</span><span class="o">.</span>
+
+<span class="n">This</span> <span class="n">system</span> <span class="n">supports</span> <span class="n">the</span> <span class="n">C</span><span class="o">.</span><span class="n">UTF</span><span class="o">-</span><span class="mi">8</span> <span class="n">locale</span> <span class="n">which</span> <span class="ow">is</span> <span class="n">recommended</span><span class="o">.</span> <span class="n">You</span> <span class="n">might</span> <span class="n">be</span> <span class="n">able</span> <span class="n">to</span> <span class="n">resolve</span> <span class="n">your</span> <span class="n">issue</span> <span class="n">by</span> <span class="n">exporting</span> <span class="n">the</span> <span class="n">following</span> <span class="n">environment</span> <span class="n">variables</span><span class="p">:</span>
+
+<span class="n">export</span> <span class="n">LC_ALL</span><span class="o">=</span><span class="n">C</span><span class="o">.</span><span class="n">UTF</span><span class="o">-</span><span class="mi">8</span>
+<span class="n">export</span> <span class="n">LANG</span><span class="o">=</span><span class="n">C</span><span class="o">.</span><span class="n">UTF</span><span class="o">-</span><span class="mi">8</span>
+</pre></div>
+</div>
+<p>In other words, the base images were configured with their system locale being set to ASCII, which is potentially buggy for Python interpreters, which can accept Unicode too. The fix is to simply do as they said - override the base image’s system locale to UTF-8. One way to do that would be through the <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">run</span></code> command itself by adding <code class="docutils literal notranslate"><span class="pre">-e</span> <span class="pre">LC_ALL='C.UTF-8'</span> <span class="pre">-e</span> <span class="pre">LANG='C.UTF-8'</span></code> to the arguments list.</p>
+</div>
+</section>
+<section id="with-monitoring-capabilities">
+<h3>With monitoring capabilities<a class="headerlink" href="#with-monitoring-capabilities" title="Permalink to this heading"></a></h3>
+<p>Services built with monitoring capabilities contain not just the inference server itself but also several other services, namely the Prometheus time series database, Grafana dashboard and an Evidently-based model metrics app. All of these are supposed to be run together as a <code class="docutils literal notranslate"><span class="pre">docker-compose</span></code> network instead of being separately and manually started. Our <code class="docutils literal notranslate"><span class="pre">docker-compose.yaml</span></code> configuration already includes all the workarounds, so you only need to ensure the host system’s NVIDIA GPU is functional and accessible.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dvc.html" class="btn btn-neutral float-left" title="Using DVC with our system" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tuning.html" class="btn btn-neutral float-right" title="Automatic hyperparameter tuning" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Huynh Thien Khiem, Voong Xay Tac, Huynh Truong Tu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

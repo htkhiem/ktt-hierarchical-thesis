@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developing new models &mdash; KTT Hierarchical Classification System 0.3a documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Implementing a model with PyTorch+DistilBERT" href="pytorch/add_model.html" />
+    <link rel="prev" title="Developing new encoders" href="../dev-encoder/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> KTT Hierarchical Classification System
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/installation.html">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/installation.html#downloading">Downloading</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/installation.html#setting-up-dependencies">Setting up dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/quickstart.html">Quickstart</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#data-preparation">Data preparation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#training-a-model">Training a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#exporting-the-trained-model">Exporting the trained model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#serving-up-a-bento">Serving up a Bento</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#shipping-bentos-in-a-container">Shipping Bentos in a container</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/commands.html">CLI usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/commands.html#adapters">Adapters</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../indepth/index.html">System design</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../indepth/adapters.html">Data adapters</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/adapters.html#intermediate-format-specification">Intermediate format specification</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#parquet-schema">Parquet schema</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#hierarchy-json-schema">Hierarchy JSON schema</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/adapters.html#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#the-sql-adapter">The SQL adapter</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#the-flatfile-adapter">The flatfile adapter</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../indepth/training.html">Training stage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/training.html#the-process">The process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/training.html#classes">Classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/training.html#common-classes">Common classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/training.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/training.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../indepth/exporting.html">Exporting your models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/exporting.html#onnx-exporting">ONNX exporting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/exporting.html#bentoml-exporting">BentoML exporting</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/exporting.html#packaging">Packaging</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../encoders/index.html">Encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../encoders/distilbert.html">DistilBERT</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../encoders/distilbert.html#api">API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../encoders/sklearn_text.html">Scikit-learn text feature extractors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../encoders/sklearn_text.html#api">API</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../models/index.html">Prebuilt models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../models/tfidf_lsgd.html">Tf-idf + Leaf SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/tfidf_hsgd.html">Tf-idf + Hierarchy SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_bhcn.html">DB-BHCN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../models/db_bhcn.html#id1">DB-BHCN</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_bhcn_awx.html">DB-BHCN+AWX</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_ahmcnf.html">DistilBERT + Adapted HMCN-F</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_achmcnn.html">DistilBERT + Adapted C-HMCNN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_linear.html">DistilBERT + Linear</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#theory">Theory</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-encoder/index.html">Developing new encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#where-encoders-come-in">Where encoders come in</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#adding-encoders">Adding encoders</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#implementing-preprocessors">Implementing preprocessors</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Developing new models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#frameworks">Frameworks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#general-model-folder-structure">General model folder structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-model-itself">The model itself</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#checkpointing">Checkpointing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#preprocessing-needs">Preprocessing needs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#exporting">Exporting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#onnx">ONNX</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#export-bento-resources"><code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#the-service-implementation">The service implementation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#the-service-configuration-files">The service configuration files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#the-reference-dataset">The reference dataset</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#the-export-bento-resources-method">The <code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code> method</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#specifying-your-hyperparameters-optional">Specifying your hyperparameters (optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#registering-your-model-with-the-rest-of-the-system">Registering your model with the rest of the system</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#the-model-lists">The model lists</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#test-run-your-model">Test-run your model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#grafana-dashboard-design-optional">Grafana dashboard design (optional)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#testing-automatic-dashboard-provisioning">Testing automatic dashboard provisioning</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#framework-specific-guides">Framework-specific guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pytorch/add_model.html">Implementing a model with PyTorch+DistilBERT</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#pytorch-model-module-structure">PyTorch model module structure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="sklearn/add_model.html">Implementing a model with Scikit-learn</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../advanced/index.html">Advanced guides</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/dvc.html">Using DVC with our system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/gpu.html">Inferencing with GPUs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/gpu.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/gpu.html#gpu-based-inference-using-bentos">GPU-based inference using Bentos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/gpu.html#gpu-based-inference-for-dockerised-services">GPU-based inference for Dockerised services</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../advanced/gpu.html#without-monitoring-capabilities">Without monitoring capabilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../advanced/gpu.html#with-monitoring-capabilities">With monitoring capabilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/tuning.html">Automatic hyperparameter tuning</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/tuning.html#cli-usage">CLI usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/tuning.html#tune-configuration-format">Tune configuration format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ref.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">KTT Hierarchical Classification System</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Developing new models</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/dev/intro.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="developing-new-models">
+<h1>Developing new models<a class="headerlink" href="#developing-new-models" title="Permalink to this heading"></a></h1>
+<p>We have designed the system to be easily extensible - new models can be added with relative ease.</p>
+<section id="frameworks">
+<h2>Frameworks<a class="headerlink" href="#frameworks" title="Permalink to this heading"></a></h2>
+<p>Bundled models are implemented using either PyTorch (for GPU-based models) or Scikit-learn (everything else). New models can be easily implemented using either of these frameworks. Implementing using other frameworks (such as Tensorflow) should be possible (as the common core of KTT is not hardwired to any particular framework) but has not been tested. Furthermore, you will need to add and keep track of your own dependencies yourself.</p>
+<p>Should you decide to use another framework, please refer to the section at the end of this page.</p>
+</section>
+<section id="general-model-folder-structure">
+<span id="model-struct"></span><h2>General model folder structure<a class="headerlink" href="#general-model-folder-structure" title="Permalink to this heading"></a></h2>
+<p>Models should have a fixed and uniform folder structure regardless of framework. This is not mandatory, but is highly encouraged to enable easier maintenance and improve code consistency. Bundled models follow the following folder structure:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>models
+└── model_name
+    ├── __init__.py
+    ├── bentoml
+    │   ├── __init__.py
+    │   ├── dashboard.json
+    │   ├── evidently.yaml
+    │   └── svc_lts.py
+    └── model_name.py
+</pre></div>
+</div>
+<p>As one can see, each model is put in their own folder, whose name is also the model’s identifier to be used in the common training and exporting controller. All model folders are put inside the <code class="docutils literal notranslate"><span class="pre">./models</span></code> folder.</p>
+<p>An explanation of what each file and folder is:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> files are there to ensure Python reads each folder as a module, allowing the model to be imported.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model_name.py</span></code> is where the model is implemented as a <code class="docutils literal notranslate"><span class="pre">Model</span></code> object. This is also where most of the work happens. Note that it has the same name as the model folder.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bentoml/</span></code> contains all BentoML-related code and resources. These files and resources are needed to build a BentoService from this model.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bentoml/dashboard.json</span></code> is the Grafana dashboard’s JSON schema. This file will be automatically <em>provisioned</em> for the Grafana instance when we start the Dockerisation process.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">evidently.yaml</span></code> is a <em>template</em> configuration file for the Evidently monitoring service. By itself, it contains dataset-agnostic configuration parameters tailored to this model. When the service is built, a copy is made of this file and additional dataset-dependent configuration added. That copy will reside in the built BentoService.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">svc_lts.py</span></code> is the monitoring application. It receives new data (feature inputs and resulting scores) from the main inference service, compares against a <em>reference dataset</em> and computes data drift/target drift metrics to be sent to the Prometheus database instance. It is a separate web service from the main inference service.</p></li>
+</ul>
+<p>With that out of the way, we will now deep-dive into how to implement each part of a model:</p>
+</section>
+<section id="the-model-itself">
+<span id="model-class"></span><h2>The model itself<a class="headerlink" href="#the-model-itself" title="Permalink to this heading"></a></h2>
+<p>Every model must subclass a framework-specific abstract model class, all of which in turn subclass <code class="docutils literal notranslate"><span class="pre">models.model.Model</span></code>. This serves as the baseline requirement, or the minimum set of features a model must implement so they could be used with KTT’s training and exporting facilities.</p>
+<p>Unless you are implementing your model in a framework other than PyTorch or Scikit-learn, you need not bother with <code class="docutils literal notranslate"><span class="pre">get_dataloader_func</span></code> and <code class="docutils literal notranslate"><span class="pre">get_metrics_func</span></code>. The rest will be detailed below.</p>
+</section>
+<section id="checkpointing">
+<h2>Checkpointing<a class="headerlink" href="#checkpointing" title="Permalink to this heading"></a></h2>
+<p>This part gives detail on how to implement <code class="docutils literal notranslate"><span class="pre">save</span></code>, <code class="docutils literal notranslate"><span class="pre">load</span></code> and <code class="docutils literal notranslate"><span class="pre">Model.from_checkpoint</span></code>.</p>
+<p>If either <code class="docutils literal notranslate"><span class="pre">path</span></code> or <code class="docutils literal notranslate"><span class="pre">best_path</span></code> is specified for the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method, a model’s training session must produce at least one checkpoint. Checkpoints must contain enough data to fully replicate the model and its state, including the state of any training process up to that moment in time (for example, Adam optimiser state dictionaries). For example, a PyTorch model checkpoint must contain not just <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> fields but also sufficient metadata regarding the topology (number of layers, layer sizes and so on).</p>
+<p>Model checkpoints (or pickled trained models) for a particular dataset must be saved to <code class="docutils literal notranslate"><span class="pre">./weights/&lt;model_name&gt;/&lt;dataset</span> <span class="pre">name&gt;</span></code>. For example, a model named <code class="docutils literal notranslate"><span class="pre">abc</span></code> trained against an intermediate dataset named <code class="docutils literal notranslate"><span class="pre">data001</span></code> must save its weights in <code class="docutils literal notranslate"><span class="pre">./weights/abc/data001</span></code>. These are to be implemented at the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method, which will pass suitable paths to the <code class="docutils literal notranslate"><span class="pre">save</span></code> method in the same instance to produce checkpoints at those paths.</p>
+<p>Checkpoint file names must abide by the following convention:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Best-performing checkpoints (by your own metric, for example the smallest validation loss value): <code class="docutils literal notranslate"><span class="pre">best_YYYY-MM-DDTHH:MM:SS.&lt;extension&gt;</span></code>.</p></li>
+<li><p>The last checkpoint (produced at the last epoch): <code class="docutils literal notranslate"><span class="pre">last_YYYY-MM-DDTHH:MM:SS.&lt;extension&gt;</span></code>.</p></li>
+</ul>
+</div></blockquote>
+<p>In other words, the checkpoint name is <code class="docutils literal notranslate"><span class="pre">best</span> <span class="pre">|</span> <span class="pre">last</span></code> plus an ISO8601 datetime string (truncated to seconds) and then the file extension. <strong>Every checkpoint must be packaged within a single file.</strong> The exact extension depends on the format you choose to save your model’s checkpoint in. All bundled models use Pickle to serialise their models and as such use the <code class="docutils literal notranslate"><span class="pre">.pt</span></code> extension.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Models that do not generate in-progress checkpoints (such as Scikit-learn models whose training process is a simple blocking <code class="docutils literal notranslate"><span class="pre">fit()</span></code> call) can produce their only checkpoint labelled as either <code class="docutils literal notranslate"><span class="pre">best</span></code> or <code class="docutils literal notranslate"><span class="pre">last</span></code>. However, since the export script defaults to looking for <code class="docutils literal notranslate"><span class="pre">best</span></code> checkpoints, it would be more convenient to use <code class="docutils literal notranslate"><span class="pre">best</span></code>. This would allow you to call the export script for these models without having to specify an additional option at the export script.</p>
+</div>
+</section>
+<section id="preprocessing-needs">
+<h2>Preprocessing needs<a class="headerlink" href="#preprocessing-needs" title="Permalink to this heading"></a></h2>
+<p>Should your model require the dataset to be preprocessed in any way (for example, tokenisation for DistilBERT and stemming for simple term-based models), implement such logic by subclassing the <code class="docutils literal notranslate"><span class="pre">BasePreprocessor</span></code> class in <code class="docutils literal notranslate"><span class="pre">utils/encoders/encoder.py</span></code>:</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="utils.encoders.encoder.BasePreprocessor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">utils.encoders.encoder.</span></span><span class="sig-name descname"><span class="pre">BasePreprocessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#utils.encoders.encoder.BasePreprocessor" title="Permalink to this definition"></a></dt>
+<dd><p>A base class for your custom preprocessors.</p>
+<p>This base preprocessor does not do anything (passthrough). It’s used
+by default when your model does not specify any preprocessor.</p>
+<p>Models may require specific preprocessing in the form of tokenisation,
+stemming, word removal and so on. Such preprocessing can be implemented
+by subclassing this class in your own model definition file.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="utils.encoders.encoder.BasePreprocessor.__call__">
+<span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#utils.encoders.encoder.BasePreprocessor.__call__" title="Permalink to this definition"></a></dt>
+<dd><p>Transform the given text into your preferred input format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>text</strong> (<em>str</em>) – The text to tokenise.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>inputs</strong> – All preprocessors must return a dictionary of model input fields.
+Do not use the key <code class="docutils literal notranslate"><span class="pre">label</span></code> as it is reserved for use by the
+<code class="docutils literal notranslate"><span class="pre">PyTorchDataset</span></code> class, which will later write the labels
+corresponding to this text to the dictionary.</p>
+<p>By default, the BaseProcessor returns the input unchanged as the
+<code class="docutils literal notranslate"><span class="pre">text</span></code> key.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="utils.encoders.encoder.BasePreprocessor.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#utils.encoders.encoder.BasePreprocessor.__init__" title="Permalink to this definition"></a></dt>
+<dd><p>General constructor.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="utils.encoders.encoder.BasePreprocessor.__weakref__">
+<span class="sig-name descname"><span class="pre">__weakref__</span></span><a class="headerlink" href="#utils.encoders.encoder.BasePreprocessor.__weakref__" title="Permalink to this definition"></a></dt>
+<dd><p>list of weak references to the object (if defined)</p>
+</dd></dl>
+
+</dd></dl>
+
+<p>With your logic implemented, instruct your model to use it by implementing the <code class="docutils literal notranslate"><span class="pre">get_preprocessor</span></code> method. This method returns an instance of your preprocessor class and will be called on every new dataset loading. That instance will be used to preprocess that dataset before its data is fed to your model.</p>
+<p>If your model directly takes in raw text from the datasets, simply skip this method. Its default implementation in the <code class="docutils literal notranslate"><span class="pre">Model</span></code> class simply returns an instance of the above <code class="docutils literal notranslate"><span class="pre">BasePreprocessor</span></code> which does nothing aside from putting your input text in a dictionary at key <code class="docutils literal notranslate"><span class="pre">text</span></code>.</p>
+</section>
+<section id="exporting">
+<h2>Exporting<a class="headerlink" href="#exporting" title="Permalink to this heading"></a></h2>
+<p>This part gives detail on how to implement the two <code class="docutils literal notranslate"><span class="pre">export_...</span></code> methods and the BentoService.</p>
+<p>KTT models should be able to export themselves into 2 formats:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>ONNX: Open Neural Network eXchange, suitable for deploying to existing ML services with an ONNX runtime. A model may be exported into one or more <code class="docutils literal notranslate"><span class="pre">.onnx</span></code> files.</p></li>
+<li><p>BentoML: Not strictly a ‘format per se, but rather a packaging of the model with the necessary resources to create a standalone REST API server based on the BentoML framework.</p></li>
+</ul>
+</div></blockquote>
+<p>Your model should support both formats, but at the minimum, it should support one of them (because what good is a model that can only be trained but not used?).</p>
+<section id="onnx">
+<h3>ONNX<a class="headerlink" href="#onnx" title="Permalink to this heading"></a></h3>
+<p>Exporting to ONNX should be a simple process as it does not involve the rest of the system that much. In <code class="docutils literal notranslate"><span class="pre">export_onnx</span></code>, simply use the ONNX converter tool appropriate for your framework (for example, <code class="docutils literal notranslate"><span class="pre">skl2onnx</span></code> for <code class="docutils literal notranslate"><span class="pre">sklearn</span></code> and <code class="docutils literal notranslate"><span class="pre">torch.onnx</span></code> for PyTorch). Once you have the ONNX graphs, write them to the paths passed to this function. If your model should be exported as one ONNX graph, export to the <code class="docutils literal notranslate"><span class="pre">clasifier_path</span></code> and leave <code class="docutils literal notranslate"><span class="pre">encoder_path</span></code> blank.</p>
+</section>
+<section id="export-bento-resources">
+<h3><code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code><a class="headerlink" href="#export-bento-resources" title="Permalink to this heading"></a></h3>
+<p>Exporting into a BentoML service is more involved, and also gives you more decisions to make. There are two main approaches regarding the format that you can export your model core into for your BentoService implementation to later use.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Reuse the ONNX graphs. This is possible, but you might run into problems with BentoML’s internal ONNX handling code not playing well with CUDA and TensorRT (at least in the current version). For non-GPU models, this is generally stable and could save you a bit of time (due to slightly better optimisation from an ONNXRuntime) and storage space (depending on your checkpoint format).</p></li>
+<li><p>Directly serialise your model and implement your BentoService’s runner function to behave just like your <code class="docutils literal notranslate"><span class="pre">test</span></code> method. Depending on framework and code structure, you might still achieve equal performance as the ONNX approach. This has the added bonus of allowing you to adapt the code from your <code class="docutils literal notranslate"><span class="pre">test</span></code> method into the BentoService, saving implementation time. It is also less fussy and is more likely to work well for GPU-enabled models.</p></li>
+</ul>
+</div></blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>KTT internally uses BentoML 0.13.1 (the LTS branch). You can find specific instructions for your framework in <a class="reference external" href="https://docs.bentoml.org/en/0.13-lts/frameworks.html">their documentation</a>.</p>
+</div>
+<p>The implementation for BentoML exporting is split into three parts: the <code class="docutils literal notranslate"><span class="pre">svc_lts.py</span></code> source file, the reference dataset’s generation plus configuration files (optional), and the <code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code> method. The expected result after running the export script with this model would be a new BentoService in the <code class="docutils literal notranslate"><span class="pre">./build</span></code> folder with the following structure:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>build
+└── &lt;model name&gt;_&lt;dataset name&gt;
+     ├── docker-compose.yaml
+     ├── grafana
+     │   └── provisioning
+     │       ├── dashboards
+     │       │   ├── dashboard.json
+     │       │   └── dashboard.yml
+     │       └── datasources
+     │           └── datasource.yml
+     ├── inference
+     │   ├── bentoml-init.sh
+     │   ├── bentoml.yml
+     │   ├── (...)
+     │   ├── Dockerfile
+     ├── monitoring
+     │   ├── Dockerfile
+     │   ├── evidently.yaml
+     │   ├── monitoring.py
+     │   ├── references.parquet
+     │   └── requirements.txt
+     └── prometheus
+         └── prometheus.yaml
+</pre></div>
+</div>
+<p>or this, if it was built without support for monitoring:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>build
+└── &lt;model name&gt;_&lt;dataset name&gt;
+     └── inference
+         ├── bentoml-init.sh
+         ├── bentoml.yml
+         ├── (...)
+         └── Dockerfile
+</pre></div>
+</div>
+<p>To keep things nice and tidy, we recommend that you create a subfolder within your model folder to store BentoML-specific files just like the example general folder structure at <a class="reference internal" href="#model-struct"><span class="std std-ref">General model folder structure</span></a>.</p>
+<section id="the-service-implementation">
+<span id="service-spec"></span><h4>The service implementation<a class="headerlink" href="#the-service-implementation" title="Permalink to this heading"></a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">svc_lts.py</span></code> file contains the definition of the BentoService for this model. The following is a rough description of what you need to implement in this file:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Define a subclass of <code class="docutils literal notranslate"><span class="pre">bentoml.BentoService</span></code> preferably named just like your model class (as it will be the name used by the exported BentoService’s internal files and folders).</p></li>
+<li><p>Based on what your model requires, define Artifacts for this class via the <code class="docutils literal notranslate"><span class="pre">&#64;bentoml.artifacts</span></code> decorator. Artifacts are data objects needed for the service, such as the serialised model itself, a metadata JSON file, or some form of configuration.</p></li>
+<li><p>Define a <code class="docutils literal notranslate"><span class="pre">predict</span></code> method that accepts one of BentoML’s <code class="docutils literal notranslate"><span class="pre">InputAdapters</span></code> (see <a class="reference external" href="https://docs.bentoml.org/en/0.13-lts/api/adapters.html">here</a>) and returns a single string, preferably a newline-separated list of class names in hierarchical order (example: <code class="docutils literal notranslate"><span class="pre">Food\\nPasta\\nSpaghetti</span></code>). This method will contain the code needed to preprocess and feed the data received passed as an <code class="docutils literal notranslate"><span class="pre">InputAdapter</span></code> by the outer BentoServer into the model, then get the results out of the model and postprocess into said string format. You can access the Artifacts from within this method (or any method within this class) by retrieving <code class="docutils literal notranslate"><span class="pre">self.artifacts.&lt;artifact</span> <span class="pre">name&gt;</span></code>. Remember to wrap this method in a <code class="docutils literal notranslate"><span class="pre">&#64;bentoml.api</span></code> decorator.</p></li>
+<li><p>(optional) If you decide to implement monitoring capabilities for your model’s BentoService, make the <code class="docutils literal notranslate"><span class="pre">predict</span></code> method send new data to the monitoring app on every request processed. The data to be sent is a JSON object containing a single 2D list at field <code class="docutils literal notranslate"><span class="pre">data</span></code>. This 2D list has shape <code class="docutils literal notranslate"><span class="pre">(microbatch,</span> <span class="pre">reference_cols)</span></code> where <code class="docutils literal notranslate"><span class="pre">microbatch</span></code> is the number of microbatched rows in this request (1 if you do not enable microbatching), and <code class="docutils literal notranslate"><span class="pre">reference_cols</span></code> is the number of columns in your <em>reference dataset</em> (more on this later). As you might have guessed, this 2D array is basically a tabular view of a new section to be appended to a <em>current dataset</em> which will be compared against said <em>reference dataset</em>. The monitoring service’s hostname and port are exposed via the <code class="docutils literal notranslate"><span class="pre">EVIDENTLY_HOST</span></code> and <code class="docutils literal notranslate"><span class="pre">EVIDENTLY_PORT</span></code> environment variables. If these variables have not been set, default to <code class="docutils literal notranslate"><span class="pre">localhost:5001</span></code>.</p></li>
+</ol>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We chose to pass them via environment variables so as to give the BentoService more flexibility. If you run everything right on the host machine, the Evidently monitoring app can be reached at <code class="docutils literal notranslate"><span class="pre">localhost:5001</span></code>. However, when Dockerised and run in a <code class="docutils literal notranslate"><span class="pre">docker-compose</span></code> network, each container is on a different host instead of <code class="docutils literal notranslate"><span class="pre">localhost</span></code>. By making the BentoService read environment variables, our <code class="docutils literal notranslate"><span class="pre">docker-compose.yaml</span></code> file can pass the suitable hostname and port to it, allowing it to continue functioning normally in both cases.</p>
+</div>
+<p>With the service implemented, we can move on to implementing logic for automatically generating the <em>reference dataset</em>. A reference dataset is any dataset that is representative of the data the model instance was trained on. Bundled models simply use the test subset as the reference dataset. However, due to requirements from Evidently (the model metrics framework used by KTT), the reference dataset instead needs to contain numerical features (for the <code class="docutils literal notranslate"><span class="pre">feature_drift</span></code> report), with each feature being given one column. In addition to that, it may also require the raw classification scores (the numerical results the model outputs) if you choose to specify <code class="docutils literal notranslate"><span class="pre">categorical_target_drift</span></code> reports as part of the metrics to compute and track - again, each class gets its own scores column.</p>
+</section>
+<section id="the-service-configuration-files">
+<span id="bentoml-config"></span><h4>The service configuration files<a class="headerlink" href="#the-service-configuration-files" title="Permalink to this heading"></a></h4>
+<p>If you chose not to include monitoring capabilities with this model, you may safely skip this part. If you do want to have them, however, then there are two configuration files to add to your model folder: <code class="docutils literal notranslate"><span class="pre">evidently.yaml</span></code>, and <code class="docutils literal notranslate"><span class="pre">dashboard.json</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">evidently.yaml</span></code> configuration template follows Evidently’s service configuration format. Technically, you can also use JSON or any other format, as you will be the one implementing the parsing code later. However, since the Evidently monitoring app itself uses YAML, it is best to just stick to that. There are a number of parameters that <strong>must</strong> be provided by the template. A sample templated configuration for DB-BHCN, which contains all of them, can be seen below:</p>
+<blockquote>
+<div><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">service</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">reference_path</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;./references.parquet&#39;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">min_reference_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w"></span>
+<span class="w">    </span><span class="nt">use_reference</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"></span>
+<span class="w">    </span><span class="nt">moving_reference</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"></span>
+<span class="w">    </span><span class="nt">window_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w"></span>
+<span class="w">    </span><span class="nt">calculation_period_sec</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span><span class="w"></span>
+<span class="w">    </span><span class="nt">monitors</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat_target_drift</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data_drift</span><span class="w"></span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>A simple explanation of these fields:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">reference_path</span></code> is a relative path to the reference dataset, whose generation we will implement shortly. The dataset must be copied along with the monitoring app to the built service’s folder. This path is relative to the monitoring app itself, which is the <code class="docutils literal notranslate"><span class="pre">monitoring.py</span></code> file within <code class="docutils literal notranslate"><span class="pre">./build/&lt;service</span> <span class="pre">name&gt;/monitoring</span></code>. It is best to simply copy the reference dataset to the same folder as the monitoring app.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">min_reference_size</span></code> specifies how many rows must be collected by the metrics app (from user inputs and scores forwarded by the inference service) for the metrics to start being computed. It should be at least <code class="docutils literal notranslate"><span class="pre">window_size</span></code> or greater.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">moving_reference</span></code> here is set to false, as we need a fixed reference set to analyse data drift.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">window_size</span></code> specifies how many collected rows to use for comparison with the reference set. Here, the latest 30 rows are used. Smaller values reduce RAM usage and metrics computation time, while larger values may help capture wider shifts in trends.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">calculation_period_sec</span></code> is in seconds and specifies how frequently metrics should be computed based on the latest <code class="docutils literal notranslate"><span class="pre">window_size</span></code> collected rows. We recommend setting it to a high value if you do not expect your production environment to change quickly, as this has a significant performance impact.</p></li>
+<li><dl>
+<dt><code class="docutils literal notranslate"><span class="pre">monitors</span></code> is a list of Evidently reports to compute. Each report in this context is a set of metrics, which can then be displayed in a Grafana dashboard. The following are available from our Evidently monitoring app:</dt><dd><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">monitor_mapping</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;data_drift&quot;</span><span class="p">:</span> <span class="n">DataDriftMonitor</span><span class="p">,</span>
+    <span class="s2">&quot;cat_target_drift&quot;</span><span class="p">:</span> <span class="n">CatTargetDriftMonitor</span><span class="p">,</span>
+    <span class="s2">&quot;regression_performance&quot;</span><span class="p">:</span> <span class="n">RegressionPerformanceMonitor</span><span class="p">,</span>
+    <span class="s2">&quot;classification_performance&quot;</span><span class="p">:</span> <span class="n">ClassificationPerformanceMonitor</span><span class="p">,</span>
+    <span class="s2">&quot;prob_classification_performance&quot;</span><span class="p">:</span> <span class="n">ProbClassificationPerformanceMonitor</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Detailed information for each of these reports can be found <a class="reference external" href="https://docs.evidentlyai.com/reports">in the official Evidently documentation</a>.</p>
+</div></blockquote>
+<p>The second configuration file is the Grafana dashboard layout (<code class="docutils literal notranslate"><span class="pre">dashboard.json</span></code>). We however do not recommend you create this file by hand. Instead, you can wait until you can boot up your service and log into the Grafana instance so you can create it interactively.
+More on that later in <a class="reference internal" href="#grafana-design"><span class="std std-ref">Grafana dashboard design (optional)</span></a>.</p>
+</section>
+<section id="the-reference-dataset">
+<span id="reference-set"></span><h4>The reference dataset<a class="headerlink" href="#the-reference-dataset" title="Permalink to this heading"></a></h4>
+<p>To generate the reference dataset, you must implement an additional method, called the <code class="docutils literal notranslate"><span class="pre">`gen_reference_set(self,</span> <span class="pre">loader)</span></code> method, which will be called by the training script after the training script and test script if the user specifies <code class="docutils literal notranslate"><span class="pre">--reference</span></code> or <code class="docutils literal notranslate"><span class="pre">-r</span></code>. This is quite similar to the <code class="docutils literal notranslate"><span class="pre">test</span></code> method in that it also runs the model over a dataset (passed as a ‘loader’ of your choice), but it also records the numerical features (for example, from a Tf-idf vectoriser, or a DistilBERT instance) along with numerical classification scores. For reference, you may want to take a look at DB-BHCN’s version:</p>
+<p>The exact reference set schema depends on your choice of Evidently reports and also your model’s design. DB-BHCN for example generates a reference dataset containings firstly a <code class="docutils literal notranslate"><span class="pre">targets</span></code> column (ground truths, using textual class names), 24 average-pooled feature columns (from the 768 features produced by its DistilBERT encoder) named <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">23</span></code> (in string form), and classification score columns, one for each leaf-level class, with the column names being the string names of the classes themselves.</p>
+<p>The resulting reference set must be in Parquet format (<code class="docutils literal notranslate"><span class="pre">.parquet</span></code>) named similarly to the <strong>last checkpoint</strong>, with <code class="docutils literal notranslate"><span class="pre">_reference</span></code> added. For example, if the last checkpoint is named <code class="docutils literal notranslate"><span class="pre">last_2022-04-01T12:34:56.pt</span></code>, then the reference dataset must be named <code class="docutils literal notranslate"><span class="pre">last_2022-04-01T12:34:56_reference.parquet</span></code>.</p>
+</section>
+<section id="the-export-bento-resources-method">
+<span id="model-export-general"></span><h4>The <code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code> method<a class="headerlink" href="#the-export-bento-resources-method" title="Permalink to this heading"></a></h4>
+<p>In this method, you should do the following:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Create a configuration dictionary (let’s just call it <code class="docutils literal notranslate"><span class="pre">config</span></code>). Write a list of scores column names to the <code class="docutils literal notranslate"><span class="pre">prediction</span></code> key. This is necessary to inform the to-be-bundled Evidently service of which columns to track in the reference dataset and the new data coming in from production. If you chose to follow the default reference dataset schema above, that would be a list of all leaf class names.</p></li>
+<li><p>Initialise a BentoService instance (as in importing the above <code class="docutils literal notranslate"><span class="pre">svc_lts.py</span></code> file as a module and constructing the BentoService-based class within). Pack all necessary resources into its artifacts.</p>
+<ul class="simple">
+<li><p>PyTorch modules should be JIT-traced using <code class="docutils literal notranslate"><span class="pre">torch.jit.trace</span></code> before packing into a <code class="docutils literal notranslate"><span class="pre">PytorchArtifact</span></code>.</p></li>
+<li><p>Configuration files or metadata should be packed as strings.</p></li>
+</ul>
+</li>
+<li><p>Return that configuration dictionary and the BentoService instance.</p></li>
+</ol>
+</div></blockquote>
+</section>
+</section>
+</section>
+<section id="specifying-your-hyperparameters-optional">
+<h2>Specifying your hyperparameters (optional)<a class="headerlink" href="#specifying-your-hyperparameters-optional" title="Permalink to this heading"></a></h2>
+<p>Some models might have tunable hyperparameters. KTT has facilities to automatically retrieve values from a <code class="docutils literal notranslate"><span class="pre">./hyperparameters.json</span></code> file. Each model gets a JSON object with their own identifier as the key. You can add your model’s hyperparameters to this file, and then tell KTT to load them in at the beginning of the training session to initialise your model.</p>
+<p>You can either directly tune your model by modifying this file, or implement automatic hyperparameter tuning in your training script and use this file to supply starting values.</p>
+<p>Models without tunable hyperparameters can skip this step.</p>
+</section>
+<section id="registering-your-model-with-the-rest-of-the-system">
+<span id="model-register"></span><h2>Registering your model with the rest of the system<a class="headerlink" href="#registering-your-model-with-the-rest-of-the-system" title="Permalink to this heading"></a></h2>
+<p>Now that you have fully implemented your model, it is time to inform the training and exporting scripts of its existence and also on how to run it.</p>
+<section id="the-model-lists">
+<h3>The model lists<a class="headerlink" href="#the-model-lists" title="Permalink to this heading"></a></h3>
+<dl>
+<dt>Edit <code class="docutils literal notranslate"><span class="pre">./models/__init__.py</span></code> and add your model to it. There are three places to do so:</dt><dd><ol class="arabic">
+<li><p>First, import your model class (the one subclassing <code class="docutils literal notranslate"><span class="pre">Model</span></code>, <code class="docutils literal notranslate"><span class="pre">PyTorchModel</span></code> or <code class="docutils literal notranslate"><span class="pre">SklearnModel</span></code>). This allows the training and exporting code to shorten the import path to just <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">models</span> <span class="pre">import</span> <span class="pre">YourModelClass</span></code> instead of <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">models.your_model.your_model</span> <span class="pre">import</span> <span class="pre">YourModelClass</span></code>. Refer to how the bundled models are imported to import your own.</p></li>
+<li><p>Then, add your model identifier (the model folder name) to the appropriate <code class="docutils literal notranslate"><span class="pre">MODEL_LIST</span></code>. Currently, there is the <code class="docutils literal notranslate"><span class="pre">PYTORCH_MODEL_LIST</span></code> and <code class="docutils literal notranslate"><span class="pre">SKLEARN_MODEL_LIST</span></code>.</p>
+<blockquote>
+<div><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>TODO: Add instructions for implementing a model outside of these frameworks.</p>
+</div>
+</div></blockquote>
+</li>
+<li><p>Lastly, add your model class name (not the folder name) to <code class="docutils literal notranslate"><span class="pre">__all__</span></code>. If your model needs to expose special functions that are not available.</p></li>
+</ol>
+</dd>
+</dl>
+</section>
+</section>
+<section id="test-run-your-model">
+<span id="test-run"></span><h2>Test-run your model<a class="headerlink" href="#test-run-your-model" title="Permalink to this heading"></a></h2>
+<p>If all goes to plan, you can now call on <code class="docutils literal notranslate"><span class="pre">train.py</span></code> and <code class="docutils literal notranslate"><span class="pre">test.py</span></code> with your model just like any of the bundled models. Train it on a preprocessed dataset and check if its checkpoints are in the correct format. Ensure that it can load, save and export smoothly.</p>
+<p>If you implemented BentoService exporting, you can test-run the built service in two ways:</p>
+<blockquote>
+<div><ul>
+<li><p>Without monitoring capabilities: either run the inference service directly using <code class="docutils literal notranslate"><span class="pre">bentoml</span> <span class="pre">serve</span></code>, or run as a Docker container using the supplied Dockerfile.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> ./build/&lt;model_name&gt;_&lt;dataset_name&gt;/inference
+
+ bentoml serve ./
+ <span class="c1"># or use the production gunicorn server</span>
+ bentoml serve-gunicorn ./
+ <span class="c1"># or as a Docker container</span>
+ docker image build .
+ docker run -p <span class="m">5000</span>:5000 &lt;built image ID&gt;
+</pre></div>
+</div>
+</li>
+<li><p>With monitoring capabilities: fire up your entire service using the autogenerated <code class="docutils literal notranslate"><span class="pre">docker-compose</span></code> script:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> ./build/&lt;model_name&gt;_&lt;dataset_name&gt;
+docker-compose up
+</pre></div>
+</div>
+<p>This will Dockerise the inference app and monitoring app (if not already), download and run Prometheus and Grafana, and configure them all to fit together nicely in a Docker network.</p>
+</li>
+</ul>
+</div></blockquote>
+<p>The following ports are exposed by the service:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">5000</span></code>: the inference service. <code class="docutils literal notranslate"><span class="pre">POST</span></code> inference requests to its <code class="docutils literal notranslate"><span class="pre">/predict</span></code> endpoint. The format of the request is whatever you decided on in your BentoService implementation. BentoML’s server also returns API- and process-related metrics through the <code class="docutils literal notranslate"><span class="pre">/metrics</span></code> endpoint.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">5001</span></code>: the monitoring service. It returns data-related metrics through its <code class="docutils literal notranslate"><span class="pre">/metrics</span></code> endpoint. Only available in monitoring-enabled services.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">9090</span></code>: the Prometheus database control panel. Only available in monitoring-enabled services.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">3000</span></code>: the Grafana control panel. Only available in monitoring-enabled services.</p></li>
+</ul>
+</div></blockquote>
+<section id="grafana-dashboard-design-optional">
+<span id="grafana-design"></span><h3>Grafana dashboard design (optional)<a class="headerlink" href="#grafana-dashboard-design-optional" title="Permalink to this heading"></a></h3>
+<p>If you designed your model with monitoring capabilities, now is the time to start designing your Grafana dashboard. Log into Grafana (by default exposed at <code class="docutils literal notranslate"><span class="pre">localhost:3000</span></code>) with default credentials (<code class="docutils literal notranslate"><span class="pre">admin</span></code> for both username and password - remember to change them!). A Prometheus data source should already have been included, which connects to the Prometheus instance in your Docker network, which in turn fetches metrics regularly from the inference and monitoring services’ <code class="docutils literal notranslate"><span class="pre">/metrics</span></code> endpoint.</p>
+<p>You can now create your dashboard from this data source, using metrics names returned by the <code class="docutils literal notranslate"><span class="pre">/metrics</span></code> endpoints above. You can also import the JSON schema of an existing dashboard from a bundled model to learn how to display them.</p>
+<p>Once everything is done and running, export your dashboard as a JSON file (remember to tick that external exporting option). Place the JSON in your model’s folder (preferably following the standard folder structure at the beginning of this guide) and rename it if necessary.</p>
+</section>
+<section id="testing-automatic-dashboard-provisioning">
+<h3>Testing automatic dashboard provisioning<a class="headerlink" href="#testing-automatic-dashboard-provisioning" title="Permalink to this heading"></a></h3>
+<p>The expected starting state of a completed BentoService from KTT includes a fully provisioned Grafana instance. This means you should ensure that your Grafana dashboard is loaded in and running without any user intervention right from service startup. To facilitate this, ensure that your <code class="docutils literal notranslate"><span class="pre">export</span></code> method correctly passes the path to the dashboard JSON to the <code class="docutils literal notranslate"><span class="pre">init_folder_structure</span></code> function. This function would then copy the JSON to <code class="docutils literal notranslate"><span class="pre">./build/&lt;model_name&gt;_&lt;dataset_name&gt;/grafana/provisioning/dashboards</span></code>.</p>
+<p>After finishing designing your dashboard, exporting it, placing the JSON in the correct location and specifying the path in your <code class="docutils literal notranslate"><span class="pre">export</span></code> method implementation, you should repeat the whole exporting process. First, remove all previously-built service files. Then, remove all related Docker volumes using <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">volume</span> <span class="pre">prune</span></code>. Finally, export your service as usual and <code class="docutils literal notranslate"><span class="pre">docker-compose</span> <span class="pre">up</span></code> to start it. Log into your Grafana dashboard again (the username and password should have been reverted to the default credentials - if not, you have not fully cleared the previous service’s data) and see if the dashboard is already there. If it is, congratulations! You now have a fully working model and BentoService exporting process!</p>
+</section>
+</section>
+<section id="framework-specific-guides">
+<h2>Framework-specific guides<a class="headerlink" href="#framework-specific-guides" title="Permalink to this heading"></a></h2>
+<p>The above instructions only cover parts that are common between all frameworks. See below for in-depth guides for each framework:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pytorch/add_model.html">Implementing a model with PyTorch+DistilBERT</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pytorch/add_model.html#the-model">The model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytorch/add_model.html#pytorch-model-module-structure">PyTorch model module structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytorch/add_model.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pytorch/add_model.html#the-process">The process</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pytorch/add_model.html#folder-structure">Folder structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pytorch/add_model.html#hyperparameters">Hyperparameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pytorch/add_model.html#implementing-the-model">Implementing the model</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#init"><code class="docutils literal notranslate"><span class="pre">__init__</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#save"><code class="docutils literal notranslate"><span class="pre">save</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#load"><code class="docutils literal notranslate"><span class="pre">load</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#from-checkpoint"><code class="docutils literal notranslate"><span class="pre">from_checkpoint</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#get-preprocessor"><code class="docutils literal notranslate"><span class="pre">get_preprocessor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#forward"><code class="docutils literal notranslate"><span class="pre">forward</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#fit"><code class="docutils literal notranslate"><span class="pre">fit</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#test"><code class="docutils literal notranslate"><span class="pre">test</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#forward-with-features"><code class="docutils literal notranslate"><span class="pre">forward_with_features</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#gen-reference-set"><code class="docutils literal notranslate"><span class="pre">gen_reference_set</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#implementing-the-bentoservice">Implementing the BentoService</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#the-configuration-files">The configuration files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pytorch/add_model.html#export-methods"><code class="docutils literal notranslate"><span class="pre">export_</span></code> methods</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pytorch/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sklearn/add_model.html">Implementing a model with Scikit-learn</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sklearn/add_model.html#the-model">The model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sklearn/add_model.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sklearn/add_model.html#the-process">The process</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="sklearn/add_model.html#folder-structure">Folder structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sklearn/add_model.html#hyperparameters">Hyperparameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sklearn/add_model.html#implementing-the-model">Implementing the model</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#init"><code class="docutils literal notranslate"><span class="pre">__init__</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#save"><code class="docutils literal notranslate"><span class="pre">save</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#load"><code class="docutils literal notranslate"><span class="pre">load</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#from-checkpoint"><code class="docutils literal notranslate"><span class="pre">from_checkpoint</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#get-preprocessor"><code class="docutils literal notranslate"><span class="pre">get_preprocessor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#fit"><code class="docutils literal notranslate"><span class="pre">fit</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#test"><code class="docutils literal notranslate"><span class="pre">test</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#gen-reference-set"><code class="docutils literal notranslate"><span class="pre">gen_reference_set</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#implementing-the-bentoservice">Implementing the BentoService</a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#the-configuration-files">The configuration files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="sklearn/add_model.html#export"><code class="docutils literal notranslate"><span class="pre">export</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="sklearn/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../dev-encoder/index.html" class="btn btn-neutral float-left" title="Developing new encoders" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pytorch/add_model.html" class="btn btn-neutral float-right" title="Implementing a model with PyTorch+DistilBERT" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Huynh Thien Khiem, Voong Xay Tac, Huynh Truong Tu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

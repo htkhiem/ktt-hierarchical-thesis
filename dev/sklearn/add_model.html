@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Implementing a model with Scikit-learn &mdash; KTT Hierarchical Classification System 0.3a documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Advanced guides" href="../../advanced/index.html" />
+    <link rel="prev" title="Implementing a model with PyTorch+DistilBERT" href="../pytorch/add_model.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> KTT Hierarchical Classification System
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../usage/index.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../usage/installation.html">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage/installation.html#downloading">Downloading</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage/installation.html#setting-up-dependencies">Setting up dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage/quickstart.html">Quickstart</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage/quickstart.html#data-preparation">Data preparation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage/quickstart.html#training-a-model">Training a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage/quickstart.html#exporting-the-trained-model">Exporting the trained model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage/quickstart.html#serving-up-a-bento">Serving up a Bento</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage/quickstart.html#shipping-bentos-in-a-container">Shipping Bentos in a container</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage/commands.html">CLI usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage/commands.html#adapters">Adapters</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../indepth/index.html">System design</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../indepth/adapters.html">Data adapters</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../indepth/adapters.html#intermediate-format-specification">Intermediate format specification</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../indepth/adapters.html#parquet-schema">Parquet schema</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../indepth/adapters.html#hierarchy-json-schema">Hierarchy JSON schema</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../indepth/adapters.html#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../indepth/adapters.html#the-sql-adapter">The SQL adapter</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../indepth/adapters.html#the-flatfile-adapter">The flatfile adapter</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../indepth/training.html">Training stage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../indepth/training.html#the-process">The process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../indepth/training.html#classes">Classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../indepth/training.html#common-classes">Common classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../indepth/training.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../indepth/training.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../indepth/exporting.html">Exporting your models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../indepth/exporting.html#onnx-exporting">ONNX exporting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../indepth/exporting.html#bentoml-exporting">BentoML exporting</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../indepth/exporting.html#packaging">Packaging</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../encoders/index.html">Encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../encoders/distilbert.html">DistilBERT</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../encoders/distilbert.html#api">API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../encoders/sklearn_text.html">Scikit-learn text feature extractors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../encoders/sklearn_text.html#api">API</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models/index.html">Prebuilt models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models/tfidf_lsgd.html">Tf-idf + Leaf SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/tfidf_lsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/tfidf_lsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/tfidf_lsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/tfidf_lsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/tfidf_hsgd.html">Tf-idf + Hierarchy SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/tfidf_hsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/tfidf_hsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/tfidf_hsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/tfidf_hsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/db_bhcn.html">DB-BHCN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn.html#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../models/db_bhcn.html#id1">DB-BHCN</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/db_bhcn_awx.html">DB-BHCN+AWX</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn_awx.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn_awx.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn_awx.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn_awx.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_bhcn_awx.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/db_ahmcnf.html">DistilBERT + Adapted HMCN-F</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_ahmcnf.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_ahmcnf.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_ahmcnf.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_ahmcnf.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_ahmcnf.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/db_achmcnn.html">DistilBERT + Adapted C-HMCNN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_achmcnn.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_achmcnn.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_achmcnn.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_achmcnn.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_achmcnn.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models/db_linear.html">DistilBERT + Linear</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_linear.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_linear.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_linear.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models/db_linear.html#theory">Theory</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-encoder/index.html">Developing new encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../dev-encoder/index.html#where-encoders-come-in">Where encoders come in</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../dev-encoder/index.html#adding-encoders">Adding encoders</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../dev-encoder/index.html#implementing-preprocessors">Implementing preprocessors</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../intro.html">Developing new models</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../intro.html#frameworks">Frameworks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../intro.html#general-model-folder-structure">General model folder structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../intro.html#the-model-itself">The model itself</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../intro.html#checkpointing">Checkpointing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../intro.html#preprocessing-needs">Preprocessing needs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../intro.html#exporting">Exporting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../intro.html#onnx">ONNX</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../intro.html#export-bento-resources"><code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../intro.html#the-service-implementation">The service implementation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../intro.html#the-service-configuration-files">The service configuration files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../intro.html#the-reference-dataset">The reference dataset</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../intro.html#the-export-bento-resources-method">The <code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code> method</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../intro.html#specifying-your-hyperparameters-optional">Specifying your hyperparameters (optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../intro.html#registering-your-model-with-the-rest-of-the-system">Registering your model with the rest of the system</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../intro.html#the-model-lists">The model lists</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../intro.html#test-run-your-model">Test-run your model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../intro.html#grafana-dashboard-design-optional">Grafana dashboard design (optional)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../intro.html#testing-automatic-dashboard-provisioning">Testing automatic dashboard provisioning</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="../intro.html#framework-specific-guides">Framework-specific guides</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../pytorch/add_model.html">Implementing a model with PyTorch+DistilBERT</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../pytorch/add_model.html#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../pytorch/add_model.html#pytorch-model-module-structure">PyTorch model module structure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../pytorch/add_model.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../pytorch/add_model.html#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../pytorch/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Implementing a model with Scikit-learn</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#scikit-learn-utilities">Scikit-learn utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/index.html">Advanced guides</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../advanced/dvc.html">Using DVC with our system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../advanced/gpu.html">Inferencing with GPUs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../advanced/gpu.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../advanced/gpu.html#gpu-based-inference-using-bentos">GPU-based inference using Bentos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../advanced/gpu.html#gpu-based-inference-for-dockerised-services">GPU-based inference for Dockerised services</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../advanced/gpu.html#without-monitoring-capabilities">Without monitoring capabilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../advanced/gpu.html#with-monitoring-capabilities">With monitoring capabilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../advanced/tuning.html">Automatic hyperparameter tuning</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../advanced/tuning.html#cli-usage">CLI usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../advanced/tuning.html#tune-configuration-format">Tune configuration format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ref.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">KTT Hierarchical Classification System</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../intro.html">Developing new models</a> &raquo;</li>
+      <li>Implementing a model with Scikit-learn</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/dev/sklearn/add_model.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="implementing-a-model-with-scikit-learn">
+<h1>Implementing a model with Scikit-learn<a class="headerlink" href="#implementing-a-model-with-scikit-learn" title="Permalink to this heading"></a></h1>
+<p>Scikit-learn (sklearn) is another toolkit that this system supports. It is mainly used for lightweight ML models that do not require GPUs.</p>
+<p>This article will guide you through the process of implementing a model from scratch using KTT’s facilities and sklearn. It will mainly focus on standout aspects (those that are unique to sklearn).</p>
+<section id="the-model">
+<h2>The model<a class="headerlink" href="#the-model" title="Permalink to this heading"></a></h2>
+<p>To keep everything simple and focus on the system integration aspects only, we will recreate tfidf+LinearSGD, which is the simpler of the two bundled sklearn models. It consists of an NLTK-powered word tokeniser+stemmer, a term frequency-inverse document frequency (tfidf) vectoriser, and a single custom classifier performing stochastic gradient descent usinga modified Huber loss. More information about this model can be found in <a class="reference internal" href="../../models/tfidf_lsgd.html#tfidf-lsgd-theory"><span class="std std-ref">Configuration schema</span></a>.
+/home/htkhiem/Documents/Thesis/ktt-hierarchical-thesis/doc/source/dev/sklearn/add_model.rst:202: ERROR: Unexpected indentation.
+Scikit-learn model module structure
+———————————–</p>
+<p>Each sklearn model module (‘module’ for short) in KTT is a self-contained collection of implemented source code, metadata and configuration files. A module defines its own training, checkpointing and exporting procedures. It might also optionally implement a  BentoML service and configuration files for live inference using the integrated BentoML-powered inference system and monitoring using Prometheus/Grafana. The general folder tree of an sklearn model is as detailed in <a class="reference internal" href="../intro.html#model-struct"><span class="std std-ref">General model folder structure</span></a>.</p>
+<p>The source implementation itself must subclass the abstract <code class="xref py py-class docutils literal notranslate"><span class="pre">models.model_sklearn.SklearnModel</span></code> class, which subclasses the abstract <code class="xref py py-class docutils literal notranslate"><span class="pre">models.model.Model</span></code> class and pre-implements two of the abstract methods for you (<code class="xref py py-meth docutils literal notranslate"><span class="pre">models.model.Model.get_dataloader_func()</span></code> and <code class="xref py py-meth docutils literal notranslate"><span class="pre">models.model.Model.metrics_func()</span></code>).</p>
+</section>
+<section id="scikit-learn-utilities">
+<h2>Scikit-learn utilities<a class="headerlink" href="#scikit-learn-utilities" title="Permalink to this heading"></a></h2>
+<p>KTT provides framework-specific utilities for common tasks such as loading data in and computing performance metrics. For Scikit-learn, see <a class="reference internal" href="../../indepth/training.html#sklearn-utils"><span class="std std-ref">Scikit-learn utilities</span></a>.</p>
+</section>
+<section id="the-process">
+<h2>The process<a class="headerlink" href="#the-process" title="Permalink to this heading"></a></h2>
+<section id="folder-structure">
+<h3>Folder structure<a class="headerlink" href="#folder-structure" title="Permalink to this heading"></a></h3>
+<p>Let’s name our model <code class="docutils literal notranslate"><span class="pre">testmodel</span></code> for brevity. First, create these files folders in accordance with KTT’s folder structure:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>models
+└── testmodel
+    ├── __init__.py
+    ├── bentoml
+    │   ├── __init__.py
+    │   ├── evidently.yaml
+    │   ├── requirements.txt
+    │   ├── dashboard.json
+    │   └── svc_lts.py
+    └── testmodel.py
+</pre></div>
+</div>
+<p>You can simply create blank files for now. We will go into detail of each file soon.</p>
+</section>
+<section id="hyperparameters">
+<h3>Hyperparameters<a class="headerlink" href="#hyperparameters" title="Permalink to this heading"></a></h3>
+<p>Let’s first determine which tunable hyperparameter our model has:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">loss</span></code>: Which loss function to use for the SGD classifier. The possible options are <code class="docutils literal notranslate"><span class="pre">hinge</span></code>, <code class="docutils literal notranslate"><span class="pre">log</span></code>, <code class="docutils literal notranslate"><span class="pre">modified_huber</span></code>, <code class="docutils literal notranslate"><span class="pre">squared_hinge</span></code>, and <code class="docutils literal notranslate"><span class="pre">perceptron</span></code> (only classification losses are listed here - regression losses shouldn’t be used) Here we shall default to <code class="docutils literal notranslate"><span class="pre">modified_huber</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_iter</span></code>: Upper limit of how many descent iterations will be performed. Setting this to low may prevent the model from converging. Here we default to 1000.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">min_df</span></code>: The minimum number of occurences a word must have in the dataset for it to be included in the tfidf vectoriser’s vocabulary. We will default it to 50.</p></li>
+</ul>
+<p>At least our model-specific hyperparameters will have to be present in the <code class="docutils literal notranslate"><span class="pre">config</span></code> dict that we will soon see in the upcoming parts.</p>
+</section>
+<section id="implementing-the-model">
+<h3>Implementing the model<a class="headerlink" href="#implementing-the-model" title="Permalink to this heading"></a></h3>
+<p>From here on we will refer to files using their paths in relative to the <code class="docutils literal notranslate"><span class="pre">testmodel</span></code> folder.</p>
+<p>In <code class="docutils literal notranslate"><span class="pre">testmodel.py</span></code>, import the necessary libraries and define a concrete subclass of the <code class="docutils literal notranslate"><span class="pre">SklearnModel</span></code> abstract class:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="kn">import</span> <span class="nn">joblib</span>
+    <span class="kn">import</span> <span class="nn">yaml</span>
+
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+    <span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">preprocessing</span><span class="p">,</span> <span class="n">linear_model</span>
+    <span class="kn">from</span> <span class="nn">sklearn.pipeline</span> <span class="kn">import</span> <span class="n">Pipeline</span>
+
+    <span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">TfidfVectorizer</span>
+    <span class="kn">from</span> <span class="nn">skl2onnx</span> <span class="kn">import</span> <span class="n">to_onnx</span>
+    <span class="kn">from</span> <span class="nn">skl2onnx.common.data_types</span> <span class="kn">import</span> <span class="n">StringTensorType</span>
+
+    <span class="kn">from</span> <span class="nn">models</span> <span class="kn">import</span> <span class="n">model_sklearn</span>
+    <span class="kn">from</span> <span class="nn">utils.encoders.snowballstemmer</span> <span class="kn">import</span> <span class="n">SnowballStemmerPreprocessor</span>
+    <span class="kn">from</span> <span class="nn">utils.build</span> <span class="kn">import</span> <span class="n">init_folder_structure</span>
+    <span class="kn">from</span> <span class="nn">.bentoml</span> <span class="kn">import</span> <span class="n">svc_lts</span>
+
+
+<span class="k">class</span> <span class="nc">TestModel</span><span class="p">(</span><span class="n">model_sklearn</span><span class="o">.</span><span class="n">SklearnModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A wrapper class around the scikit-learn-based test model.</span>
+
+<span class="sd">    It&#39;s basically a replica of the Tfidf-LeafSGD model bundled with KTT.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_checkpoint</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_preprocessor</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+                    <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">optim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dvc</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">train_loader</span><span class="p">,</span>
+            <span class="n">val_loader</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Unused but included for signature compatibility</span>
+            <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">best_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">dvc</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">generate_reference_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+            <span class="k">def</span> <span class="nf">export_onnx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">classifier_path</span><span class="p">,</span> <span class="n">encoder_path</span><span class="p">):</span>
+                    <span class="k">pass</span>
+
+            <span class="k">def</span> <span class="nf">export_bento_resources</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">svc_config</span><span class="o">=</span><span class="p">{}):</span>
+                    <span class="k">pass</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>You might notice that there are more methods than what is there in the <code class="docutils literal notranslate"><span class="pre">Model</span></code> abstract class. They are for reference dataset generation. Since we do not force every model to be able to export to our BentoML-based inference system with full monitoring capabilities, these methods are not defined in the abstract class. However, they will be covered in this guide for the sake of completeness.</p>
+<p>Now we will go through the process of implementing each method.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We highly recommend writing documentation for your model as you implement each method.</p>
+<p>KTT’s documentation system uses Sphinx but follows PEP 8’s documentation strings standard, with Sphinx features exposed to the syntax via the <code class="docutils literal notranslate"><span class="pre">numpydoc</span></code> extension. In short, you can refer to <a class="reference external" href="https://numpydoc.readthedocs.io/en/latest/format.html">this style guide</a>.</p>
+<p>The below code listings will not include full documentation (only short summary docstrings) for brevity.</p>
+</div>
+<section id="init">
+<h4><code class="docutils literal notranslate"><span class="pre">__init__</span></code><a class="headerlink" href="#init" title="Permalink to this heading"></a></h4>
+<p>Constructing an sklearn model in KTT is quite simple compared to PyTorch. One is recommended to package all components into <em>pipelines</em> for easier exporting and importing. Here we have two components: the tfidf vectoriser and the SGD classifier. The stemmer and tokeniser is not present since they have already been taken care of by KTT’s default sklearn facilities at the data-loading level.</p>
+<p>One point of difference in terms of design from PyTorch model is that Scikit-learn models can entirely serialise themselves without needing external configuration and hierarchical metadata to be stored along. To take advantage of this, we will package everything into a single <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> and later use <code class="docutils literal notranslate"><span class="pre">joblib</span></code> to pickle it. However, there’s a catch: since we do not store those information separately, we cannot reuse them to instantiate this model through the normal constructor as with PyTorch. As a workaround, we set up the constructor such that it can tolerate having no arguments (and later call <code class="docutils literal notranslate"><span class="pre">load</span></code> on it). In this case, the constructor should create an empty model with no pipeline or config saved.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hierarchy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+                    <span class="c1"># It is possible that the constructor will be called without</span>
+                    <span class="c1"># any of the arguments (by the from_checkpoint constructor).</span>
+                    <span class="c1"># In that case simply instantiate an empty class.</span>
+                    <span class="k">if</span> <span class="n">hierarchy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># The SGD classifier</span>
+                    <span class="n">clf</span> <span class="o">=</span> <span class="n">linear_model</span><span class="o">.</span><span class="n">SGDClassifier</span><span class="p">(</span>
+                        <span class="n">loss</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;loss&#39;</span><span class="p">],</span>
+                        <span class="n">max_iter</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;max_iter&#39;</span><span class="p">]</span>
+                    <span class="p">)</span>
+                    <span class="c1"># Package into pipeline</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([</span>
+                        <span class="p">(</span><span class="s1">&#39;tfidf&#39;</span><span class="p">,</span> <span class="n">TfidfVectorizer</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;min_df&#39;</span><span class="p">])),</span>
+                        <span class="p">(</span><span class="s1">&#39;clf&#39;</span><span class="p">,</span> <span class="n">clf</span><span class="p">),</span>
+                    <span class="p">])</span>
+                    <span class="c1"># Back up config for later use</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+</pre></div>
+</div>
+</section>
+<section id="save">
+<h4><code class="docutils literal notranslate"><span class="pre">save</span></code><a class="headerlink" href="#save" title="Permalink to this heading"></a></h4>
+<p>Due to how high-level sklearn can be, saving and loading models are a breeze compared to PyTorch. Sklearn models can be saved in whole (including their code) in a single file. As such, to save this model, we only need to use <code class="docutils literal notranslate"><span class="pre">joblib</span></code> to serialise the entire pipeline.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">optim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dvc</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dvc</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s1">&#39;dvc add &#39;</span> <span class="o">+</span> <span class="n">path</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="load">
+<h4><code class="docutils literal notranslate"><span class="pre">load</span></code><a class="headerlink" href="#load" title="Permalink to this heading"></a></h4>
+<p>The reverse is performed in this method compared to <code class="docutils literal notranslate"><span class="pre">save</span></code>.</p>
+<p>Thanks to how sklearn models are serialised, we can fully replicate the previous instance without
+having to go through a class constructor. In other words, this and the <code class="docutils literal notranslate"><span class="pre">from_checkpoint</span></code> classmethod
+that we will be implementing soon are functionally equivalent.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that DVC is taken care of by KTT at the pulling phase - your model need only push it.</p>
+</section>
+<section id="from-checkpoint">
+<h4><code class="docutils literal notranslate"><span class="pre">from_checkpoint</span></code><a class="headerlink" href="#from-checkpoint" title="Permalink to this heading"></a></h4>
+<p>This is a <code class="docutils literal notranslate"><span class="pre">&#64;classmethod</span></code> to be used as an alternative constructor to <code class="docutils literal notranslate"><span class="pre">__init__()</span></code>. It will be capable of fully reading the checkpoint to construct an exact replica of the model by itself, topology included, without needing the user to input the correct hierarchical metadata. Or that’s what applied to PyTorch models.</p>
+<p>For Scikit-learn models, again the checkpoint already contains the code. In other words, we can just create a blank instance then call its <code class="docutils literal notranslate"><span class="pre">load</span></code> method on the checkpoint! This is possible thanks to the workaround above.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_checkpoint</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">instance</span>
+</pre></div>
+</div>
+<p>Doing it this way allows us to reuse the DVC handling implemented in <code class="docutils literal notranslate"><span class="pre">cls.load()</span></code>.</p>
+</section>
+<section id="get-preprocessor">
+<h4><code class="docutils literal notranslate"><span class="pre">get_preprocessor</span></code><a class="headerlink" href="#get-preprocessor" title="Permalink to this heading"></a></h4>
+<p>For optimum performance with tf-idf vectorisers, we will stem the words before passing them to this model. KTT provides a preprocessor for this, called <code class="docutils literal notranslate"><span class="pre">SnowballStemmerPreprocessor</span></code>, which as its name suggests, borrows NLTK’s SnowballStemmer facilities.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>            <span class="nd">@classmethod</span>
+            <span class="k">def</span> <span class="nf">get_preprocessor</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+                <span class="sd">&quot;&quot;&quot;Return a SnowballStemmere instance for this model.&quot;&quot;&quot;</span>
+                <span class="k">return</span> <span class="n">SnowballStemmerPreprocessor</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="fit">
+<h4><code class="docutils literal notranslate"><span class="pre">fit</span></code><a class="headerlink" href="#fit" title="Permalink to this heading"></a></h4>
+<p>Every model in KTT knows how to train itself, the process of which is implemented as the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method. For sklearn models, we take in a training set (as returned by <code class="docutils literal notranslate"><span class="pre">model_sklearn.get_loaders</span></code>), iterate over them for a set number of epochs, compute loss value and backpropagate the layers. Since every model is different in their training process (such as different loss functions, optimisers and such), it makes more sense to pack the training process into the models themselves.</p>
+<p>Sklearn’s high-level design shines again here, with the <code class="docutils literal notranslate"><span class="pre">fit</span></code> method being super short compared to PyTorch implementations:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">train_loader</span><span class="p">,</span>
+            <span class="n">val_loader</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Unused but included for signature compatibility</span>
+            <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">best_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">dvc</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_loader</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">train_loader</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">best_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># There&#39;s no distinction between path and best_path as there is</span>
+            <span class="c1"># no validation phase.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">path</span> <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">best_path</span><span class="p">,</span> <span class="n">dvc</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+</pre></div>
+</div>
+</section>
+<section id="test">
+<h4><code class="docutils literal notranslate"><span class="pre">test</span></code><a class="headerlink" href="#test" title="Permalink to this heading"></a></h4>
+<p>This method simply iterates the model over any given dataset (usually the test set) as presented above. Since it will most likely be used for testing a newly-trained model against a test set, it’s named <code class="docutils literal notranslate"><span class="pre">test</span></code> (quite creatively). It is pretty much a slightly adjusted copy of the validation logic found in <code class="docutils literal notranslate"><span class="pre">fit</span></code>, so there’s not much to go about.</p>
+<p>The only thing of note is the output format. <strong>All Scikit-learn-based KTT models’ test methods are required to output a dictionary with at least four keys.</strong> The first one, <code class="docutils literal notranslate"><span class="pre">targets</span></code>, leads to the labels column. The second one, <code class="docutils literal notranslate"><span class="pre">predictions</span></code>, contains the model’s selected class names to be compared against <code class="docutils literal notranslate"><span class="pre">targets</span></code>. The third one, <code class="docutils literal notranslate"><span class="pre">targets_b</span></code>, is the same as the <code class="docutils literal notranslate"><span class="pre">targets</span></code> column but binarised (this can be easily done using sklearn’s own facilities). The last one is <code class="docutils literal notranslate"><span class="pre">scores</span></code>, which are the raw scores from the model before being argmaxed and matched back to label names.</p>
+<p>In this implementation, we’ll also output a fifth key, called <code class="docutils literal notranslate"><span class="pre">encodings</span></code>. As we do not have a separate <code class="docutils literal notranslate"><span class="pre">forward_with_features</span></code> method as in the example PyTorch model, we chose to include such functionality into this method. Also, we will manually implement it here instead of using Pytorch’s AvgPool layers, just to keep things exclusively sklearn and <code class="docutils literal notranslate"><span class="pre">numpy</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">return_encodings</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+                <span class="c1"># We need binarised targets for AU(PRC)</span>
+                    <span class="n">y_avg</span> <span class="o">=</span> <span class="n">preprocessing</span><span class="o">.</span><span class="n">label_binarize</span><span class="p">(</span>
+                    <span class="n">loader</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="n">classes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">classes_</span>
+                <span class="p">)</span>
+                <span class="c1"># Separately run each stage so we can extract the feature vectors</span>
+                <span class="n">tfidf_encoding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">loader</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">scores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">tfidf_encoding</span><span class="p">)</span>
+                <span class="n">predictions</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">classes_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="p">]</span>
+
+                <span class="n">res</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;targets&#39;</span><span class="p">:</span> <span class="n">loader</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="s1">&#39;targets_b&#39;</span><span class="p">:</span> <span class="n">y_avg</span><span class="p">,</span>
+                    <span class="s1">&#39;predictions&#39;</span><span class="p">:</span> <span class="n">predictions</span><span class="p">,</span>
+                    <span class="s1">&#39;scores&#39;</span><span class="p">:</span> <span class="n">scores</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="k">if</span> <span class="n">return_encodings</span><span class="p">:</span>
+                    <span class="n">pooled_feature_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">vocabulary_</span><span class="p">)</span> \
+                        <span class="o">//</span> <span class="n">REFERENCE_SET_FEATURE_POOL</span>
+                    <span class="c1"># Average-pool encodings</span>
+                    <span class="n">tfidf_encoding_dense</span> <span class="o">=</span> <span class="n">tfidf_encoding</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+                    <span class="n">res</span><span class="p">[</span><span class="s1">&#39;encodings&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+                        <span class="p">[</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span>
+                                <span class="n">tfidf_encoding_dense</span><span class="p">[</span>
+                                    <span class="n">j</span><span class="p">,</span>
+                                    <span class="n">i</span><span class="o">*</span><span class="n">REFERENCE_SET_FEATURE_POOL</span><span class="p">:</span>
+                                    <span class="nb">min</span><span class="p">((</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">REFERENCE_SET_FEATURE_POOL</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">))</span>
+                                <span class="p">]</span>
+                            <span class="p">)</span>
+                            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pooled_feature_size</span><span class="p">)</span>
+                        <span class="p">]</span>
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">tfidf_encoding_dense</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="p">])</span>
+                <span class="k">return</span> <span class="n">res</span>
+</pre></div>
+</div>
+</section>
+<section id="gen-reference-set">
+<h4><code class="docutils literal notranslate"><span class="pre">gen_reference_set</span></code><a class="headerlink" href="#gen-reference-set" title="Permalink to this heading"></a></h4>
+<p>This is where we generate the reference dataset for production-time model performance monitoring.</p>
+<p>Our goal is to create a Pandas dataframe with the columns detailed in <a class="reference internal" href="../intro.html#reference-set"><span class="std std-ref">The reference dataset</span></a>, that is, one column for every feature (titled with a stringified number starting from 0), then one column for every leaf label’s classification score (titled with the label names).</p>
+<p>There’s a catch, however: Since this model runs without using the JSON, it only knows of internal indices instead of textual label names. In other words, we will have name collisions (against the feature column names, which are also numbers). To circumvent this, we spice up the terminology by prepending some letters to these names. ‘C’ for labels and ‘F’ for features should work well.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">gen_reference_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">):</span>
+                <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="n">return_encodings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">pooled_features</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;encodings&#39;</span><span class="p">]</span>
+                <span class="n">scores</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">]</span>
+                <span class="n">targets</span> <span class="o">=</span> <span class="n">loader</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">scores</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">]</span>
+                <span class="n">cols</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;targets&#39;</span><span class="p">:</span> <span class="n">targets</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">col_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pooled_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">cols</span><span class="p">[</span><span class="s1">&#39;F&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">col_idx</span><span class="p">)]</span> <span class="o">=</span> <span class="n">pooled_features</span><span class="p">[:,</span> <span class="n">col_idx</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">col_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">scores</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">cols</span><span class="p">[</span><span class="s1">&#39;C&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">classes_</span><span class="p">[</span><span class="n">col_idx</span><span class="p">])]</span> <span class="o">=</span>\
+                        <span class="n">scores</span><span class="p">[:,</span> <span class="n">col_idx</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>As you can see, this method is very similar to the <code class="docutils literal notranslate"><span class="pre">test</span></code> method above - in fact, it calls <code class="docutils literal notranslate"><span class="pre">test</span></code> to get most the necessary data. It additionally pools and stores features since we shouldn’t be tracking a ton of separate columns at once - too much overhead for too little gain in insight.</p>
+</section>
+<section id="implementing-the-bentoservice">
+<h4>Implementing the BentoService<a class="headerlink" href="#implementing-the-bentoservice" title="Permalink to this heading"></a></h4>
+<p>Let’s take a break from <code class="docutils literal notranslate"><span class="pre">testmodel.py</span></code> and focus on implementing the actual BentoService that will run our model. In other words, let’s move to <code class="docutils literal notranslate"><span class="pre">bentoml/svc_lts.py</span></code>.
+Each model will have differing needs for pre- and post-processing as well as metadata and data flow. Due to this, we have decided to let each model implement their own BentoService runtime.</p>
+<blockquote>
+<div><p>As of BentoML LTS 0.13, ONNX is supported but rather buggy for those who want to use GPUs for inference. As such, in this guide we will instead simply serialise our components and then load them into the BentoService runtime. This has the added benefit of having almost identical code between BentoService and the <code class="docutils literal notranslate"><span class="pre">test</span></code> method.</p>
+</div></blockquote>
+<p>First, we import all the dependencies needed at inference time and read a few environment variables. This will involve a bunch of BentoML modules, which are very well explained in <a class="reference external" href="https://docs.bentoml.org/en/0.13-lts/">their official documentation</a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">bentoml</span>
+<span class="kn">from</span> <span class="nn">bentoml.adapters</span> <span class="kn">import</span> <span class="n">JsonInput</span>
+<span class="kn">from</span> <span class="nn">bentoml.frameworks.sklearn</span> <span class="kn">import</span> <span class="n">SklearnModelArtifact</span>
+<span class="kn">from</span> <span class="nn">bentoml.service.artifacts.common</span> <span class="kn">import</span> <span class="n">JSONArtifact</span>
+<span class="kn">from</span> <span class="nn">bentoml.types</span> <span class="kn">import</span> <span class="n">JsonSerializable</span>
+
+<span class="kn">import</span> <span class="nn">nltk</span>
+<span class="kn">from</span> <span class="nn">nltk.corpus</span> <span class="kn">import</span> <span class="n">stopwords</span>
+<span class="kn">from</span> <span class="nn">nltk.stem.snowball</span> <span class="kn">import</span> <span class="n">SnowballStemmer</span>
+<span class="kn">from</span> <span class="nn">nltk.tokenize</span> <span class="kn">import</span> <span class="n">word_tokenize</span>
+
+<span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;punkt&#39;</span><span class="p">)</span>
+<span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;stopwords&#39;</span><span class="p">)</span>
+<span class="c1"># These can&#39;t be put inside the class since they don&#39;t have _unload(), which</span>
+<span class="c1"># prevents joblib from correctly parallelising the class if included.</span>
+<span class="n">SNOWBALLSTEMMER</span> <span class="o">=</span> <span class="n">SnowballStemmer</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">)</span>
+<span class="n">STOP_WORDS</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">stopwords</span><span class="o">.</span><span class="n">words</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">))</span>
+
+<span class="n">EVIDENTLY_HOST</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;EVIDENTLY_HOST&#39;</span><span class="p">,</span> <span class="s1">&#39;localhost&#39;</span><span class="p">)</span>
+<span class="n">EVIDENTLY_PORT</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;EVIDENTLY_PORT&#39;</span><span class="p">,</span> <span class="mi">5001</span><span class="p">)</span>
+
+<span class="n">REFERENCE_SET_FEATURE_POOL</span> <span class="o">=</span> <span class="mi">64</span>
+</pre></div>
+</div>
+<p>Note the two environment variables here (<code class="docutils literal notranslate"><span class="pre">EVIDENTLY_HOST</span></code> and <code class="docutils literal notranslate"><span class="pre">EVIDENTLY_PORT</span></code>). This is to allow the different components of our service to be run both directly on host machine’s network as well as being containerised in a Docker network (in which hostnames are not just <code class="docutils literal notranslate"><span class="pre">localhost</span></code> anymore). KTT will provide the necessary <code class="docutils literal notranslate"><span class="pre">docker-compose</span></code> configuration to set these environment variables to the suitable values, so reading them here and using them correctly is really all we need to do.</p>
+<p>Next, we need to implement the service class. It will be a subclass of <code class="docutils literal notranslate"><span class="pre">bentoml.BentoService</span></code>. All of its dependencies, data (called ‘artifacts’) and configuration are defined via &#64;decorators, as BentoML internally uses a dependency injection framework.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@bentoml</span><span class="o">.</span><span class="n">env</span><span class="p">(</span>
+        <span class="n">requirements_txt_file</span><span class="o">=</span><span class="s1">&#39;models/db_bhcn/bentoml/requirements.txt&#39;</span>
+<span class="p">)</span>
+<span class="nd">@bentoml</span><span class="o">.</span><span class="n">artifacts</span><span class="p">([</span>
+        <span class="n">SklearnModelArtifact</span><span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">),</span>
+        <span class="n">JSONArtifact</span><span class="p">(</span><span class="s1">&#39;config&#39;</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="k">class</span> <span class="nc">TestModel</span><span class="p">(</span><span class="n">bentoml</span><span class="o">.</span><span class="n">BentoService</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Real-time inference service for TestModel.&quot;&quot;&quot;</span>
+
+        <span class="n">_initialised</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">def</span> <span class="nf">init_fields</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Initialise the necessary fields. This is not a constructor.&quot;&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">artifacts</span><span class="o">.</span><span class="n">model</span>
+            <span class="c1"># Load service configuration JSON</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">monitoring_enabled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">artifacts</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;monitoring_enabled&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pooled_feature_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">n_features_in_</span> <span class="o">//</span> <span class="n">REFERENCE_SET_FEATURE_POOL</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_initialised</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
+<p>Lastly, we implement the actual predict() API handler as a method in that class, wrapped by a <code class="docutils literal notranslate"><span class="pre">&#64;bentoml.api</span></code> decorator that defines the input type (for informing the outer BentoML web server) and microbatching specification.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>        <span class="nd">@bentoml</span><span class="o">.</span><span class="n">api</span><span class="p">(</span>
+            <span class="nb">input</span><span class="o">=</span><span class="n">JsonInput</span><span class="p">(),</span>
+            <span class="n">batch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">mb_max_batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+            <span class="n">mb_max_latency</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parsed_json_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">JsonSerializable</span><span class="p">]):</span>
+                <span class="sd">&quot;&quot;&quot;Classify text to the trained hierarchy.&quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialised</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">init_fields</span><span class="p">()</span>
+            <span class="n">tokenized</span> <span class="o">=</span> <span class="p">[</span><span class="n">word_tokenize</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">parsed_json_list</span><span class="p">]</span>
+            <span class="n">stemmed</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">SNOWBALLSTEMMER</span><span class="o">.</span><span class="n">stem</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="k">if</span> <span class="n">word</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">STOP_WORDS</span>
+                          <span class="k">else</span> <span class="n">word</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">lst</span> <span class="ow">in</span> <span class="n">tokenized</span>
+            <span class="p">]</span>
+            <span class="n">tfidf_encoding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">stemmed</span><span class="p">)</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">steppredict_proba</span><span class="p">(</span><span class="n">tfidf_encoding</span><span class="p">)</span>
+            <span class="n">predictions</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">classes_</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>There’s one more thing in this method to implement: some code to send the newly-received data-in-the-wild plus our model’s scores for it to the monitoring service.
+For more information regarding the format of the data to be sent to the monitoring service, please see <a class="reference internal" href="../intro.html#service-spec"><span class="std std-ref">The service implementation</span></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">monitoring_enabled</span><span class="p">:</span>
+                    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                    Create a 2D list contains the following content:</span>
+<span class="sd">                    [:, 0]: leaf target names (left as zeroes)</span>
+<span class="sd">                    [:, 1:n]: pooled features,</span>
+<span class="sd">                    [:, n:]: leaf classification scores,</span>
+<span class="sd">                    where n is the number of pooled features.</span>
+<span class="sd">                    The first axis is the microbatch axis.</span>
+<span class="sd">                    &quot;&quot;&quot;</span>
+                    <span class="n">new_rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+                        <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">stemmed</span><span class="p">),</span> <span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">pooled_feature_size</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">classes_</span><span class="p">)),</span>
+                        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+                    <span class="p">)</span>
+                    <span class="n">new_rows</span><span class="p">[</span>
+                        <span class="p">:,</span>
+                        <span class="mi">1</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">pooled_feature_size</span><span class="o">+</span><span class="mi">1</span>
+                    <span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span>
+                            <span class="n">tfidf_encoding</span><span class="p">[</span>
+                                <span class="p">:,</span>
+                                <span class="n">i</span><span class="o">*</span><span class="n">REFERENCE_SET_FEATURE_POOL</span><span class="p">:</span>
+                                <span class="nb">min</span><span class="p">((</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">REFERENCE_SET_FEATURE_POOL</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">))</span>
+                            <span class="p">]</span>
+                        <span class="p">)</span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pooled_feature_size</span><span class="p">)</span>
+                    <span class="p">])</span>
+                    <span class="n">new_rows</span><span class="p">[</span>
+                        <span class="p">:,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">pooled_feature_size</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="p">]</span> <span class="o">=</span> <span class="n">scores</span>
+                    <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+                        <span class="s2">&quot;http://</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">/iterate&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">EVIDENTLY_HOST</span><span class="p">,</span> <span class="n">EVIDENTLY_PORT</span><span class="p">),</span>
+                        <span class="n">data</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">new_rows</span><span class="o">.</span><span class="n">tolist</span><span class="p">()}),</span>
+                        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;content-type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+                    <span class="p">)</span>
+</pre></div>
+</div>
+<p>Lastly, return the predictions. There is no need to post-process - Scikit-learn models do that by themselves and return the class names as discovered from the datasets!</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>            <span class="k">return</span> <span class="n">predictions</span>
+</pre></div>
+</div>
+</section>
+<section id="the-configuration-files">
+<h4>The configuration files<a class="headerlink" href="#the-configuration-files" title="Permalink to this heading"></a></h4>
+<p>It’s time to populate two out of the three configuration files in the <code class="docutils literal notranslate"><span class="pre">./bentoml</span></code> directory.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">evidently.yaml</span></code>, follow the guide at <a class="reference internal" href="../intro.html#bentoml-config"><span class="std std-ref">The service configuration files</span></a>. Here’s what you should end up with:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">service</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">reference_path</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;./references.parquet&#39;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">min_reference_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w"></span>
+<span class="w">    </span><span class="nt">use_reference</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"></span>
+<span class="w">    </span><span class="nt">moving_reference</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"></span>
+<span class="w">    </span><span class="nt">window_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w"></span>
+<span class="w">    </span><span class="nt">calculation_period_sec</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span><span class="w"></span>
+<span class="w">    </span><span class="nt">monitors</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat_target_drift</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data_drift</span><span class="w"></span>
+</pre></div>
+</div>
+<p>For <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>, you should manually skim over your implementation and decide on which dependency will be needed at inference time (note: you don’t need to include dependencies that are only used for training for obvious reasons). For this <code class="docutils literal notranslate"><span class="pre">testmodel</span></code>, you might get the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bentoml</span><span class="o">==</span><span class="mf">0.13.1</span>
+<span class="n">scikit</span><span class="o">-</span><span class="n">learn</span><span class="o">==</span><span class="mf">0.24.2</span>
+<span class="n">numpy</span><span class="o">==</span><span class="mf">1.19.5</span>
+</pre></div>
+</div>
+<p>It is always good practice to lock your versions. Only manually update a dependency version when necessary. This prevents breakages, as big Python libraries are known to fight each other over their own dependencies’ versions.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">dashboard.json</span></code>, simply leave it blank for now.</p>
+</section>
+<section id="export">
+<h4><code class="docutils literal notranslate"><span class="pre">export</span></code><a class="headerlink" href="#export" title="Permalink to this heading"></a></h4>
+<p>We will implement both export schemes: ONNX and BentoML.</p>
+<p>Exporting to ONNX is relatively straightforward if not for the fact that transformer models need to be dealt with specially. For this reason, we export the DistilBERT encoder and the classifier head as separate ONNX graphs using different facilities.</p>
+<p>For more information regarding naming and path specifications, please see <a class="reference internal" href="../intro.html#model-export-general"><span class="std std-ref">The export_bento_resources method</span></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>            <span class="k">def</span> <span class="nf">export_onnx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">classifier_path</span><span class="p">,</span> <span class="n">encoder_path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="n">initial_type</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;str_input&#39;</span><span class="p">,</span> <span class="n">StringTensorType</span><span class="p">([</span><span class="kc">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))]</span>
+                <span class="n">onx</span> <span class="o">=</span> <span class="n">to_onnx</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">initial_types</span><span class="o">=</span><span class="n">initial_type</span><span class="p">,</span> <span class="n">target_opset</span><span class="o">=</span><span class="mi">11</span>
+                <span class="p">)</span>
+                <span class="c1"># Export</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">classifier_path</span> <span class="o">+</span> <span class="s1">&#39;classifier.onnx&#39;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">onx</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Exporting as a BentoService is a bit more involved. We will implement it to support an optional monitoring extension powered by the Evidently library. This will be run as a standalone server accepting new data from production to compare with the above reference dataset to compute feature and target drift. To ease this process, KTT has already implemented said standalone server to be customisable (meaning new models can simply write a configuration file to tailor it to their needs and capabilities), as well as automating the file and folder logic for you. All you need to do is to produce two specific pieces of data: a configuration dictionary that lists out the features and classes this model has been trained on, and a fully packed BentoService instance.</p>
+<p>We will now use the above facilities to export our new model as a self-contained, standalone classification service.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>            <span class="k">def</span> <span class="nf">export_bento_resources</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">svc_config</span><span class="o">=</span><span class="p">{}):</span>
+                <span class="c1"># Config for monitoring service</span>
+                <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;prediction&#39;</span><span class="p">:</span> <span class="p">[</span>
+                        <span class="s1">&#39;C&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">classes_</span>
+                    <span class="p">]</span>
+                <span class="p">}</span>
+                <span class="n">svc_lts</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="s1">&#39;models.tfidf_lsgd.bentoml.svc_lts&#39;</span><span class="p">)</span>
+                <span class="n">svc</span> <span class="o">=</span> <span class="n">svc_lts</span><span class="o">.</span><span class="n">TestModel</span><span class="p">()</span>
+                <span class="n">svc</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="p">)</span>
+                <span class="n">svc</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;config&#39;</span><span class="p">,</span> <span class="n">svc_config</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="n">config</span><span class="p">,</span> <span class="n">svc</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="registering-testing-conclusion">
+<h2>Registering, testing &amp; conclusion<a class="headerlink" href="#registering-testing-conclusion" title="Permalink to this heading"></a></h2>
+<p>With every part of your model implemented, now is the time to add it to the model list and implement some runner code to get the training and exporting script to use it smoothly. For this, you can refer to <a class="reference internal" href="../intro.html#model-register"><span class="std std-ref">Registering your model with the rest of the system</span></a>.</p>
+<p>Be sure to test out every option for your model before deploying to a production environment. Testing instructions can be found at <a class="reference internal" href="../intro.html#test-run"><span class="std std-ref">Test-run your model</span></a>. Afterwards, design a Grafana dashboard and add it to the provisioning system to have your service automatically initialise Grafana right from the get-go.</p>
+<p>After this, your model is pretty much complete. If you did it correctly, it should be an integral and uniform part of your own KTT fork and can be used just like any existing (bundled) model.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../pytorch/add_model.html" class="btn btn-neutral float-left" title="Implementing a model with PyTorch+DistilBERT" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../../advanced/index.html" class="btn btn-neutral float-right" title="Advanced guides" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Huynh Thien Khiem, Voong Xay Tac, Huynh Truong Tu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DB-BHCN &mdash; KTT Hierarchical Classification System 0.3a documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="DB-BHCN+AWX" href="db_bhcn_awx.html" />
+    <link rel="prev" title="Tf-idf + Hierarchy SGD" href="tfidf_hsgd.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> KTT Hierarchical Classification System
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/installation.html">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/installation.html#downloading">Downloading</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/installation.html#setting-up-dependencies">Setting up dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/quickstart.html">Quickstart</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#data-preparation">Data preparation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#training-a-model">Training a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#exporting-the-trained-model">Exporting the trained model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#serving-up-a-bento">Serving up a Bento</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#shipping-bentos-in-a-container">Shipping Bentos in a container</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/commands.html">CLI usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/commands.html#adapters">Adapters</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../indepth/index.html">System design</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../indepth/adapters.html">Data adapters</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/adapters.html#intermediate-format-specification">Intermediate format specification</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#parquet-schema">Parquet schema</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#hierarchy-json-schema">Hierarchy JSON schema</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/adapters.html#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#the-sql-adapter">The SQL adapter</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/adapters.html#the-flatfile-adapter">The flatfile adapter</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../indepth/training.html">Training stage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/training.html#the-process">The process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/training.html#classes">Classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/training.html#common-classes">Common classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/training.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/training.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../indepth/exporting.html">Exporting your models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/exporting.html#onnx-exporting">ONNX exporting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../indepth/exporting.html#bentoml-exporting">BentoML exporting</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../indepth/exporting.html#packaging">Packaging</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../encoders/index.html">Encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../encoders/distilbert.html">DistilBERT</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../encoders/distilbert.html#api">API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../encoders/sklearn_text.html">Scikit-learn text feature extractors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../encoders/sklearn_text.html#api">API</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Prebuilt models</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="tfidf_lsgd.html">Tf-idf + Leaf SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tfidf_lsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tfidf_lsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tfidf_lsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tfidf_lsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tfidf_hsgd.html">Tf-idf + Hierarchy SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tfidf_hsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tfidf_hsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tfidf_hsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tfidf_hsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">DB-BHCN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">DB-BHCN</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="db_bhcn_awx.html">DB-BHCN+AWX</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="db_bhcn_awx.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_bhcn_awx.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_bhcn_awx.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_bhcn_awx.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_bhcn_awx.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="db_ahmcnf.html">DistilBERT + Adapted HMCN-F</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="db_ahmcnf.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_ahmcnf.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_ahmcnf.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_ahmcnf.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_ahmcnf.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="db_achmcnn.html">DistilBERT + Adapted C-HMCNN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="db_achmcnn.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_achmcnn.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_achmcnn.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_achmcnn.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_achmcnn.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="db_linear.html">DistilBERT + Linear</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="db_linear.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_linear.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_linear.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="db_linear.html#theory">Theory</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-encoder/index.html">Developing new encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#where-encoders-come-in">Where encoders come in</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#adding-encoders">Adding encoders</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#implementing-preprocessors">Implementing preprocessors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/intro.html">Developing new models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#frameworks">Frameworks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#general-model-folder-structure">General model folder structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#the-model-itself">The model itself</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#checkpointing">Checkpointing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#preprocessing-needs">Preprocessing needs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#exporting">Exporting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#onnx">ONNX</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#export-bento-resources"><code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-service-implementation">The service implementation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-service-configuration-files">The service configuration files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-reference-dataset">The reference dataset</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-export-bento-resources-method">The <code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code> method</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#specifying-your-hyperparameters-optional">Specifying your hyperparameters (optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#registering-your-model-with-the-rest-of-the-system">Registering your model with the rest of the system</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#the-model-lists">The model lists</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#test-run-your-model">Test-run your model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#grafana-dashboard-design-optional">Grafana dashboard design (optional)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#testing-automatic-dashboard-provisioning">Testing automatic dashboard provisioning</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#framework-specific-guides">Framework-specific guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/pytorch/add_model.html">Implementing a model with PyTorch+DistilBERT</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#pytorch-model-module-structure">PyTorch model module structure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../dev/sklearn/add_model.html">Implementing a model with Scikit-learn</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../advanced/index.html">Advanced guides</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/dvc.html">Using DVC with our system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/gpu.html">Inferencing with GPUs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/gpu.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/gpu.html#gpu-based-inference-using-bentos">GPU-based inference using Bentos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/gpu.html#gpu-based-inference-for-dockerised-services">GPU-based inference for Dockerised services</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../advanced/gpu.html#without-monitoring-capabilities">Without monitoring capabilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../advanced/gpu.html#with-monitoring-capabilities">With monitoring capabilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/tuning.html">Automatic hyperparameter tuning</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/tuning.html#cli-usage">CLI usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/tuning.html#tune-configuration-format">Tune configuration format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ref.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">KTT Hierarchical Classification System</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Prebuilt models</a> &raquo;</li>
+      <li>DB-BHCN</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/models/db_bhcn.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="db-bhcn">
+<h1>DB-BHCN<a class="headerlink" href="#db-bhcn" title="Permalink to this heading"></a></h1>
+<section id="api">
+<h2>API<a class="headerlink" href="#api" title="Permalink to this heading"></a></h2>
+</section>
+<section id="configuration-schema">
+<h2>Configuration schema<a class="headerlink" href="#configuration-schema" title="Permalink to this heading"></a></h2>
+<p>The configuration for this model defines the following hyperparameters:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">encoder_lr</span></code>: Encoder (DistilBERT) learning rate.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">classifier_lr</span></code>: Classifier learning rate.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dropout</span></code>: The model’s dropout rate.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hidden_nonlinear</span></code>: The FCFF model’s nonlinear type, which can be either <code class="docutils literal notranslate"><span class="pre">relu</span></code> or <code class="docutils literal notranslate"><span class="pre">tanhh</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lambda_l</span></code>: intensity of the local loss function.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gamma_l</span></code>: the gamma value of the loss function (how skewed are bottom levels’ penalisation compared to upper levels).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lambda_h</span></code>: intensity of the hierarchical loss function.</p></li>
+</ul>
+</section>
+<section id="default-tuning-configuration">
+<h2>Default tuning configuration<a class="headerlink" href="#default-tuning-configuration" title="Permalink to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;db_bhcn&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;display_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DB-BHCN&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;train_minibatch_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;val_test_minibatch_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;max_len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;range&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;encoder_lr&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.00002</span><span class="p">,</span><span class="w"> </span><span class="mf">0.00009</span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;classifier_lr&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.0002</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0009</span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;gamma_l&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">-0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;lambda_l&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;lambda_h&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.9</span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;dropout&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.5</span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;hidden_nonlinear&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;relu&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;encoder_lr&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uniform&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;classifier_lr&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uniform&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;gamma_l&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uniform&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;lambda_l&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fixed&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;lambda_h&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uniform&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;dropout&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uniform&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;hidden_nonlinear&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fixed&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">},</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="checkpoint-schema">
+<h2>Checkpoint schema<a class="headerlink" href="#checkpoint-schema" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">config</span></code>: A copy of the configuration dictionary passed to this instance’s constructor, either explicitly, or by <code class="docutils literal notranslate"><span class="pre">from_checkpoint</span></code> (extracted from a prior checkpoint).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hierarchy</span></code>: A serialised dictionary of hierarchical metadata created by <code class="docutils literal notranslate"><span class="pre">PerLevelHierarchy.to_dict()</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">encoder_state_dict</span></code>: Weights of the DistilBERT model.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">classifier_state_dict</span></code>: Weights of the classifier.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">optimizer_state_dict</span></code>: Saved state of the optimiser that was used to train the model for that checkpoint.</p></li>
+</ul>
+</section>
+<section id="theory">
+<h2>Theory<a class="headerlink" href="#theory" title="Permalink to this heading"></a></h2>
+<section id="id1">
+<h3>DB-BHCN<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<p>DB-BHCN stands for the the DistilBERT Branching Hierarchical Classification Network (DB-BHCN) model, which is designed specifically to maximise the utilisation of advanced language comprehension capabilities made available by DistilBERT model.</p>
+<p>An example computation graph for the classifier is given below.</p>
+<a class="reference internal image-reference" href="../_images/bhcn.svg"><img alt="Topology of the BHCN classifier head." src="../_images/bhcn.svg" width="320" /></a>
+<p>The topology’s depth matches that of the hierarchy with no additional layer, while its output size at each layer corresponds to the number of classes at the corresponding hierarchical level. Outputs are taken in a residual manner from each layer, ‘branching’ from the main flow, hence the name. Between layers, the hidden output first goes through a hidden nonlinear function, then a layer normalisation function, then a dropout stage whose probability is a hyperparameter.</p>
+<p>Formally, let <span class="math notranslate nohighlight">\(x \in \mathbb{R}^{768 \times 1}\)</span> be the feature vector, that is, the direct input that came from the fine-tuned DistilBERT instance that goes into the fully-connected flow; <span class="math notranslate nohighlight">\(H\)</span> be the depth-padded hierarchy object for which <span class="math notranslate nohighlight">\(|H|\)</span> represents its depth, <span class="math notranslate nohighlight">\(C_H\)</span> be the set of classes in H where <span class="math notranslate nohighlight">\(C_{H_h}\)</span> represents the set of classes at level <span class="math notranslate nohighlight">\(h\)</span>; <span class="math notranslate nohighlight">\(W\)</span> and <span class="math notranslate nohighlight">\(b\)</span> be the set of weights and biases where <span class="math notranslate nohighlight">\(W_h \in \mathbb{R}^{|C_{H_h}| \times |A^{h-1}|}\)</span> and <span class="math notranslate nohighlight">\(b_h \in \mathbb{R}^{|A^{h-1}| \times 1}\)</span> are the weights and biases of layer <span class="math notranslate nohighlight">\(h\)</span>, respectively; <span class="math notranslate nohighlight">\(z^h \in \mathbb{R}^{|C_{H_h}| \times 1}\)</span> represents the linear output from layer <span class="math notranslate nohighlight">\(h\)</span>, <span class="math notranslate nohighlight">\(A^h = \phi(z^h)\)</span> being the hidden nonlinear output with <span class="math notranslate nohighlight">\(\phi\)</span> being a hidden nonlinear activation function (such as ReLU or tanh); and <span class="math notranslate nohighlight">\(P^h = \psi(z^h)\)</span> being the output scores for classes of level <span class="math notranslate nohighlight">\(h\)</span> in hierarchy <span class="math notranslate nohighlight">\(H\)</span>, with <span class="math notranslate nohighlight">\(\psi\)</span> being the output nonlinear activation function, which in this case is the typical LogSoftmax function.</p>
+<p>DB-BHCN’s data flow is relatively straightforward. The input text is first encoded by a fine-tuned DistilBERT instance into <span class="math notranslate nohighlight">\(x\)</span>. This enters the first fully-connected level, which produces <span class="math notranslate nohighlight">\(z_1\)</span>, which is then transformed by <span class="math notranslate nohighlight">\(\phi\)</span> and <span class="math notranslate nohighlight">\(\psi\)</span> into <span class="math notranslate nohighlight">\(A_1\)</span> and <span class="math notranslate nohighlight">\(P_1\)</span>, respectively:</p>
+<div class="math notranslate nohighlight">
+\[z^1 = W^1x + b^1\]</div>
+<div class="math notranslate nohighlight">
+\[A^1 = \phi(z^1)\]</div>
+<div class="math notranslate nohighlight">
+\[P^1 = \psi(z^1)\]</div>
+<p>Then, for each non-leaf layer <span class="math notranslate nohighlight">\(0 &lt; h \neq |H|\)</span>, the same happens, with a small difference from the input layer in that the previous output is also concatenated with the original feature vector:</p>
+<div class="math notranslate nohighlight">
+\[z^h = W^h(x ++ A^{h - 1}) + b^{h}\]</div>
+<div class="math notranslate nohighlight">
+\[A^h = \phi(z^h)\]</div>
+<div class="math notranslate nohighlight">
+\[P^h = \psi(z^h)\]</div>
+<p>where, <span class="math notranslate nohighlight">\(W^h \in \mathbb{R}^{|C_{H_h}| \times (|x| + |A^{h - 1}|)}\)</span>. The last layer (where <span class="math notranslate nohighlight">\(h = |H|\)</span>) does not produce <cite>A^{|H|}</cite> as there is no further layer after it. Layer normalisation and dropout are performed in said order but not shown here for clarity. For indexing classes, each hierarchical level’s label indexing starts from zero, and the hierarchical label is then represented as an ordered list of indices. The complete classification for each example is the concatenation of one-hot vectors from each level.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="tfidf_hsgd.html" class="btn btn-neutral float-left" title="Tf-idf + Hierarchy SGD" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="db_bhcn_awx.html" class="btn btn-neutral float-right" title="DB-BHCN+AWX" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Huynh Thien Khiem, Voong Xay Tac, Huynh Truong Tu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

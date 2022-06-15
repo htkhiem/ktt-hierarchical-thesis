@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data adapters &mdash; KTT Hierarchical Classification System 0.3a documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Training stage" href="training.html" />
+    <link rel="prev" title="System design" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> KTT Hierarchical Classification System
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/installation.html">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/installation.html#downloading">Downloading</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/installation.html#setting-up-dependencies">Setting up dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/quickstart.html">Quickstart</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#data-preparation">Data preparation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#training-a-model">Training a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#exporting-the-trained-model">Exporting the trained model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#serving-up-a-bento">Serving up a Bento</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usage/quickstart.html#shipping-bentos-in-a-container">Shipping Bentos in a container</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/commands.html">CLI usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../usage/commands.html#adapters">Adapters</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">System design</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Data adapters</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#intermediate-format-specification">Intermediate format specification</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#parquet-schema">Parquet schema</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#hierarchy-json-schema">Hierarchy JSON schema</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#the-sql-adapter">The SQL adapter</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#the-flatfile-adapter">The flatfile adapter</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="training.html">Training stage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="training.html#the-process">The process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="training.html#classes">Classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="training.html#common-classes">Common classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="training.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="training.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="exporting.html">Exporting your models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="exporting.html#onnx-exporting">ONNX exporting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="exporting.html#bentoml-exporting">BentoML exporting</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="exporting.html#packaging">Packaging</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../encoders/index.html">Encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../encoders/distilbert.html">DistilBERT</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../encoders/distilbert.html#api">API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../encoders/sklearn_text.html">Scikit-learn text feature extractors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../encoders/sklearn_text.html#api">API</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../models/index.html">Prebuilt models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../models/tfidf_lsgd.html">Tf-idf + Leaf SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_lsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/tfidf_hsgd.html">Tf-idf + Hierarchy SGD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/tfidf_hsgd.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_bhcn.html">DB-BHCN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn.html#theory">Theory</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../models/db_bhcn.html#id1">DB-BHCN</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_bhcn_awx.html">DB-BHCN+AWX</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_bhcn_awx.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_ahmcnf.html">DistilBERT + Adapted HMCN-F</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_ahmcnf.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_achmcnn.html">DistilBERT + Adapted C-HMCNN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#default-tuning-configuration">Default tuning configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_achmcnn.html#theory">Theory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../models/db_linear.html">DistilBERT + Linear</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#api">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#configuration-schema">Configuration schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#checkpoint-schema">Checkpoint schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../models/db_linear.html#theory">Theory</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-encoder/index.html">Developing new encoders</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#where-encoders-come-in">Where encoders come in</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#adding-encoders">Adding encoders</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev-encoder/index.html#implementing-preprocessors">Implementing preprocessors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dev/intro.html">Developing new models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#frameworks">Frameworks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#general-model-folder-structure">General model folder structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#the-model-itself">The model itself</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#checkpointing">Checkpointing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#preprocessing-needs">Preprocessing needs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#exporting">Exporting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#onnx">ONNX</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#export-bento-resources"><code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-service-implementation">The service implementation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-service-configuration-files">The service configuration files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-reference-dataset">The reference dataset</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/intro.html#the-export-bento-resources-method">The <code class="docutils literal notranslate"><span class="pre">export_bento_resources</span></code> method</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#specifying-your-hyperparameters-optional">Specifying your hyperparameters (optional)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#registering-your-model-with-the-rest-of-the-system">Registering your model with the rest of the system</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#the-model-lists">The model lists</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#test-run-your-model">Test-run your model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#grafana-dashboard-design-optional">Grafana dashboard design (optional)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../dev/intro.html#testing-automatic-dashboard-provisioning">Testing automatic dashboard provisioning</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../dev/intro.html#framework-specific-guides">Framework-specific guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../dev/pytorch/add_model.html">Implementing a model with PyTorch+DistilBERT</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#pytorch-model-module-structure">PyTorch model module structure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#pytorch-utilities">PyTorch utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/pytorch/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../dev/sklearn/add_model.html">Implementing a model with Scikit-learn</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#the-model">The model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#scikit-learn-utilities">Scikit-learn utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#the-process">The process</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../dev/sklearn/add_model.html#registering-testing-conclusion">Registering, testing &amp; conclusion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../advanced/index.html">Advanced guides</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/dvc.html">Using DVC with our system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/gpu.html">Inferencing with GPUs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/gpu.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/gpu.html#gpu-based-inference-using-bentos">GPU-based inference using Bentos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/gpu.html#gpu-based-inference-for-dockerised-services">GPU-based inference for Dockerised services</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../advanced/gpu.html#without-monitoring-capabilities">Without monitoring capabilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../advanced/gpu.html#with-monitoring-capabilities">With monitoring capabilities</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/tuning.html">Automatic hyperparameter tuning</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/tuning.html#cli-usage">CLI usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/tuning.html#tune-configuration-format">Tune configuration format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ref.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">KTT Hierarchical Classification System</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">System design</a> &raquo;</li>
+      <li>Data adapters</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/indepth/adapters.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="data-adapters">
+<h1>Data adapters<a class="headerlink" href="#data-adapters" title="Permalink to this heading"></a></h1>
+<p>Our system uses what we call <em>data adapters</em> to process and convert input data from various sources and with different formats to one intermediate format that all models use for training.</p>
+<section id="intermediate-format-specification">
+<h2>Intermediate format specification<a class="headerlink" href="#intermediate-format-specification" title="Permalink to this heading"></a></h2>
+<p>An intermediate dataset is a dataset pre-processed to contain data in a specific format, with the necessary metadata packed along. It can be fed into any model in KTT without further processing, enabling future complex scenarios including out-of-core training support.</p>
+<p>Intermediate datasets are already CV-split into three subsets (training, validation, and test). The ratio between these subsets is configurable by the user when using data adapters, but defaults to an 8:1:1 split. These subsets are mutually exclusive and do not contain overlapping rows. It is recommended to sample the original dataset randomly to fill these subsets instead of sectioning it, unless the original dataset is already shuffled.</p>
+<p>Each subset is a single Apache Parquet partition, at least in the current iteration of KTT. Metadata is packed in a separate JSON file stored alongside these Parquet partitions.</p>
+<p>A directory tree of an intermediate dataset is:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>datasets
+└── DatasetName
+        ├── hierarchy.json
+        ├── hierarchy.json.dvc
+        ├── test.parquet
+        ├── test.parquet.dvc
+        ├── train.parquet
+        ├── train.parquet.dvc
+        ├── val.parquet
+        └── val.parquet.dvc
+</pre></div>
+</div>
+<p>Each intermediate dataset resides in a folder titled with their name. This name is the one passed to training and export scripts. Within this folder are the aforementioned subsets, named <code class="docutils literal notranslate"><span class="pre">train.parquet</span></code>, <code class="docutils literal notranslate"><span class="pre">val.parquet</span></code> and <code class="docutils literal notranslate"><span class="pre">test.parquet</span></code> for the training, validation and test subsets, respectively. The hierarchy file is <code class="docutils literal notranslate"><span class="pre">hierarchy.json</span></code>. Additionally, each of these files have a <code class="docutils literal notranslate"><span class="pre">.dvc</span></code> placeholder, such that the actual files can be ignored by Git and instead pushed to a separate object-storage remote such as Google Drive or Amazon S3.</p>
+<section id="parquet-schema">
+<h3>Parquet schema<a class="headerlink" href="#parquet-schema" title="Permalink to this heading"></a></h3>
+<p>The column schema for Parquet partitions are very simple. They only consist of two columns:
+- <code class="docutils literal notranslate"><span class="pre">name</span></code>: The text strings representing each data object that will become the model’s inputs after vectorisation.
+- <code class="docutils literal notranslate"><span class="pre">codes</span></code>: Lists of integers that denote, in root-to-leaf hierarchical order, which classes each data object belongs to. These integer codes are internal representations of discovered class labels.</p>
+<p>For example, in an e-commerce use case, we can classify products into a hierarchy of categories based on their title. For a product titled ‘Fresh organic McIntosh apples’ belonging to <code class="docutils literal notranslate"><span class="pre">Food</span> <span class="pre">&amp;</span> <span class="pre">Produce-&gt;Fresh</span> <span class="pre">produce-&gt;Fruits</span></code>, whose internal codes are <code class="docutils literal notranslate"><span class="pre">1,</span> <span class="pre">10,</span> <span class="pre">25,</span> <span class="pre">70</span></code> respectively, the cell for the <code class="docutils literal notranslate"><span class="pre">name</span></code> column would be said title, and the one for <code class="docutils literal notranslate"><span class="pre">classes</span></code> would be <code class="docutils literal notranslate"><span class="pre">[1,</span> <span class="pre">10,</span> <span class="pre">25,</span> <span class="pre">70]</span></code>. It is recommended to directly use Python lists instead of <code class="docutils literal notranslate"><span class="pre">numpy</span> <span class="pre">ndarrays</span></code>.</p>
+</section>
+<section id="hierarchy-json-schema">
+<h3>Hierarchy JSON schema<a class="headerlink" href="#hierarchy-json-schema" title="Permalink to this heading"></a></h3>
+<p>KTT uses various representations to integrate hierarchical structure knowledge into its models. All of these representations are stored in the JSON file titled <code class="docutils literal notranslate"><span class="pre">hierarchy.json</span></code>.</p>
+<p>The schema starts with a single root object. Within it are the following keys and their data:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">classes</span></code>: A list of class names. It contain classes from all hierarchical levels, organised by their level within the hierarchy (intra-level ordering is not specified, but is usually alphabetical). The order of this list determines the integer code given to each class.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">level_offsets</span></code>: A list of start and end indices for the levels. It contains one more element than there are levels, which is the last element, representing the end of the last level (which equates to <code class="docutils literal notranslate"><span class="pre">len(classes)</span></code>). <strong>For example</strong>: <code class="docutils literal notranslate"><span class="pre">level_offsets</span> <span class="pre">==</span> <span class="pre">[0,5,15,115]</span></code> a 3-level hierarchy with 5, 10 and 100 classes in the first, second and third levels respectively. The first number is the first index of the first level, the second the first index of the second level (and also the first level’s class count), the third the first index of the third level, and the fourth is the last index of the last level <strong>plus one</strong>. Remember, classes from all levels are concatenated together into the final <code class="docutils literal notranslate"><span class="pre">classes</span></code> list, hence the cumulative sum.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">level_sizes</span></code>: A list of integers representing sizes of each level. A level’s size is simply the number of classes belonging to that level. For example, the example hierarchy above would have <code class="docutils literal notranslate"><span class="pre">level_sizes</span> <span class="pre">==</span> <span class="pre">[5,</span> <span class="pre">10,</span> <span class="pre">100]</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parent_of</span></code>: A list of lists (or a jagged 2D array). Each sublist corresponds to one hierarchical level, such that index <span class="math notranslate nohighlight">\((i, j)\)</span> corresponds to the <span class="math notranslate nohighlight">\(j^{th}\)</span> class of the <span class="math notranslate nohighlight">\(i^{th}\)</span> hierarchical level (or <code class="docutils literal notranslate"><span class="pre">level_offsets[i]+j</span></code> in the global index space, following the above indexing scheme), and its value <span class="math notranslate nohighlight">\(k\)</span> at that index corresponds to class <span class="math notranslate nohighlight">\((i, j)\)</span> ‘s parent, which is class <span class="math notranslate nohighlight">\(k\)</span> in level <span class="math notranslate nohighlight">\(i-1\)</span>. A special case is the first level, which, since we do not include the imaginary root node in the hierarchical representations, do not have any parent. For this level, simply use themselves as their own parents - that is, <code class="docutils literal notranslate"><span class="pre">parent_of[0,</span> <span class="pre">i]</span> <span class="pre">=</span> <span class="pre">i</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: The M-matrix to be used with DistilBERT+Adapted C-HMCNN. It is essentially a <span class="math notranslate nohighlight">\(|C|\times |C|\)</span> boolean matrix (where <code class="docutils literal notranslate"><span class="pre">|C|==len(classes)</span></code> is the number of classes in the entire hierarchy) recording the ancestry of each class. For each coordinate <span class="math notranslate nohighlight">\(i,j \in [0, |C|]\)</span>, <code class="docutils literal notranslate"><span class="pre">M[i,j]==1</span></code> if there is a <em>directed</em> path from class <span class="math notranslate nohighlight">\(j\)</span> to <span class="math notranslate nohighlight">\(i\)</span> (that is, i is a descendant of j - the reverse does not count) and 0 otherwise. Note that <span class="math notranslate nohighlight">\(M[i,i] == 1\)</span> as each class is regarded as having a directed path to itself by C-HMCNN.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">R</span></code>: A variant of <code class="docutils literal notranslate"><span class="pre">M</span></code>, recording ancestry for leaf classes only. Its size is therefore <code class="docutils literal notranslate"><span class="pre">level_sizes[-1]</span> <span class="pre">x</span> <span class="pre">len(classes)</span></code>, where <span class="math notranslate nohighlight">\(R[i,j] == 1\)</span> if there is a path from the from overall class <span class="math notranslate nohighlight">\(j\)</span> to leaf class <span class="math notranslate nohighlight">\(i\)</span>. The same rules as in M apply for R, just with applicable modifications to the coordinates to accommodate the fact that the first dimension now only contains leaf classes. Also similarly to M, <span class="math notranslate nohighlight">\(R[i,i] == 1\)</span>.</p></li>
+</ul>
+<p>A typical JSON (truncated) looks like this:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;classes&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Food&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Electronics&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Veggies&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Seafood&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Deli&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Laptops&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Smartphones&quot;</span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;level_offsets&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0</span><span class="p">,</span><span class="w"> </span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="mf">7</span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;level_sizes&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="mf">3</span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;parent_of&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[[</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">],[</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">,</span><span class="mf">1</span><span class="p">]],</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;M&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[[</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,...,</span><span class="mf">0</span><span class="p">],[</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">,</span><span class="mf">1</span><span class="p">,...,</span><span class="mf">0</span><span class="p">],...,[</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">]],</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;R&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[[</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">],...,[</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">]]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="theory">
+<h2>Theory<a class="headerlink" href="#theory" title="Permalink to this heading"></a></h2>
+<p>A data adapter is responsible for fetching data from a source they are specialised at (for example, SQL for the SQL adapter, JSON/CSV/Parquet/Arrow for the flatfile adapter), possibly clean it, reorganise it, discover the hierarchy, encode classes into internal integer codes and convert the labels to said codes, CV-split and then write the processed subsets plus the hierarchical metadata into the aforementioned folder tree.</p>
+<p>Currently, two adapters are provided:</p>
+<section id="the-sql-adapter">
+<h3>The SQL adapter<a class="headerlink" href="#the-sql-adapter" title="Permalink to this heading"></a></h3>
+<section id="design">
+<h4>Design<a class="headerlink" href="#design" title="Permalink to this heading"></a></h4>
+<a class="reference internal image-reference" href="../_images/adapter-sql.svg"><img alt="Block diagram of the SQL adapter." src="../_images/adapter-sql.svg" width="800" /></a>
+<p>For CLI usage, see <span class="xref std std-ref">adapter-sql</span>.</p>
+<p>This adapter takes two queries from the user, one for each view as seen in the above diagram. It will use these two queries to fetch the above views as Pandas dataframes. These dataframes are then mined for hierarchical data. The rest is pretty standard, with the file exporting and folder organisation work being the same as described in the previous section.</p>
+<p>The two queries are recommended to have some kind of limiting clause to restrict the size of the returned SQL views. The SQL adapter currently has to store everything in-memory for the processing algorithms.</p>
+</section>
+<section id="supported-databases">
+<h4>Supported databases<a class="headerlink" href="#supported-databases" title="Permalink to this heading"></a></h4>
+<p>The SQL adapter supports all SQL database management systems as supported by <code class="docutils literal notranslate"><span class="pre">sqlalchemy</span></code>. It has been tested with PostgreSQL using the <code class="docutils literal notranslate"><span class="pre">psycopg2</span></code> driver.</p>
+<p>The default instllation of KTT comes bundled with <code class="docutils literal notranslate"><span class="pre">psycopg2</span></code> and thus supports PostgreSQL out-of-the-box. To connect to other databases, you need to manually install drivers for them through either <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span></code>, and then configure the adapter correspondingly using the <code class="docutils literal notranslate"><span class="pre">adapter_sql.json</span></code> file. We recommend <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span></code> if possible as Anaconda additionally takes care of non-Python executables and dependences as well as trying to install packages in the most compatible way possible (which is an entire optimisation problem). <a class="reference external" href="https://pythonspeed.com/articles/conda-vs-pip/">This article</a> is a good read on the matter.</p>
+<p>A full list of supported dialects and their drivers is available at <a class="reference external" href="https://docs.sqlalchemy.org/en/14/dialects/">SQLAlchemy’s DBAPI support page</a>.</p>
+<p><strong>Example:</strong> to connect to a MariaDB database, you can pick one out of the many drivers available - here we choose <a class="reference external" href="https://docs.sqlalchemy.org/en/14/dialects/mysql.html#module-sqlalchemy.dialects.mysql.mysqldb">mysqlclient</a>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda install -c conda-forge mysqlclient
+</pre></div>
+</div>
+<p>After installing <code class="docutils literal notranslate"><span class="pre">mysqlclient</span></code>, change the dialect and driver in the configuration file to <code class="docutils literal notranslate"><span class="pre">mysql</span></code> and <code class="docutils literal notranslate"><span class="pre">mysqlclient</span></code> respectively:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;dialect&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;mysql&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;driver&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;mysqlclient&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// ...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="configuration-schema">
+<h4>Configuration schema<a class="headerlink" href="#configuration-schema" title="Permalink to this heading"></a></h4>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;dialect&quot;</span></code>: The SQL dialect to use. <code class="docutils literal notranslate"><span class="pre">sqlalchemy</span></code> needs to support it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;driver&quot;</span></code>: The driver to use with the above SQL dialect. <code class="docutils literal notranslate"><span class="pre">sqlalchemy</span></code> needs to support it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;host&quot;</span></code>: Where the database server is, for example <code class="docutils literal notranslate"><span class="pre">localhost</span></code>. Port number can be manually specified if your server runs on a non-default port.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;database&quot;</span></code>: Name of the database to read from.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;user&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;password&quot;</span></code>: Credentials to log into the database.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;dataitem_query&quot;</span></code>: How to query the database for data items (labeled objects to learn from). See <a class="reference internal" href="#expected-schema"><span class="std std-ref">Expected view schema</span></a> to know what the adapter expects. The default value shows an example of how to query from an e-commerce products database with product names in the <code class="docutils literal notranslate"><span class="pre">title</span></code> column and their leaf category IDs (labels) in the <code class="docutils literal notranslate"><span class="pre">category_id</span></code> column.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;class_query&quot;</span></code>: How to query the database for classes (labels). See <a class="reference internal" href="#expected-schema"><span class="std std-ref">Expected view schema</span></a> to know what the adapter expects. The default value shows an example of how to query from an e-commerce products database with product categories in a recursive relationship (thus forming a hierarchy) with <code class="docutils literal notranslate"><span class="pre">id</span></code> and <code class="docutils literal notranslate"><span class="pre">parent_id</span></code> being the ID of the category and its parent, respectively.</p></li>
+</ul>
+</section>
+<section id="expected-view-schema">
+<span id="expected-schema"></span><h4>Expected view schema<a class="headerlink" href="#expected-view-schema" title="Permalink to this heading"></a></h4>
+<p>We expect two views, one for the data items and one for the classes.</p>
+<p>The data item view needs to have two columns:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: Textual name of the data object. This is the input to all the models.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">class_id</span></code>: The foreign key pointing to the primary key of the <strong>leaf</strong> class that this data object belongs to.</p></li>
+</ul>
+<p>The class view needs to have two columns also:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">id</span></code>: The primary key of each class.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parent_id</span></code>: The foreign key pointing to the primary key of the parent of each class. Use <code class="docutils literal notranslate"><span class="pre">NULL</span></code> if this is a top-level class (i.e. having no parent class).</p></li>
+</ul>
+</section>
+</section>
+<section id="the-flatfile-adapter">
+<h3>The flatfile adapter<a class="headerlink" href="#the-flatfile-adapter" title="Permalink to this heading"></a></h3>
+<p>For CLI usage, see <span class="xref std std-ref">adapter-flat</span>.</p>
+<p>This is a simpler adapter than SQL. In spite of its name, it actually takes in more than just flatfiles - anything that Pandas support.</p>
+<p>For JSON, we also support specifying the tabular schemas to use. By default, <code class="docutils literal notranslate"><span class="pre">records</span></code> is preferred.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="System design" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="training.html" class="btn btn-neutral float-right" title="Training stage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Huynh Thien Khiem, Voong Xay Tac, Huynh Truong Tu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
